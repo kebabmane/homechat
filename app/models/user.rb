@@ -1,5 +1,6 @@
 class User < ApplicationRecord
   has_secure_password
+  has_one_attached :avatar
   
   validates :username, presence: true, uniqueness: true, length: { minimum: 3, maximum: 50 }
   validates :role, inclusion: { in: %w[user admin] }

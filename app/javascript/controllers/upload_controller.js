@@ -2,10 +2,12 @@ import { Controller } from "@hotwired/stimulus"
 
 // Drag-and-drop + preview thumbnails for message attachments
 export default class extends Controller {
-  static targets = ["input", "previews", "textarea"]
+  static targets = ["input", "previews", "textarea", "hint"]
 
   connect() {
     this.element.addEventListener('dragover', this.onDragOver)
+    this.element.addEventListener('dragenter', this.onDragEnter)
+    this.element.addEventListener('dragleave', this.onDragLeave)
     this.element.addEventListener('drop', (e) => this.onDrop(e))
   }
 
@@ -15,10 +17,21 @@ export default class extends Controller {
 
   onDragOver = (e) => {
     e.preventDefault()
+    this.showHint()
+  }
+
+  onDragEnter = (e) => {
+    e.preventDefault()
+    this.showHint()
+  }
+
+  onDragLeave = (e) => {
+    if (!this.element.contains(e.relatedTarget)) this.hideHint()
   }
 
   onDrop(e) {
     e.preventDefault()
+    this.hideHint()
     if (!this.hasInputTarget) return
     const files = Array.from(e.dataTransfer.files || [])
     if (files.length === 0) return
@@ -62,5 +75,12 @@ export default class extends Controller {
     this.inputTarget.files = dt.files
     this.renderPreviews()
   }
-}
 
+  showHint() {
+    if (this.hasHintTarget) this.hintTarget.classList.remove('hidden')
+  }
+
+  hideHint() {
+    if (this.hasHintTarget) this.hintTarget.classList.add('hidden')
+  }
+}

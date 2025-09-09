@@ -1,10 +1,6 @@
 <div class="flex items-start space-x-4 px-6">
   <div class="flex-shrink-0">
-    <div class="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
-      <span class="text-lg font-medium text-gray-600">
-        <%= message.user.username.first.upcase %>
-      </span>
-    </div>
+    <%= avatar_for(message.user) %>
   </div>
   <div class="flex-1 min-w-0">
     <div class="flex items-baseline space-x-2 mb-1">

@@ -91,9 +91,7 @@
   <div class="px-4 py-3 border-t border-white/10">
     <div class="flex items-center space-x-3">
       <div class="flex-shrink-0">
-        <div class="w-7 h-7 bg-white/10 rounded-full flex items-center justify-center">
-          <span class="text-white text-sm font-medium"><%= current_user.username.first.upcase %></span>
-        </div>
+        <%= avatar_for(current_user, size: 'h-7 w-7') %>
       </div>
       <div class="flex-1 min-w-0">
         <p class="text-sm font-medium text-white truncate"><%= current_user.username %></p>

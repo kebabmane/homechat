@@ -64,9 +64,13 @@ module MessagesHelper
 
     content_tag :div, class: 'mt-2 space-y-2' do
       previews.map { |p|
-        link_to p[:url], target: '_blank', rel: 'noopener', class: 'block border border-gray-200 rounded-md p-3 hover:border-gray-300 hover:shadow-sm transition' do
-          (image_tag(p[:favicon], class: 'inline-block w-4 h-4 mr-2 align-text-bottom') if p[:favicon]).to_s.html_safe +
-          content_tag(:span, p[:title].presence || p[:url], class: 'text-sm text-gray-800')
+        link_to p[:url], target: '_blank', rel: 'noopener', class: 'flex border border-gray-200 rounded-md p-3 hover:border-gray-300 hover:shadow-sm transition gap-3' do
+          (image_tag(p[:image], class: 'w-16 h-16 object-cover rounded hidden sm:block') if p[:image]).to_s.html_safe +
+          content_tag(:div) do
+            ((image_tag(p[:favicon], class: 'inline-block w-4 h-4 mr-2 align-text-bottom') if p[:favicon]).to_s.html_safe) +
+            content_tag(:div, p[:title].presence || p[:url], class: 'text-sm text-gray-900') +
+            (p[:description].present? ? content_tag(:div, truncate(p[:description], length: 140), class: 'text-xs text-gray-600 mt-1') : ''.html_safe)
+          end
         end
       }.join.html_safe
     end
@@ -86,11 +90,17 @@ module MessagesHelper
         req = Net::HTTP::Get.new(uri)
         res = http.request(req)
         body = (res.body || '')[0, 100_000]
-        title = body[/<title[^>]*>([^<]+)<\/title>/i, 1]&.strip
+        # Prefer OpenGraph title/description/image when present
+        og_title = body[/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["'][^>]*>/i, 1]
+        og_desc  = body[/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["'][^>]*>/i, 1]
+        og_image = body[/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["'][^>]*>/i, 1]
+        title = (og_title || body[/<title[^>]*>([^<]+)<\/title>/i, 1])&.strip
         {
           url: url,
           title: title,
-          favicon: "#{uri.scheme}://#{uri.host}/favicon.ico"
+          description: og_desc&.strip,
+          favicon: "#{uri.scheme}://#{uri.host}/favicon.ico",
+          image: absolutize_url(og_image, uri)
         }
       rescue StandardError
         nil
@@ -109,5 +119,18 @@ module MessagesHelper
     return false if host =~ /^192\.168\./
     return false if host =~ /^172\.(1[6-9]|2[0-9]|3[0-1])\./
     true
+  end
+
+  def absolutize_url(candidate, base_uri)
+    return nil if candidate.blank?
+    begin
+      uri = URI.parse(candidate)
+      uri = base_uri.merge(uri) if uri.relative?
+      return nil unless %w[http https].include?(uri.scheme)
+      return nil unless safe_http_url?(uri.to_s)
+      uri.to_s
+    rescue
+      nil
+    end
   end
 end
