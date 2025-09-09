@@ -138,7 +138,7 @@ Add the Home Assistant integration for automation features:
 3. **Configure**: Settings > Integrations > Add "HomeChat" integration
 4. **Automate**: Use `notify.homechat` service in your automations
 
-See [`INTEGRATION_SETUP.md`](../INTEGRATION_SETUP.md) for detailed setup instructions.
+See [`INTEGRATION_SETUP.md`](INTEGRATION_SETUP.md) for detailed setup instructions.
 
 ### 💾 Data & Backup
 - **Database**: SQLite stored in `/data/production.sqlite3`
@@ -179,7 +179,7 @@ automation:
 ### Repository Links
 - **📦 HomeChat Add-on**: [kebabmane/homechat-addon](https://github.com/kebabmane/homechat-addon)
 - **🔌 HA Integration**: [kebabmane/homechat-integration](https://github.com/kebabmane/homechat-integration)
-- **📖 Setup Guide**: [INTEGRATION_SETUP.md](../INTEGRATION_SETUP.md)
+- **📖 Setup Guide**: [INTEGRATION_SETUP.md](INTEGRATION_SETUP.md)
 
 ### ⚠️ Security Trade-offs (Current Implementation)
 
