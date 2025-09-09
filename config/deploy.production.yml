@@ -1,0 +1,98 @@
+# Production environment configuration for HomeChat
+# Inherits from config/deploy.yml and overrides for production-specific settings
+
+# Production servers - configure for high availability
+servers:
+  web:
+    - REPLACE_WITH_PRODUCTION_SERVER_1
+    # Uncomment for load balancing across multiple servers:
+    # - REPLACE_WITH_PRODUCTION_SERVER_2
+    # - REPLACE_WITH_PRODUCTION_SERVER_3
+  
+  # Dedicated job servers for high-traffic production
+  # job:
+  #   hosts:
+  #     - REPLACE_WITH_JOB_SERVER_1
+  #   cmd: bin/jobs
+  #   env:
+  #     clear:
+  #       SOLID_QUEUE_IN_PUMA: false
+  #       JOB_CONCURRENCY: 5
+
+# Production domain with SSL
+proxy:
+  ssl: true
+  host: chat.yourdomain.com
+  # For multiple servers, consider external load balancer instead
+
+# Production environment variables
+env:
+  secret:
+    - RAILS_MASTER_KEY
+    # Production API tokens
+    - HOMECHAT_API_TOKEN
+    # Database credentials if using external DB
+    # - DATABASE_PASSWORD
+  clear:
+    RAILS_ENV: production
+    RAILS_SERVE_STATIC_FILES: true
+    RAILS_LOG_TO_STDOUT: true
+    
+    # Production logging
+    RAILS_LOG_LEVEL: info
+    
+    # HomeChat production settings
+    ENABLE_INTEGRATIONS: true
+    AUTO_CREATE_API_TOKEN: false  # Manual token management in production
+    HOME_ASSISTANT_INTEGRATION: true
+    
+    # Performance tuning for production
+    WEB_CONCURRENCY: 4  # Adjust based on server specs
+    SOLID_QUEUE_IN_PUMA: true
+    JOB_CONCURRENCY: 3
+    
+    # Database configuration
+    # For external database, uncomment and configure:
+    # DATABASE_URL: postgresql://user:password@host:port/homechat_production
+
+# Production volumes with backup considerations
+volumes:
+  - "homechat_production_storage:/rails/storage"
+  - "homechat_production_data:/rails/db"
+
+# Production health checks
+healthcheck:
+  path: /up
+  port: 3000
+  max_attempts: 15
+  interval: 20s
+
+# Production boot configuration
+boot:
+  limit: 5   # Keep more old containers for quick rollback
+  wait: 10   # More conservative restart timing
+
+# Production-specific accessories (uncomment as needed)
+# accessories:
+#   # External PostgreSQL for production scale
+#   db:
+#     image: postgres:15
+#     host: REPLACE_WITH_DB_SERVER_IP
+#     port: "127.0.0.1:5432:5432"
+#     env:
+#       clear:
+#         POSTGRES_DB: homechat_production
+#         POSTGRES_USER: homechat
+#       secret:
+#         - POSTGRES_PASSWORD
+#     directories:
+#       - data:/var/lib/postgresql/data
+#     
+#   # Redis for high-traffic ActionCable
+#   redis:
+#     image: redis:7.0
+#     host: REPLACE_WITH_REDIS_SERVER_IP
+#     port: "127.0.0.1:6379:6379"
+#     directories:
+#       - data:/data
+#     cmd: redis-server --appendonly yes

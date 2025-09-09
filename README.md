@@ -32,8 +32,9 @@ HomeChat is designed as **three complementary repositories** that work together:
 
 | **Deployment Option** | **Best For** | **Setup Complexity** | **HA Integration** |
 |----------------------|--------------|---------------------|-------------------|
-| **Standalone Docker** | Non-HA users, custom setups | Medium | Optional |
+| **Standalone Docker** | Local testing, development | Low | Optional |
 | **HA Add-on Only** | HA users wanting private chat | Easy | Optional |
+| **Cloud (Kamal)** | Production, teams, public access | Medium | Optional |
 | **HA Add-on + Integration** | Smart home automation | Easy | Full featured |
 
 > **💡 HomeChat works great standalone!** You don't need Home Assistant to use HomeChat as your private family/team chat platform.
@@ -107,10 +108,32 @@ Install directly in Home Assistant for integrated deployment:
 3. **Configure & Start**: Set your preferences and start the add-on
 4. **Access**: Available in Home Assistant sidebar or direct URL
 
-### Option 3: Full Smart Home Integration (HA + Automation)
+### Option 3: Cloud Deployment with Kamal (Production)
+Deploy to any cloud provider (AWS, GCP, DigitalOcean, Vultr, Hetzner) with zero-downtime deployments:
+
+```bash
+# Quick cloud deployment
+git clone https://github.com/kebabmane/homechat.git
+cd homechat
+
+# Configure your servers in config/deploy.yml
+bin/kamal setup    # Initial deployment
+bin/kamal deploy   # Deploy updates
+```
+
+**Features:**
+- ✅ **Zero-downtime deployments** with health checks
+- ✅ **Automatic SSL** certificates via Let's Encrypt  
+- ✅ **Multi-server scaling** for high availability
+- ✅ **Environment management** (staging/production)
+- ✅ **One-command deployments** and rollbacks
+
+See [`KAMAL_DEPLOYMENT.md`](../KAMAL_DEPLOYMENT.md) for detailed cloud deployment guide.
+
+### Option 4: Full Smart Home Integration (HA + Automation)
 Add the Home Assistant integration for automation features:
 
-1. **Deploy HomeChat** (via add-on or Docker)
+1. **Deploy HomeChat** (via add-on, Docker, or Kamal)
 2. **Install Integration**: Copy `homechat-integration` to `custom_components/homechat/`
 3. **Configure**: Settings > Integrations > Add "HomeChat" integration
 4. **Automate**: Use `notify.homechat` service in your automations

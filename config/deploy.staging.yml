@@ -1,0 +1,43 @@
+# Staging environment configuration for HomeChat
+# Inherits from config/deploy.yml and overrides specific settings
+
+service: homechat-staging
+
+# Staging servers
+servers:
+  web:
+    - REPLACE_WITH_STAGING_SERVER_IP
+
+# Staging domain
+proxy:
+  ssl: true
+  host: staging-chat.yourdomain.com  # Use subdomain for staging
+
+# Staging-specific environment variables
+env:
+  clear:
+    RAILS_ENV: staging
+    RAILS_SERVE_STATIC_FILES: true
+    RAILS_LOG_TO_STDOUT: true
+    
+    # Enable debug logging for staging
+    RAILS_LOG_LEVEL: debug
+    
+    # HomeChat staging settings
+    ENABLE_INTEGRATIONS: true
+    AUTO_CREATE_API_TOKEN: true  # Auto-generate for easier testing
+    HOME_ASSISTANT_INTEGRATION: true
+    
+    # Reduce resources for staging
+    WEB_CONCURRENCY: 1
+    SOLID_QUEUE_IN_PUMA: true
+
+# Staging volumes (separate from production)
+volumes:
+  - "homechat_staging_storage:/rails/storage"
+  - "homechat_staging_data:/rails/db"
+
+# Use smaller resource limits for staging
+boot:
+  limit: 3
+  wait: 10
