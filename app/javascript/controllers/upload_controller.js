@@ -9,6 +9,8 @@ export default class extends Controller {
     this.element.addEventListener('dragenter', this.onDragEnter)
     this.element.addEventListener('dragleave', this.onDragLeave)
     this.element.addEventListener('drop', (e) => this.onDrop(e))
+    this.element.addEventListener('dragend', () => this.hideHint())
+    this._hideTimer = null
   }
 
   disconnect() {
@@ -77,10 +79,15 @@ export default class extends Controller {
   }
 
   showHint() {
-    if (this.hasHintTarget) this.hintTarget.classList.remove('hidden')
+    if (this.hasHintTarget) {
+      this.hintTarget.classList.remove('hidden')
+      clearTimeout(this._hideTimer)
+      this._hideTimer = setTimeout(() => this.hideHint(), 800)
+    }
   }
 
   hideHint() {
     if (this.hasHintTarget) this.hintTarget.classList.add('hidden')
+    clearTimeout(this._hideTimer)
   }
 }

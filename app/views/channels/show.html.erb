@@ -112,7 +112,7 @@
           data: { message_list_target: "textarea", mentions_target: "textarea", upload_target: "textarea", action: "input->message-list#autoResize input->mentions#onInput keydown.enter->mentions#maybeAccept keydown.enter->message-list#submit" } %>
       <div data-mentions-target="menu" class="absolute left-6 bottom-16 z-10 bg-white border border-gray-200 rounded-md shadow-sm hidden"></div>
       <div data-upload-target="previews" class="px-6 pt-2 flex gap-2"></div>
-      <div data-upload-target="hint" class="hidden absolute inset-0 z-10 flex items-center justify-center bg-blue-50/70 border-2 border-dashed border-blue-300 rounded-lg mx-6">
+      <div data-upload-target="hint" class="hidden pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-blue-50/70 border-2 border-dashed border-blue-300 rounded-lg mx-6">
         <div class="text-blue-700 text-sm font-medium">Drop files to attach</div>
       </div>
       <div class="absolute inset-y-0 right-0 flex items-center space-x-3 pr-10">
