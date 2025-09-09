@@ -1,0 +1,298 @@
+<% content_for :title, "Integrations" %>
+
+<%= render 'admin/header' %>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+  <div class="mb-6">
+    <p class="text-gray-600 dark:text-gray-300">
+      Manage API tokens and integration settings for external services like Home Assistant.
+    </p>
+  </div>
+
+  <!-- Integration Settings -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-8">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Integration Settings</h2>
+    </div>
+    
+    <div class="p-6">
+      <%= form_with url: update_settings_admin_integrations_path, method: :patch, local: true, class: "space-y-6" do |f| %>
+        <div>
+          <label class="flex items-center">
+            <%= f.check_box :home_assistant_enabled, 
+                checked: @integration_settings[:home_assistant_enabled], 
+                class: "rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" %>
+            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Enable Home Assistant Integration</span>
+          </label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Allow Home Assistant to send messages and notifications to HomeChat.
+          </p>
+        </div>
+
+        <div>
+          <label class="flex items-center">
+            <%= f.check_box :api_enabled, 
+                checked: @integration_settings[:api_enabled], 
+                class: "rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" %>
+            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Enable API Access</span>
+          </label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Allow external services to interact with HomeChat via API.
+          </p>
+        </div>
+
+        <div>
+          <label for="settings_webhook_base_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Webhook Base URL
+          </label>
+          <%= f.text_field :webhook_base_url, 
+              value: @integration_settings[:webhook_base_url],
+              placeholder: "https://homechat.local:3000",
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white" %>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Base URL for webhook callbacks. This should be accessible from Home Assistant.
+          </p>
+        </div>
+
+        <div class="flex gap-3">
+          <%= f.submit "Save Settings", 
+              class: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" %>
+          
+          <button type="button" id="test-connection" 
+                  class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+            Test Connection
+          </button>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- API Tokens -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-8">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white">API Tokens</h2>
+      <%= button_to "Create New Token", create_token_admin_integrations_path, 
+          params: { name: "Home Assistant" },
+          method: :post,
+          class: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" %>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Token</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Last Used</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          <% if @api_tokens.empty? %>
+            <tr>
+              <td colspan="5" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                No API tokens found. Create one to enable Home Assistant integration.
+              </td>
+            </tr>
+          <% else %>
+            <% @api_tokens.each do |token| %>
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                  <%= token.name %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
+                  <span class="cursor-pointer" onclick="copyToClipboard('<%= token.token %>', this)">
+                    <%= token.masked_token %>
+                    <span class="ml-2 text-blue-500 hover:text-blue-700">📋</span>
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <% if token.active? %>
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                      Active
+                    </span>
+                  <% else %>
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                      Inactive
+                    </span>
+                  <% end %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <%= token.last_used_at ? time_ago_in_words(token.last_used_at) + " ago" : "Never" %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                  <% if token.active? %>
+                    <%= link_to "Regenerate", admin_integration_regenerate_token_path(token), 
+                        method: :patch, 
+                        data: { confirm: "Are you sure? This will invalidate the current token." },
+                        class: "text-blue-600 hover:text-blue-900 dark:text-blue-400" %>
+                    <%= link_to "Deactivate", admin_integration_deactivate_token_path(token), 
+                        method: :patch,
+                        class: "text-red-600 hover:text-red-900 dark:text-red-400" %>
+                  <% else %>
+                    <%= link_to "Activate", admin_integration_activate_token_path(token), 
+                        method: :patch,
+                        class: "text-green-600 hover:text-green-900 dark:text-green-400" %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bots -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Integration Bots</h2>
+      <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+        Bots created by external integrations for two-way communication.
+      </p>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Webhook ID</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Created</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          <% if @bots.empty? %>
+            <tr>
+              <td colspan="5" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                No integration bots found. They will be created automatically when Home Assistant connects.
+              </td>
+            </tr>
+          <% else %>
+            <% @bots.each do |bot| %>
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                  <%= bot.name %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <span class="capitalize"><%= bot.bot_type %></span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <% if bot.active? %>
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                      Active
+                    </span>
+                  <% else %>
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                      Inactive
+                    </span>
+                  <% end %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
+                  <% if bot.webhook_id.present? %>
+                    <span class="cursor-pointer" onclick="copyToClipboard('<%= bot.webhook_url(@integration_settings[:webhook_base_url]) %>', this)">
+                      <%= bot.webhook_id[0..8] %>...
+                      <span class="ml-2 text-blue-500 hover:text-blue-700">📋</span>
+                    </span>
+                  <% else %>
+                    —
+                  <% end %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <%= bot.created_at.strftime("%B %d, %Y") %>
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Setup Instructions -->
+<div class="max-w-6xl mx-auto mt-8 bg-blue-50 dark:bg-blue-900 rounded-lg p-6">
+  <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-4">
+    🏠 Home Assistant Setup Instructions
+  </h3>
+  
+  <div class="space-y-4 text-sm text-blue-800 dark:text-blue-200">
+    <div>
+      <strong>1. Install the HomeChat Integration:</strong>
+      <p>Copy the custom integration to <code>&lt;ha_config&gt;/custom_components/homechat/</code></p>
+    </div>
+    
+    <div>
+      <strong>2. Configuration Details:</strong>
+      <ul class="list-disc list-inside ml-4 space-y-1">
+        <li><strong>Host:</strong> <%= request.host %></li>
+        <li><strong>Port:</strong> <%= request.port %></li>
+        <li><strong>SSL:</strong> <%= request.ssl? ? "Enabled" : "Disabled" %></li>
+        <li><strong>API Token:</strong> Create one above and copy it</li>
+      </ul>
+    </div>
+    
+    <div>
+      <strong>3. Test Connection:</strong>
+      <p>Use the "Test Connection" button above to verify API connectivity.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+function copyToClipboard(text, element) {
+  navigator.clipboard.writeText(text).then(function() {
+    const originalText = element.innerHTML;
+    element.innerHTML = 'Copied! ✓';
+    element.classList.add('text-green-600');
+    
+    setTimeout(function() {
+      element.innerHTML = originalText;
+      element.classList.remove('text-green-600');
+    }, 2000);
+  }).catch(function(err) {
+    console.error('Could not copy text: ', err);
+  });
+}
+
+document.getElementById('test-connection').addEventListener('click', function() {
+  const button = this;
+  const originalText = button.textContent;
+  button.textContent = 'Testing...';
+  button.disabled = true;
+  
+  fetch('<%= test_connection_admin_integrations_path %>', {
+    headers: {
+      'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      button.textContent = 'Test Passed ✓';
+      button.classList.remove('bg-green-500', 'hover:bg-green-700');
+      button.classList.add('bg-green-600');
+    } else {
+      button.textContent = 'Test Failed ✗';
+      button.classList.remove('bg-green-500', 'hover:bg-green-700');
+      button.classList.add('bg-red-600');
+      alert('Test failed: ' + data.message);
+    }
+  })
+  .catch(error => {
+    button.textContent = 'Test Failed ✗';
+    button.classList.remove('bg-green-500', 'hover:bg-green-700');
+    button.classList.add('bg-red-600');
+    alert('Test failed: ' + error);
+  })
+  .finally(() => {
+    button.disabled = false;
+    setTimeout(() => {
+      button.textContent = originalText;
+      button.className = 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded';
+    }, 3000);
+  });
+});
+</script>

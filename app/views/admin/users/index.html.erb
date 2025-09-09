@@ -1,0 +1,32 @@
+<%= render 'admin/header' %>
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-6">
+
+  <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <% @users.each do |user| %>
+          <tr>
+            <td class="px-4 py-3 text-sm text-gray-900"><%= user.username %></td>
+            <td class="px-4 py-3 text-sm text-gray-700"><%= user.role %></td>
+            <td class="px-4 py-3 text-right">
+              <%= form_with url: admin_user_path(user), method: :patch, local: true, class: "inline-flex items-center space-x-2" do |f| %>
+                <select name="user[role]" class="px-2 py-1 border border-gray-300 rounded-md text-sm">
+                  <option value="user" <%= 'selected' if user.role == 'user' %>>user</option>
+                  <option value="admin" <%= 'selected' if user.role == 'admin' %>>admin</option>
+                </select>
+                <button type="submit" class="px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">Update</button>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

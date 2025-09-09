@@ -1,0 +1,152 @@
+<div class="h-full overflow-y-auto bg-gray-50">
+  <div class="p-6">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+      <p class="text-gray-600">Welcome back, <%= current_user.username %>. Here's your activity overview.</p>
+    </div>
+
+    <!-- Activity Overview Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <!-- Channels Joined -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"></path>
+                <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Channels Joined</dt>
+              <dd class="text-2xl font-semibold text-gray-900"><%= @my_channels.count %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <!-- Public Channels -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Public Channels</dt>
+              <dd class="text-2xl font-semibold text-gray-900"><%= @public_channels.count %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Recent Messages</dt>
+              <dd class="text-2xl font-semibold text-gray-900"><%= @recent_messages&.count || 0 %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-lg border border-gray-200 mb-8">
+      <div class="p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <%= link_to new_channel_path, class: "group flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all" do %>
+            <div class="flex-shrink-0">
+              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-900">Create Channel</p>
+              <p class="text-sm text-gray-500">Start a new conversation</p>
+            </div>
+          <% end %>
+
+          <%= link_to channels_path, class: "group flex items-center p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:shadow-sm transition-all" do %>
+            <div class="flex-shrink-0">
+              <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-900">Browse Channels</p>
+              <p class="text-sm text-gray-500">Discover communities</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Messages -->
+    <% if @recent_messages&.any? %>
+      <div class="bg-white rounded-lg border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-gray-900">Recent Messages</h2>
+            <span class="text-sm text-gray-500">Latest activity across your channels</span>
+          </div>
+        </div>
+
+        <div class="p-6">
+          <div class="space-y-4">
+            <% @recent_messages.first(5).each do |message| %>
+              <div class="flex items-start space-x-3 p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-medium text-gray-600"><%= message.user.username.first.upcase %></span>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center space-x-2 mb-1">
+                    <span class="text-sm font-medium text-gray-900"><%= message.user.username %></span>
+                    <span class="text-sm text-gray-500">in</span>
+                    <%= link_to channel_path(message.channel), class: "text-sm font-medium text-blue-600 hover:text-blue-700" do %>
+                      #<%= message.channel.name %>
+                    <% end %>
+                    <span class="text-sm text-gray-400">·</span>
+                    <span class="text-sm text-gray-500"><%= time_ago_in_words(message.created_at) %> ago</span>
+                  </div>
+                  <p class="text-sm text-gray-700"><%= truncate(message.content, length: 120) %></p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% else %>
+      <div class="bg-white rounded-lg border border-gray-200">
+        <div class="p-12 text-center">
+          <div class="text-6xl mb-4">💬</div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No messages yet</h3>
+          <p class="text-gray-500 mb-6">Start a conversation in one of your channels or create a new one!</p>
+          <%= link_to "Browse Channels", channels_path, class: "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

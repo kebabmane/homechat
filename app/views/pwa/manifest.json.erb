@@ -1,0 +1,14 @@
+{
+  "name": "<%= Setting.fetch(:site_name, 'HomeChat') %>",
+  "short_name": "<%= Setting.fetch(:pwa_short_name, Setting.fetch(:site_name, 'HomeChat')) %>",
+  "start_url": "/",
+  "display": "<%= Setting.fetch(:pwa_display, 'standalone') %>",
+  "theme_color": "<%= Setting.fetch(:pwa_theme_color, '#2563eb') %>",
+  "background_color": "<%= Setting.fetch(:pwa_bg_color, '#ffffff') %>",
+  "icons": [
+    { "src": "/icon.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
+

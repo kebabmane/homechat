@@ -1,0 +1,148 @@
+<div class="flex-1 min-h-0 overflow-y-auto">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white shadow-sm rounded-xl border border-gray-200">
+      <div class="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200">
+        <div class="flex items-center">
+          <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-sm mr-4">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Create New Channel</h1>
+            <p class="text-gray-600 mt-1 hidden sm:block">Set up a new space for conversations</p>
+          </div>
+        </div>
+      </div>
+
+    <%= form_with model: @channel, local: true, class: "p-6 pb-24" do |form| %>
+      <% if @channel.errors.any? %>
+        <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div class="flex items-center mb-2">
+            <svg class="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+            </svg>
+            <h4 class="font-medium text-red-800">Please fix the following errors:</h4>
+          </div>
+          <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
+            <% @channel.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="space-y-6">
+        <div>
+          <%= form.label :name, class: "block text-sm font-medium text-gray-900 mb-2" do %>
+            <span class="flex items-center">
+              <svg class="w-4 h-4 mr-2 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path>
+              </svg>
+              Channel Name
+            </span>
+          <% end %>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">#</span>
+            <%= form.text_field :name, class: "block w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm", placeholder: "general, random, announcements...", data: { controller: "focus" } %>
+          </div>
+          <p class="mt-2 text-xs sm:text-sm text-gray-600">Choose a clear, descriptive name that reflects the channel's purpose</p>
+        </div>
+
+        <div>
+          <%= form.label :description, class: "block text-sm font-medium text-gray-900 mb-2" do %>
+            <span class="flex items-center">
+              <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              Description <span class="text-gray-400 font-normal">(optional)</span>
+            </span>
+          <% end %>
+          <%= form.text_area :description, rows: 4, class: "block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm resize-none", placeholder: "What's this channel about? What kind of discussions will happen here?" %>
+          <p class="mt-2 text-xs sm:text-sm text-gray-600">Help others understand what your channel is for and what to expect</p>
+        </div>
+
+        <div>
+          <%= form.label :channel_type, class: "block text-sm font-medium text-gray-900 mb-4" do %>
+            <span class="flex items-center">
+              <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+              Channel Privacy
+            </span>
+          <% end %>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="relative">
+              <label class="flex p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 hover:border-gray-300 focus-within:ring-2 focus-within:ring-blue-500">
+                <%= form.radio_button :channel_type, "public", class: "sr-only peer", checked: true %>
+                <div class="peer-checked:border-blue-500 peer-checked:bg-blue-50 border-2 border-transparent rounded-lg p-4 w-full">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                      <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clip-rule="evenodd"></path>
+                        </svg>
+                      </div>
+                      <span class="font-medium text-gray-900">Public Channel</span>
+                    </div>
+                    <div class="hidden peer-checked:block">
+                      <div class="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                        <svg class="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 8 8">
+                          <path d="M6.564.75l-3.59 3.612-1.538-1.55L0 4.26l2.974 2.99L8 2.193z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-sm text-gray-600">Anyone can discover and join this channel</p>
+                </div>
+              </label>
+            </div>
+
+            <div class="relative">
+              <label class="flex p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 hover:border-gray-300 focus-within:ring-2 focus-within:ring-blue-500">
+                <%= form.radio_button :channel_type, "private", class: "sr-only peer" %>
+                <div class="peer-checked:border-blue-500 peer-checked:bg-blue-50 border-2 border-transparent rounded-lg p-4 w-full">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                      <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
+                        </svg>
+                      </div>
+                      <span class="font-medium text-gray-900">Private Channel</span>
+                    </div>
+                    <div class="hidden peer-checked:block">
+                      <div class="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                        <svg class="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 8 8">
+                          <path d="M6.564.75l-3.59 3.612-1.538-1.55L0 4.26l2.974 2.99L8 2.193z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-sm text-gray-600">Only invited members can join this channel</p>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sticky action bar -->
+      <div class="sticky bottom-0 left-0 right-0 bg-gray-50 border-t border-gray-200 -mx-6 mt-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between rounded-b-lg" style="padding-bottom: env(safe-area-inset-bottom)">
+        <%= link_to channels_path, class: "inline-flex items-center px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors" do %>
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          Cancel
+        <% end %>
+        <%= button_tag type: "submit", class: "inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" do %>
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+          <span>Create Channel</span>
+        <% end %>
+      </div>
+    <% end %>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+GEM_BIN_DIR="$(ruby -e 'puts Gem.bindir')"
+
+RUBY_VERSION_STR=$(ruby -e 'print RUBY_VERSION' 2>/dev/null || echo "")
+if [[ -z "$RUBY_VERSION_STR" || "$RUBY_VERSION_STR" != 3.3* ]]; then
+  echo "This project expects Ruby 3.3.x. Detected: ${RUBY_VERSION_STR:-unknown}." >&2
+  echo "Activate the correct Ruby (e.g., 'rvm use 3.3.0' or 'rbenv local 3.3.0') then re-run." >&2
+  exit 2
+fi
+
+echo "==> RuboCop"
+if ! "$GEM_BIN_DIR"/rubocop "$@"; then
+  echo "RuboCop found issues." >&2
+  exit 1
+fi
+
+echo "\n==> ERB Lint"
+if ! "$GEM_BIN_DIR"/erblint --lint-all; then
+  echo "ERB lint found issues." >&2
+  exit 1
+fi
+
+echo "\n==> Brakeman"
+if ! "$GEM_BIN_DIR"/brakeman --no-pager; then
+  echo "Brakeman found issues." >&2
+  exit 1
+fi
+
+echo "\nAll linters passed."

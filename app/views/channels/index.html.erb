@@ -1,0 +1,180 @@
+<div class="h-full p-6 overflow-y-auto bg-gray-50">
+  <div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">Browse All Channels</h1>
+          <p class="text-gray-600">Discover and join conversations across the community</p>
+        </div>
+        <%= link_to "Create New Channel", new_channel_path,
+            class: "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors" %>
+      </div>
+      <div class="max-w-md">
+        <input id="channel-search" name="q" type="search" placeholder="Search channels..." value="<%= params[:q] %>"
+               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+               data-controller="channel-search <%= 'focus' if params[:focus] == 'search' %>"
+               data-channel-search-target="input"
+               data-action="input->channel-search#filter">
+      </div>
+    </div>
+
+    <!-- All Public Channels -->
+    <div class="bg-white rounded-lg border border-gray-200 mb-8">
+      <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-gray-900">Public Channels</h2>
+            <p class="text-sm text-gray-600 mt-1">Open to everyone - <%= @public_channels.count %> channel<%= "s" unless @public_channels.count == 1 %></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6">
+        <% if @public_channels.any? %>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6" data-channel-search-target="items">
+            <% @public_channels.each do |channel| %>
+              <div class="border border-gray-200 rounded-lg p-5 hover:border-gray-300 hover:shadow-sm transition-all" data-channel-search-target="item" data-name="<%= channel.name %>">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center space-x-2 mb-3">
+                      <span class="text-gray-400 text-lg">#</span>
+                      <h3 class="text-lg font-semibold text-gray-900 truncate">
+                        <%= link_to channel.name, channel_path(channel), class: "hover:text-blue-600 transition-colors" %>
+                      </h3>
+                    </div>
+                    <% if channel.description.present? %>
+                      <p class="text-sm text-gray-600 mb-3 line-clamp-2"><%= channel.description %></p>
+                    <% end %>
+                    <div class="flex items-center space-x-4 text-xs text-gray-500 mb-4">
+                      <div class="flex items-center space-x-1">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>Created by <%= channel.creator.username %></span>
+                      </div>
+                      <div class="flex items-center space-x-1">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+                        </svg>
+                        <span><%= channel.member_count %> member<%= "s" if channel.member_count != 1 %></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="text-xs text-gray-400">
+                    Created <%= time_ago_in_words(channel.created_at) %> ago
+                  </div>
+                  <div class="flex-shrink-0">
+                    <% if current_user.member_of?(channel) %>
+                      <%= link_to "Enter", channel_path(channel), class: "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors" %>
+                    <% else %>
+                      <%= link_to "Join", join_channel_path(channel), method: :post, class: "px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors" %>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-12">
+            <div class="text-6xl mb-6">💬</div>
+            <h3 class="text-xl font-medium text-gray-900 mb-3">No public channels yet</h3>
+            <p class="text-gray-500 mb-6 max-w-sm mx-auto">Be the first to create a public channel for everyone to join and start building your community!</p>
+            <%= link_to "Create First Channel", new_channel_path, class: "inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- My Channels -->
+    <div class="bg-white rounded-lg border border-gray-200">
+      <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-gray-900">My Channels</h2>
+            <p class="text-sm text-gray-600 mt-1">Channels you've joined - <%= @my_channels.count %> channel<%= "s" unless @my_channels.count == 1 %></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6">
+        <% if @my_channels.any? %>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <% @my_channels.each do |channel| %>
+              <div class="border border-gray-200 rounded-lg p-5 hover:border-gray-300 hover:shadow-sm transition-all">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center space-x-2 mb-3">
+                      <span class="text-gray-400 text-lg">#</span>
+                      <h3 class="text-lg font-semibold text-gray-900 truncate">
+                        <%= link_to channel.name, channel_path(channel), class: "hover:text-blue-600 transition-colors" %>
+                      </h3>
+                      <% if channel.private? %>
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
+                          </svg>
+                          Private
+                        </span>
+                      <% end %>
+                    </div>
+                    <% if channel.description.present? %>
+                      <p class="text-sm text-gray-600 mb-3 line-clamp-2"><%= channel.description %></p>
+                    <% end %>
+                    <div class="flex items-center space-x-4 text-xs text-gray-500 mb-4">
+                      <div class="flex items-center space-x-1">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>
+                          <% if channel.creator == current_user %>
+                            Created by you
+                          <% else %>
+                            Created by <%= channel.creator.username %>
+                          <% end %>
+                        </span>
+                      </div>
+                      <div class="flex items-center space-x-1">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+                        </svg>
+                        <span><%= channel.member_count %> member<%= "s" if channel.member_count != 1 %></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="text-xs text-gray-400">
+                    Joined <%= time_ago_in_words(current_user.channel_memberships.find_by(channel: channel)&.joined_at || channel.created_at) %> ago
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <%= link_to "Enter", channel_path(channel), class: "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors" %>
+                    <%= link_to leave_channel_path(channel), method: :delete,
+                        confirm: "Are you sure you want to leave this channel?",
+                        class: "text-gray-400 hover:text-red-600 transition-colors p-2",
+                        title: "Leave channel" do %>
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                      </svg>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-12">
+            <div class="text-6xl mb-6">📝</div>
+            <h3 class="text-xl font-medium text-gray-900 mb-3">No channels joined yet</h3>
+            <p class="text-gray-500 mb-6 max-w-sm mx-auto">Join a public channel or create your own to start participating in conversations!</p>
+            <div class="space-x-3">
+              <%= link_to "Browse Public Channels", "#", class: "inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors", onclick: "document.getElementById('public-channels').scrollIntoView({behavior: 'smooth'}); return false;" %>
+              <%= link_to "Create Channel", new_channel_path, class: "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors" %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

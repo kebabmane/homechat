@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || Setting.fetch(:site_name, 'HomeChat') %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <%= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+    <meta name="theme-color" content="<%= Setting.fetch(:pwa_theme_color, '#2563eb') %>">
+  </head>
+
+  <body class="antialiased font-sans bg-gray-50 min-h-screen flex flex-col">
+    <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
+      <div data-controller="install-prompt" data-install-prompt-target="toast" class="hidden fixed bottom-6 right-6 z-40">
+        <div class="flex items-center space-x-3 px-4 py-3 bg-gray-900 text-white rounded-lg shadow-lg">
+          <span>Install this app?</span>
+          <button class="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700" data-action="install-prompt#install">Install</button>
+          <button class="text-white/70 hover:text-white" aria-label="Dismiss" data-action="install-prompt#dismiss">✕</button>
+        </div>
+      </div>
+    <% end %>
+    <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
+      <script>
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('<%= pwa_service_worker_path %>') }
+      </script>
+    <% end %>
+    <% if flash[:notice] %>
+      <div data-controller="flash" data-flash-timeout-value="4000" class="fixed top-0 left-0 right-0 bg-green-500 text-white px-4 py-2 text-center z-50">
+        <span><%= flash[:notice] %></span>
+        <button type="button" aria-label="Dismiss" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/80 hover:text-white" data-action="click->flash#close">&times;</button>
+      </div>
+    <% end %>
+
+    <% if flash[:alert] %>
+      <div data-controller="flash" data-flash-timeout-value="5000" class="fixed top-0 left-0 right-0 bg-red-500 text-white px-4 py-2 text-center z-50">
+        <span><%= flash[:alert] %></span>
+        <button type="button" aria-label="Dismiss" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/80 hover:text-white" data-action="click->flash#close">&times;</button>
+      </div>
+    <% end %>
+
+    <!-- Header / Navbar -->
+    <header class="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-gray-200">
+      <div class="max-w-7xl mx-auto h-14 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <%= link_to root_path, class: "inline-flex items-center space-x-2" do %>
+          <%= image_tag 'logo.svg', alt: Setting.fetch(:site_name, 'HomeChat'), class: 'h-6 w-6' %>
+          <span class="font-semibold text-gray-900"><%= Setting.fetch(:site_name, 'HomeChat') %></span>
+        <% end %>
+        <nav class="flex items-center space-x-4 text-sm">
+          <%= link_to "Features", "#features", class: "text-gray-600 hover:text-gray-900 hidden md:inline" %>
+          <%= link_to "How it works", "#how-it-works", class: "text-gray-600 hover:text-gray-900 hidden md:inline" %>
+          <%= link_to "About", about_path, class: "text-gray-600 hover:text-gray-900 hidden md:inline" %>
+          <% if logged_in? %>
+            <%= link_to "Go to Chat", dashboard_path, class: "inline-flex items-center px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700" %>
+          <% else %>
+            <% unless current_page?(signin_path) %>
+              <%= link_to "Sign in", signin_path, class: "text-gray-600 hover:text-gray-900" %>
+            <% end %>
+            <% unless current_page?(signup_path) %>
+              <%= link_to "Sign up", signup_path, class: "inline-flex items-center px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700" %>
+            <% end %>
+          <% end %>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="flex-1">
+      <% if controller.controller_name == 'home' && action_name == 'index' %>
+        <%= yield %>
+      <% else %>
+        <div class="max-w-md w-full mx-auto p-8">
+          <%= yield %>
+        </div>
+      <% end %>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-xs text-gray-500 flex items-center justify-between">
+        <span>© <%= Time.current.year %> HomeChat</span>
+        <div class="space-x-4">
+          <a href="#features" class="hover:text-gray-700">Features</a>
+          <a href="#how-it-works" class="hover:text-gray-700">How it works</a>
+          <%= link_to 'About', about_path, class: 'hover:text-gray-700' %>
+          <%= link_to 'Privacy', privacy_path, class: 'hover:text-gray-700' %>
+          <%= link_to 'Terms', terms_path, class: 'hover:text-gray-700' %>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

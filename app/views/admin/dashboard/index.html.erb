@@ -1,0 +1,28 @@
+<%= render 'admin/header' %>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white border border-gray-200 rounded-lg p-5">
+      <div class="text-sm text-gray-500">Active Tokens</div>
+      <div class="text-3xl font-semibold text-gray-900"><%= @active_token_count %> <span class="text-gray-400 text-base">/ <%= @token_count %></span></div>
+      <div class="text-xs text-gray-500 mt-1">Last used: <%= @last_token_use&.strftime('%Y-%m-%d %H:%M') || 'Never' %></div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-lg p-5">
+      <div class="text-sm text-gray-500">Bots</div>
+      <div class="text-3xl font-semibold text-gray-900"><%= @bots_active %> <span class="text-gray-400 text-base">/ <%= @bots_total %></span></div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-lg p-5">
+      <div class="text-sm text-gray-500">Integration Status</div>
+      <div class="mt-2 space-y-1">
+        <div class="text-sm"><span class="font-medium">API:</span> <%= @api_enabled ? 'Enabled' : 'Disabled' %></div>
+        <div class="text-sm"><span class="font-medium">Home Assistant:</span> <%= @ha_enabled ? 'Enabled' : 'Disabled' %></div>
+        <div class="text-xs text-gray-500 break-all"><span class="font-medium">Webhook base:</span> <%= @webhook_base %></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-sm text-gray-600">Quick Links:
+    <%= link_to 'Users', admin_users_path, class: 'ml-2 text-blue-600 hover:text-blue-700 underline' %>
+    <%= link_to 'Server Settings', edit_admin_settings_path, class: 'ml-2 text-blue-600 hover:text-blue-700 underline' %>
+  </div>
+</div>

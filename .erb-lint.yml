@@ -1,0 +1,28 @@
+---
+# Minimal, fast, and safe defaults.
+EnableDefaultLinters: true
+
+Linters:
+  Rubocop:
+    enabled: true
+    rubocop_config:
+      inherit_gem:
+        rubocop-rails-omakase: rubocop.yml
+      AllCops:
+        TargetRubyVersion: 3.3
+  SpaceAroundErbTag:
+    enabled: true
+  TrailingWhitespace:
+    enabled: true
+  SelfClosingTag:
+    enabled: true
+    enforce_style: void
+  DeprecatedClasses:
+    enabled: true
+  NoJavascriptTagHelper:
+    enabled: true
+
+Exclude:
+  - 'app/assets/builds/**/*'
+  - 'node_modules/**/*'
+  - 'vendor/**/*'

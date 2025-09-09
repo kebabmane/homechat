@@ -1,0 +1,11 @@
+<nav class="mb-6 border-b border-gray-200">
+  <ul class="flex space-x-4 text-sm">
+    <li><%= link_to 'Dashboard', admin_dashboard_path, class: class_names('pb-3 border-b-2', 'border-blue-600 text-blue-600' => current_page?(admin_dashboard_path), 'border-transparent text-gray-600 hover:text-gray-900' => !current_page?(admin_dashboard_path)) %></li>
+    <li><%= link_to 'Integrations', admin_integrations_path, class: class_names('pb-3 border-b-2', 'border-blue-600 text-blue-600' => current_page?(admin_integrations_path), 'border-transparent text-gray-600 hover:text-gray-900' => !current_page?(admin_integrations_path)) %></li>
+    <li><%= link_to 'Tokens', admin_tokens_path, class: class_names('pb-3 border-b-2', 'border-blue-600 text-blue-600' => current_page?(admin_tokens_path), 'border-transparent text-gray-600 hover:text-gray-900' => !current_page?(admin_tokens_path)) %></li>
+    <li><%= link_to 'Bots', admin_bots_path, class: class_names('pb-3 border-b-2', 'border-blue-600 text-blue-600' => current_page?(admin_bots_path), 'border-transparent text-gray-600 hover:text-gray-900' => !current_page?(admin_bots_path)) %></li>
+    <li><%= link_to 'Users', admin_users_path, class: class_names('pb-3 border-b-2', 'border-blue-600 text-blue-600' => current_page?(admin_users_path), 'border-transparent text-gray-600 hover:text-gray-900' => !current_page?(admin_users_path)) %></li>
+    <li class="ml-auto"><%= link_to 'Server Settings', edit_admin_settings_path, class: 'text-gray-600 hover:text-gray-900' %></li>
+  </ul>
+</nav>
+

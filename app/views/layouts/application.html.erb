@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || Setting.fetch(:site_name, 'HomeChat') %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <%= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+    <meta name="theme-color" content="<%= Setting.fetch(:pwa_theme_color, '#2563eb') %>">
+  </head>
+
+  <body class="antialiased font-sans bg-white text-gray-900" data-controller="shortcuts">
+    <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
+      <div data-controller="install-prompt" data-install-prompt-target="toast" class="hidden fixed bottom-6 right-6 z-40">
+        <div class="flex items-center space-x-3 px-4 py-3 bg-gray-900 text-white rounded-lg shadow-lg">
+          <span>Install this app?</span>
+          <button class="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700" data-action="install-prompt#install">Install</button>
+          <button class="text-white/70 hover:text-white" aria-label="Dismiss" data-action="install-prompt#dismiss">✕</button>
+        </div>
+      </div>
+    <% end %>
+    <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
+      <script>
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('<%= pwa_service_worker_path %>') }
+      </script>
+    <% end %>
+    <% if logged_in? %>
+      <span data-current-username data-current-username="<%= current_user.username %>" class="hidden"></span>
+    <% end %>
+    <%# Global flashes removed from full-width; shown inside main content below %>
+
+    <div class="relative flex h-screen bg-gray-100 overflow-hidden" data-controller="sidebar">
+      <!-- Backdrop (mobile) -->
+      <div class="fixed inset-0 bg-black/40 z-30 hidden md:hidden" data-sidebar-target="backdrop" data-action="click->sidebar#close"></div>
+
+      <!-- Sidebar -->
+      <div class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out bg-gray-900 text-white md:relative md:flex-shrink-0 flex flex-col min-h-0" data-sidebar-target="panel">
+        <%= render "shared/channels_sidebar" %>
+      </div>
+
+      <!-- Main Content -->
+      <div class="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+        <% top_pad = content_for?(:no_top_padding) ? '' : ' pt-6 sm:pt-8' %>
+        <main class="flex-1 flex flex-col min-h-0 bg-white h-screen<%= top_pad %>">
+          <% if flash[:notice] %>
+            <div data-controller="flash" data-flash-timeout-value="4000" class="mx-4 md:mx-6 mt-3 mb-2 rounded-md bg-green-500 text-white px-4 py-2 text-center relative opacity-100">
+              <%= flash[:notice] %>
+              <button type="button" aria-label="Dismiss" class="absolute right-2 top-1/2 -translate-y-1/2 text-white/80 hover:text-white" data-action="click->flash#close">&times;</button>
+            </div>
+          <% end %>
+          <% if flash[:alert] %>
+            <div data-controller="flash" data-flash-timeout-value="5000" class="mx-4 md:mx-6 mt-3 mb-2 rounded-md bg-red-500 text-white px-4 py-2 text-center relative opacity-100">
+              <%= flash[:alert] %>
+              <button type="button" aria-label="Dismiss" class="absolute right-2 top-1/2 -translate-y-1/2 text-white/80 hover:text-white" data-action="click->flash#close">&times;</button>
+            </div>
+          <% end %>
+          <%= yield %>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

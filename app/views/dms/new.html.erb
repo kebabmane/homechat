@@ -1,0 +1,14 @@
+<div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <h1 class="text-2xl font-bold text-gray-900 mb-4">Start a Direct Message</h1>
+  <p class="text-sm text-gray-600 mb-4">Enter a username to start a 1‑on‑1 conversation.</p>
+  <%= form_with url: dms_path, method: :post, local: true, class: "space-y-4" do |f| %>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Username</label>
+      <input type="text" name="username" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., alex" required>
+    </div>
+    <div class="flex items-center justify-end">
+      <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">Start</button>
+    </div>
+  <% end %>
+</div>
+

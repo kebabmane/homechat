@@ -1,0 +1,17 @@
+@import "trix/dist/trix.css";
+
+/* Hide the default toolbar for a cleaner chat composer */
+trix-toolbar { display: none !important; }
+
+/* Match our input styling */
+trix-editor {
+  min-height: 44px;
+  outline: none;
+}
+
+/* Limit embedded content in messages */
+.trix-content img {
+  max-height: 14rem; /* ~56px*4 */
+  border-radius: .5rem;
+  border: 1px solid #e5e7eb; /* gray-200 */
+}

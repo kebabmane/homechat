@@ -1,0 +1,45 @@
+<div>
+  <h2 class="text-center text-2xl font-extrabold text-gray-900 mb-2">
+    Welcome back
+  </h2>
+  <p class="text-center text-sm text-gray-600 mb-8">
+    Sign in to your HomeChat account
+  </p>
+</div>
+
+<%= form_with url: signin_path, local: true, class: "space-y-6" do |form| %>
+  <div class="bg-white py-8 px-6 shadow-xl rounded-lg">
+    <% if flash[:alert] %>
+      <div class="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+        <%= flash[:alert] %>
+      </div>
+    <% end %>
+
+    <div class="space-y-6">
+      <div>
+        <%= form.label :username, "Username", class: "block text-sm font-medium text-gray-700" %>
+        <div class="mt-1">
+          <%= form.text_field :username, class: "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm", placeholder: "Enter your username", required: true %>
+        </div>
+      </div>
+
+      <div>
+        <%= form.label :password, "Password", class: "block text-sm font-medium text-gray-700" %>
+        <div class="mt-1">
+          <%= form.password_field :password, class: "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm", placeholder: "Enter your password", required: true %>
+        </div>
+      </div>
+
+      <div>
+        <%= form.submit "Sign In", class: "group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out" %>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<div class="text-center mt-6">
+  <p class="text-sm text-gray-600">
+    Don't have an account?
+    <%= link_to "Sign up here", signup_path, class: "font-medium text-blue-600 hover:text-blue-500 transition duration-150 ease-in-out" %>
+  </p>
+</div>
