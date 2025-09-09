@@ -138,4 +138,81 @@ class Api::V1::MessagesController < Api::V1::BaseController
   rescue => e
     Rails.logger.error "Failed to broadcast message: #{e.message}"
   end
+
+  # === New scoped endpoints ===
+  public
+
+  # POST /api/v1/channels/:id/messages
+  def create_for_channel
+    channel = Channel.find(params[:id])
+    user = current_api_user
+    message = channel.messages.build(user: user, content: params.require(:message))
+
+    if message.save
+      broadcast_message(message, channel)
+      render_success({ id: message.id, channel_id: channel.id }, 'Message sent')
+    else
+      render_error(message.errors.full_messages.join(', '))
+    end
+  rescue ActiveRecord::RecordNotFound
+    render_error('Channel not found', :not_found)
+  rescue ActionController::ParameterMissing => e
+    render_error("Missing required parameter: #{e.param}")
+  end
+
+  # POST /api/v1/channels/:id/media
+  def create_media
+    channel = Channel.find(params[:id])
+    user = current_api_user
+    message = channel.messages.build(user: user, content: params[:caption].presence || 'Attachment')
+
+    if params[:files].present?
+      Array(params[:files]).each { |f| message.files.attach(f) }
+    end
+
+    if message.save
+      broadcast_message(message, channel)
+      render_success({ id: message.id, channel_id: channel.id, files: message.files.map(&:filename) }, 'Media uploaded')
+    else
+      render_error(message.errors.full_messages.join(', '))
+    end
+  rescue ActiveRecord::RecordNotFound
+    render_error('Channel not found', :not_found)
+  end
+
+  # POST /api/v1/users/:id/messages
+  def create_dm
+    target = User.find(params[:id])
+    user = current_api_user
+    if target == user
+      render_error('Cannot DM self') and return
+    end
+
+    channel = find_or_create_dm(user, target)
+    message = channel.messages.build(user: user, content: params.require(:message))
+
+    if message.save
+      broadcast_message(message, channel)
+      render_success({ id: message.id, channel_id: channel.id }, 'DM sent')
+    else
+      render_error(message.errors.full_messages.join(', '))
+    end
+  rescue ActiveRecord::RecordNotFound
+    render_error('User not found', :not_found)
+  rescue ActionController::ParameterMissing => e
+    render_error("Missing required parameter: #{e.param}")
+  end
+
+  private
+
+  def find_or_create_dm(a, b)
+    users = [a, b].sort_by(&:id)
+    name = "dm-#{users.first.username}-#{users.last.username}"
+    Channel.dm_channels.find_by(name: name) || begin
+      ch = Channel.create!(name: name, channel_type: 'dm', created_by: a)
+      ch.add_member(a)
+      ch.add_member(b)
+      ch
+    end
+  end
 end

@@ -1,5 +1,5 @@
 <%= render 'admin/header' %>
-<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-12">
 
   <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
     <div class="bg-white border border-gray-200 rounded-lg p-5">
@@ -21,8 +21,9 @@
     </div>
   </div>
 
-  <div class="text-sm text-gray-600">Quick Links:
-    <%= link_to 'Users', admin_users_path, class: 'ml-2 text-blue-600 hover:text-blue-700 underline' %>
-    <%= link_to 'Server Settings', edit_admin_settings_path, class: 'ml-2 text-blue-600 hover:text-blue-700 underline' %>
+  <div class="text-sm text-gray-600 flex items-center space-x-2">
+    <span>Quick Links:</span>
+    <%= link_to 'Users', admin_users_path, class: 'inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200' %>
+    <%= link_to 'Server Settings', edit_admin_settings_path, class: 'inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200' %>
   </div>
 </div>

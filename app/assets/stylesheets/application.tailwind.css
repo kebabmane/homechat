@@ -13,3 +13,30 @@
     @apply text-lg;
   }
 }
+
+/* Lightweight prose styling for chat messages */
+@layer components {
+  .message-body {
+    @apply text-[15px];
+  }
+  .message-body .hc-link {
+    @apply text-blue-600 hover:text-blue-700 underline;
+  }
+  .message-body .hc-mention-link {
+    @apply px-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100;
+  }
+  .message-body pre.hc-code {
+    @apply bg-gray-50 border border-gray-200 rounded-md p-3 overflow-x-auto text-sm my-2;
+  }
+  .message-body code.hc-code-inline {
+    @apply bg-gray-100 rounded px-1 py-0.5 text-[13px];
+  }
+}
+
+/* Dark mode polish for message content */
+@layer components {
+  .dark .message-body .hc-link { @apply text-blue-400 hover:text-blue-300; }
+  .dark .message-body .hc-mention-link { @apply bg-blue-900/30 text-blue-200 hover:bg-blue-900/50; }
+  .dark .message-body pre.hc-code { @apply bg-gray-800 border-gray-700 text-gray-100; }
+  .dark .message-body code.hc-code-inline { @apply bg-gray-800 text-gray-100; }
+}

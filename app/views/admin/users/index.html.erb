@@ -1,5 +1,5 @@
 <%= render 'admin/header' %>
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-6">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-12">
 
   <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
     <table class="min-w-full divide-y divide-gray-200">
@@ -12,7 +12,7 @@
       </thead>
       <tbody class="divide-y divide-gray-200">
         <% @users.each do |user| %>
-          <tr>
+          <tr class="hover:bg-gray-50 transition-colors">
             <td class="px-4 py-3 text-sm text-gray-900"><%= user.username %></td>
             <td class="px-4 py-3 text-sm text-gray-700"><%= user.role %></td>
             <td class="px-4 py-3 text-right">

@@ -5,7 +5,8 @@ class ChannelsController < ApplicationController
 
   def index
     @public_channels = Channel.where(channel_type: 'public').includes(:creator, :channel_memberships)
-    @my_channels = current_user.channels.includes(:creator, :channel_memberships)
+    # Show only channels (public/private) you belong to; exclude DMs from this list
+    @my_channels = current_user.channels.where.not(channel_type: 'dm').includes(:creator, :channel_memberships)
   end
 
   def show

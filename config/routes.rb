@@ -70,6 +70,8 @@ Rails.application.routes.draw do
   end
 
   resources :dms, only: [:new, :create]
+  # Quick-start a DM with a username
+  get "/dm/:username", to: "dms#start", as: :start_dm
 
   # API routes for Home Assistant integration
   namespace :api do
@@ -80,6 +82,15 @@ Rails.application.routes.draw do
       # Message endpoints
       post :messages, to: 'messages#create'
       get :messages, to: 'messages#index'
+      # Channel-scoped API
+      resources :channels, only: [:index] do
+        member do
+          post :messages, to: 'messages#create_for_channel'
+          post :media, to: 'messages#create_media'
+        end
+      end
+      # DM endpoint
+      post 'users/:id/messages', to: 'messages#create_dm', as: :user_messages
       
       # Bot management endpoints
       resources :bots, only: [:create, :show, :index, :update, :destroy] do

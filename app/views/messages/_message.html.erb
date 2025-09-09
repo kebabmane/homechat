@@ -13,12 +13,13 @@
         <%= message.created_at.strftime('%I:%M %p') %>
       </span>
     </div>
-    <div class="text-gray-800 leading-relaxed whitespace-pre-wrap"><%= message.content %></div>
+    <div class="message-body text-gray-800 leading-relaxed"><%= render_message_body(message.content).html_safe %></div>
+    <%= render_link_previews(message) %>
     <% if message.files.attached? %>
       <div class="mt-2 space-y-2">
         <% message.files.each do |file| %>
           <% if file.image? %>
-            <%= image_tag file, class: "max-h-56 rounded-lg border border-gray-200" %>
+            <%= image_tag file, class: "max-h-56 rounded-lg border border-gray-200 cursor-zoom-in", data: { controller: 'lightbox', action: 'click->lightbox#open' } %>
           <% else %>
             <%= link_to file.filename, url_for(file), class: "text-sm text-blue-600 hover:text-blue-700 underline" %>
           <% end %>

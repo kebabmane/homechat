@@ -1,5 +1,5 @@
 <%= render 'admin/header' %>
-<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-12">
 
   <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
     <table class="min-w-full divide-y divide-gray-200">
@@ -14,7 +14,7 @@
       </thead>
       <tbody class="divide-y divide-gray-200">
         <% @bots.each do |bot| %>
-          <tr>
+          <tr class="hover:bg-gray-50 transition-colors">
             <td class="px-4 py-3 text-sm text-gray-900"><%= bot.name %></td>
             <td class="px-4 py-3 text-sm text-gray-700"><%= bot.bot_type %></td>
             <td class="px-4 py-3 text-sm text-gray-700"><%= bot.webhook_id.presence || '-' %></td>

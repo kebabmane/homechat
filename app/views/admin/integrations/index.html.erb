@@ -1,7 +1,7 @@
 <% content_for :title, "Integrations" %>
 
 <%= render 'admin/header' %>
-<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-12">
   <div class="mb-6">
     <p class="text-gray-600 dark:text-gray-300">
       Manage API tokens and integration settings for external services like Home Assistant.
@@ -122,15 +122,15 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                   <% if token.active? %>
-                    <%= link_to "Regenerate", admin_integration_regenerate_token_path(token), 
+                    <%= link_to "Regenerate", regenerate_token_admin_integration_path(token), 
                         method: :patch, 
                         data: { confirm: "Are you sure? This will invalidate the current token." },
                         class: "text-blue-600 hover:text-blue-900 dark:text-blue-400" %>
-                    <%= link_to "Deactivate", admin_integration_deactivate_token_path(token), 
+                    <%= link_to "Deactivate", deactivate_token_admin_integration_path(token), 
                         method: :patch,
                         class: "text-red-600 hover:text-red-900 dark:text-red-400" %>
                   <% else %>
-                    <%= link_to "Activate", admin_integration_activate_token_path(token), 
+                    <%= link_to "Activate", activate_token_admin_integration_path(token), 
                         method: :patch,
                         class: "text-green-600 hover:text-green-900 dark:text-green-400" %>
                   <% end %>

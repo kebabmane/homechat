@@ -72,14 +72,14 @@
         </div>
 
         <div class="space-y-1">
-          <% @sidebar_my_channels.select{ |c| c.channel_type == 'dm' }.each do |channel| %>
+          <% @sidebar_dm_channels.each do |channel| %>
             <%= link_to channel_path(channel),
                 class: "flex items-center mx-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-white/10 rounded-md transition-colors group #{'bg-white/10 text-white' if request.path == channel_path(channel)}" do %>
               <span class="text-gray-400 mr-2 text-lg">@</span>
               <span class="flex-1 truncate"><%= channel.name.sub(/^dm-/, '').gsub('-', ' & ') %></span>
             <% end %>
           <% end %>
-          <% if @sidebar_my_channels.none? { |c| c.channel_type == 'dm' } %>
+          <% if @sidebar_dm_channels.blank? %>
             <div class="text-xs text-gray-300 px-4 py-2">No direct messages</div>
           <% end %>
         </div>

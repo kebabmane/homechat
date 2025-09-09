@@ -18,9 +18,6 @@ class MessagesController < ApplicationController
     @message.user = current_user
 
     if @message.save
-      if params[:message][:files]
-        @message.files.attach(params[:message][:files])
-      end
       redirect_to @channel, notice: 'Message sent successfully.'
     else
       @messages = @channel.messages.includes(:user).recent.limit(50)
