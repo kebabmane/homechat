@@ -128,7 +128,7 @@ bin/kamal deploy   # Deploy updates
 - ✅ **Environment management** (staging/production)
 - ✅ **One-command deployments** and rollbacks
 
-See [`KAMAL_DEPLOYMENT.md`](../KAMAL_DEPLOYMENT.md) for detailed cloud deployment guide.
+See [`KAMAL_DEPLOYMENT.md`](KAMAL_DEPLOYMENT.md) for detailed cloud deployment guide.
 
 ### Option 4: Full Smart Home Integration (HA + Automation)
 Add the Home Assistant integration for automation features:
