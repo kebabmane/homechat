@@ -1,0 +1,66 @@
+---
+# Brakeman configuration file for HomeChat Rails app
+# This configuration enhances security scanning coverage
+
+# Application path (default: current directory)
+app_path: .
+
+# Output format: json, html, csv, tabs, text, sarif
+output_format: text
+
+# Check all files
+check_all: true
+
+# Check for security vulnerabilities in gems
+check_dependencies: true
+
+# Check arguments passed to methods that may result in security issues
+check_arguments: true
+
+# Exit with error code on warnings
+exit_on_warn: true
+
+# Exit with error code on errors  
+exit_on_error: true
+
+# Minimum confidence level (High, Medium, Weak)
+# Only report issues with this confidence level or higher
+min_confidence: 2
+
+# Quiet mode - suppress some non-essential warnings
+quiet: false
+
+# Additional checks to enable
+enable_checks:
+  - CheckCrossSiteScripting
+  - CheckSQLInjection
+  - CheckCommandInjection
+  - CheckFileAccess
+  - CheckMassAssignment
+  - CheckRedirect
+  - CheckRender
+  - CheckResponseSplitting
+  - CheckSkipBeforeFilter
+  - CheckSessionSettings
+  - CheckCookieSettings
+  - CheckHeaderDoS
+  - CheckContentTag
+  - CheckJSONParsing
+  - CheckYAMLLoad
+  - CheckEscapeFunction
+
+# Ignore certain files/paths
+ignore_paths:
+  - tmp/
+  - log/
+  - vendor/bundle/
+  - node_modules/
+
+# Skip certain checks if needed (none skipped by default for security)
+skip_checks: []
+
+# Print report even when no warnings found
+print_report: true
+
+# Parallel processing for faster scans
+parallel_checks: true
