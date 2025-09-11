@@ -33,8 +33,8 @@ quiet: false
 # Additional checks to enable
 enable_checks:
   - CheckCrossSiteScripting
-  - CheckSQLInjection
-  - CheckCommandInjection
+  - CheckSQL
+  - CheckExecute
   - CheckFileAccess
   - CheckMassAssignment
   - CheckRedirect
@@ -42,11 +42,11 @@ enable_checks:
   - CheckResponseSplitting
   - CheckSkipBeforeFilter
   - CheckSessionSettings
-  - CheckCookieSettings
+  - CheckCookieSerialization
   - CheckHeaderDoS
   - CheckContentTag
   - CheckJSONParsing
-  - CheckYAMLLoad
+  - CheckYAMLParsing
   - CheckEscapeFunction
 
 # Ignore certain files/paths

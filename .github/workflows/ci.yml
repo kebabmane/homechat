@@ -57,7 +57,7 @@ jobs:
         run: bin/rubocop -f github --fail-level error
 
       - name: Lint ERB templates
-        run: bundle exec erblint --lint-all
+        run: bundle exec erb_lint --lint-all
 
   test:
     runs-on: ubuntu-latest
