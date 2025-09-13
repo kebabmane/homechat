@@ -1,0 +1,39 @@
+# Hadolint configuration for Dockerfile linting
+# Hadolint is a Dockerfile linter that helps build best practice Docker images
+
+# Trusted registries
+trusted-registries:
+  - docker.io
+  - gcr.io
+  - registry.gitlab.com
+
+# Rules to ignore (if any specific ones conflict with Rails conventions)
+ignored:
+  # Ignore pinning package versions in apt-get (common in Rails apps)
+  # - DL3008  
+  
+  # Ignore switching users (we do this for security)
+  # - DL3002
+
+# Rules that should cause warnings instead of errors
+warning:
+  - DL3008  # Pin versions in apt-get install
+  - DL3009  # Delete apt-get cache
+  - DL4006  # Set SHELL option
+
+# Rules that should cause errors (these are security/best practice critical)
+error:
+  - DL3001  # For some bash commands it makes no sense running them in Docker
+  - DL3002  # Last user should not be root
+  - DL3003  # Use WORKDIR to switch to a directory
+  - DL3004  # Do not use sudo
+  - DL3007  # Using latest is prone to errors
+  - DL3020  # Use COPY instead of ADD for files and folders
+  - DL3025  # Use arguments JSON notation for CMD and ENTRYPOINT
+
+# Override specific rules for certain instructions
+override:
+  # Allow certain patterns that are Rails-specific
+  error: []
+  warning: []
+  info: []

@@ -1,0 +1,134 @@
+#!/usr/bin/env ruby
+
+# Comprehensive security and quality scanning script for HomeChat
+require 'optparse'
+require 'fileutils'
+
+class ScanRunner
+  SCANS = {
+    'security' => 'Run all security scans',
+    'quality' => 'Run all code quality scans', 
+    'all' => 'Run all scans',
+    'brakeman' => 'Rails security vulnerabilities',
+    'bundle-audit' => 'Ruby gem vulnerabilities',
+    'importmap' => 'JavaScript dependency audit',
+    'rubocop' => 'Ruby code style and quality',
+    'erb-lint' => 'ERB template linting',
+    'reek' => 'Code smell detection',
+    'flog' => 'Code complexity analysis',
+    'flay' => 'Code duplication detection',
+    'coverage' => 'Test coverage report'
+  }.freeze
+
+  def initialize
+    @options = { verbose: false, format: 'text' }
+    @failed_scans = []
+  end
+
+  def run(args)
+    parse_options(args)
+    
+    scans_to_run = determine_scans(args)
+    
+    if scans_to_run.empty?
+      puts "Usage: bin/scan [scan_type] [options]"
+      puts "\nAvailable scans:"
+      SCANS.each { |name, desc| puts "  #{name.ljust(15)} - #{desc}" }
+      puts "\nOptions:"
+      puts "  -v, --verbose    Verbose output"
+      puts "  -f, --format     Output format (text, json, html)"
+      puts "  -h, --help       Show this help"
+      exit 1
+    end
+
+    puts "🔍 Running scans: #{scans_to_run.join(', ')}" if @options[:verbose]
+    
+    scans_to_run.each do |scan|
+      run_scan(scan)
+    end
+
+    print_summary
+    exit(@failed_scans.empty? ? 0 : 1)
+  end
+
+  private
+
+  def parse_options(args)
+    OptionParser.new do |opts|
+      opts.on('-v', '--verbose', 'Verbose output') { @options[:verbose] = true }
+      opts.on('-f', '--format FORMAT', 'Output format') { |f| @options[:format] = f }
+      opts.on('-h', '--help', 'Show help') { puts opts; exit }
+    end.parse!(args)
+  end
+
+  def determine_scans(args)
+    scan_arg = args.first
+    
+    case scan_arg
+    when 'all'
+      %w[brakeman bundle-audit importmap rubocop erb-lint reek flog flay]
+    when 'security'
+      %w[brakeman bundle-audit importmap]
+    when 'quality'
+      %w[rubocop erb-lint reek flog flay]
+    when nil
+      %w[brakeman bundle-audit rubocop]  # Default essential scans
+    else
+      [scan_arg].select { |s| SCANS.key?(s) }
+    end
+  end
+
+  def run_scan(scan)
+    puts "\n🔍 Running #{scan}..." if @options[:verbose]
+    
+    success = case scan
+    when 'brakeman'
+      system('bin/brakeman --no-pager --config-file config/brakeman.yml')
+    when 'bundle-audit'
+      system('bundle exec bundle-audit check --update')
+    when 'importmap'
+      system('bin/importmap audit')
+    when 'rubocop'
+      format_flag = @options[:format] == 'json' ? '--format json' : ''
+      system("bin/rubocop #{format_flag}")
+    when 'erb-lint'
+      system('bundle exec erb_lint --lint-all')
+    when 'reek'
+      format_flag = @options[:format] == 'json' ? '--format json' : ''
+      system("bundle exec reek #{format_flag}")
+    when 'flog'
+      system('bundle exec flog --all --continue app/ lib/')
+    when 'flay'
+      system('bundle exec flay app/ lib/')
+    when 'coverage'
+      puts "Run tests with COVERAGE=1 to generate coverage report"
+      system('COVERAGE=1 bin/rails test')
+    else
+      puts "❌ Unknown scan: #{scan}"
+      false
+    end
+
+    if success
+      puts "✅ #{scan} passed" if @options[:verbose]
+    else
+      puts "❌ #{scan} failed"
+      @failed_scans << scan
+    end
+  end
+
+  def print_summary
+    puts "\n" + "="*50
+    puts "📊 SCAN SUMMARY"
+    puts "="*50
+    
+    if @failed_scans.empty?
+      puts "✅ All scans passed!"
+    else
+      puts "❌ Failed scans: #{@failed_scans.join(', ')}"
+      puts "\nRerun failed scans with:"
+      @failed_scans.each { |scan| puts "  bin/scan #{scan}" }
+    end
+  end
+end
+
+ScanRunner.new.run(ARGV) if __FILE__ == $PROGRAM_NAME

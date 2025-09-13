@@ -1,0 +1,69 @@
+# Gitleaks configuration for HomeChat
+# This file configures secret detection patterns
+
+title = "HomeChat Security Scanning"
+
+[extend]
+# Use the default gitleaks configuration as a base
+useDefault = true
+
+[[rules]]
+description = "Rails Master Key"
+id = "rails-master-key"
+regex = '''[a-f0-9]{64}'''
+path = '''config/master\.key'''
+
+[[rules]]
+description = "Rails Credentials"
+id = "rails-credentials"
+regex = '''[a-zA-Z0-9+/]{20,}={0,2}'''
+path = '''config/credentials\.yml\.enc'''
+
+[[rules]]
+description = "Database Password"
+id = "database-password"
+regex = '''password:\s*['"]?[^\s'"]+['"]?'''
+path = '''config/database\.yml'''
+
+[[rules]]
+description = "Environment Variables"
+id = "env-vars"
+regex = '''(?i)(api_key|secret|token|password)\s*[:=]\s*['"][^'"]+['"]'''
+path = '''\.env.*'''
+
+[[rules]]
+description = "AWS Access Key"
+id = "aws-access-key"
+regex = '''AKIA[0-9A-Z]{16}'''
+
+[[rules]]
+description = "AWS Secret Key"  
+id = "aws-secret-key"
+regex = '''[0-9a-zA-Z/+]{40}'''
+
+# Allowlist certain files/patterns
+[[rules.allowlist]]
+description = "Test files with dummy secrets"
+paths = [
+  '''test/.*''',
+  '''spec/.*''',
+  '''fixtures/.*'''
+]
+
+[[rules.allowlist]]
+description = "Documentation files"
+paths = [
+  '''README.*''',
+  '''.*\.md''',
+  '''docs/.*'''
+]
+
+[[rules.allowlist]]
+description = "Configuration templates"
+regexes = [
+  '''CHANGEME''',
+  '''REPLACEME''',
+  '''YOUR_.*_HERE''',
+  '''example''',
+  '''sample'''
+]

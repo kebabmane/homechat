@@ -59,6 +59,27 @@ jobs:
       - name: Lint ERB templates
         run: bundle exec erb_lint --lint-all
 
+  code_quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Check code smells (Reek)
+        run: bin/reek --failure-exit-code=0  # Don't fail build on code smells
+
+      - name: Analyze code complexity (Flog)
+        run: bundle exec flog --all --continue app/ lib/ || true
+
+      - name: Check code duplication (Flay)
+        run: bundle exec flay app/ lib/ || true
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -76,3 +97,13 @@ jobs:
 
       - name: Run tests
         run: bin/rails test
+
+      - name: Run tests with coverage
+        run: COVERAGE=1 bin/rails test
+        
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/

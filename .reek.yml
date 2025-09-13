@@ -1,0 +1,88 @@
+---
+# Reek configuration for HomeChat Rails application
+# This configuration balances code quality with Rails conventions
+
+detectors:
+  # Disable some Rails-specific detectors that conflict with conventions
+  IrresponsibleModule:
+    enabled: false
+  
+  TooManyInstanceVariables:
+    enabled: true
+    max_instance_variables: 6
+    exclude:
+      - "ApplicationController" # Controllers often need many instance variables
+      
+  TooManyMethods:
+    enabled: true  
+    max_methods: 20
+    exclude:
+      - "ApplicationController"
+      - "ApplicationRecord"
+      
+  LongParameterList:
+    enabled: true
+    max_params: 4
+    overrides:
+      initialize:
+        max_params: 6
+        
+  DataClump:
+    enabled: true
+    max_copies: 3
+    min_clump_size: 3
+    
+  FeatureEnvy:
+    enabled: true
+    
+  UtilityFunction:
+    enabled: true
+    exclude:
+      - "ApplicationHelper" # Helpers are utility functions by nature
+      - "*Helper"
+      
+  NestedIterators:
+    enabled: true
+    max_allowed_nesting: 2
+    ignore_iterators:
+      - tap
+      
+  RepeatedConditional:
+    enabled: true
+    max_ifs: 3
+    
+  TooManyStatements:
+    enabled: true
+    max_statements: 8
+    exclude:
+      - "initialize" # Initialization can be complex
+      
+  DuplicateMethodCall:
+    enabled: true
+    max_calls: 2
+    allow_calls:
+      - params
+      - request
+      - session
+      - current_user
+      - logger
+      
+  LongMethod:
+    enabled: true
+    max_statements: 10
+    exclude:
+      - "initialize"
+
+# Exclude certain directories and files from analysis      
+exclude_paths:
+  - vendor/
+  - db/migrate/
+  - db/schema.rb  
+  - config/
+  - bin/
+  - test/
+  - spec/
+  - tmp/
+  - log/
+  - node_modules/
+  - public/

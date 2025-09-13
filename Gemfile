@@ -57,6 +57,18 @@ group :development, :test do
   
   # ERB template linting [https://github.com/Shopify/erb-lint]
   gem "erb_lint", require: false
+  
+  # Code smell detection [https://github.com/troessner/reek]
+  gem "reek", require: false
+  
+  # Test coverage reporting [https://github.com/simplecov-ruby/simplecov]
+  gem "simplecov", require: false
+  
+  # Code complexity analysis [https://github.com/seattlerb/flog]
+  gem "flog", require: false
+  
+  # Code duplication detection [https://github.com/seattlerb/flay] 
+  gem "flay", require: false
 end
 
 group :test do
