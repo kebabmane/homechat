@@ -83,24 +83,65 @@ class Api::V1::MessagesController < Api::V1::BaseController
   private
   
   def find_or_create_channel(room_id)
+    Rails.logger.info "Finding/creating channel for room_id: #{room_id}"
+    Rails.logger.info "Current API user: #{current_api_user&.username} (ID: #{current_api_user&.id})"
+
     if room_id.present?
-      # Try to find existing channel by name or create new one
-      Channel.find_by(name: room_id) || Channel.create!(
+      # Try to find existing channel by name first
+      channel = Channel.find_by(name: room_id)
+      if channel
+        Rails.logger.info "Found existing channel: #{channel.name} (ID: #{channel.id})"
+        return channel
+      end
+
+      # Create new channel
+      api_user = current_api_user
+      unless api_user
+        Rails.logger.error "No API user available for channel creation"
+        raise "System user not available"
+      end
+
+      channel = Channel.create!(
         name: room_id,
         description: "Auto-created channel for Home Assistant integration",
         channel_type: 'public',
-        created_by: current_api_user
+        created_by: api_user
       )
+
+      Rails.logger.info "Created new channel: #{channel.name} (ID: #{channel.id})"
+      channel
     else
-      # Use default general channel or create it
-      Channel.find_by(name: 'general') || Channel.find_by(name: 'home-assistant') || 
-      Channel.create!(
+      # Use default channels in order of preference
+      channel = Channel.find_by(name: 'home') ||
+                Channel.find_by(name: 'general') ||
+                Channel.find_by(name: 'home-assistant')
+
+      if channel
+        Rails.logger.info "Using default channel: #{channel.name} (ID: #{channel.id})"
+        return channel
+      end
+
+      # Create home-assistant channel if no defaults exist
+      api_user = current_api_user
+      unless api_user
+        Rails.logger.error "No API user available for default channel creation"
+        raise "System user not available"
+      end
+
+      channel = Channel.create!(
         name: 'home-assistant',
         description: 'Home Assistant notifications and messages',
         channel_type: 'public',
-        created_by: current_api_user
+        created_by: api_user
       )
+
+      Rails.logger.info "Created default home-assistant channel: #{channel.name} (ID: #{channel.id})"
+      channel
     end
+  rescue => e
+    Rails.logger.error "Failed to find/create channel: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    raise
   end
   
   def format_message_content(message, title, sender)

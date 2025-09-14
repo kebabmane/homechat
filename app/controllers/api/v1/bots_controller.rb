@@ -34,11 +34,15 @@ class Api::V1::BotsController < Api::V1::BaseController
   end
   
   def create
+    Rails.logger.info "Bot creation params: #{params.inspect}"
+
     bot = Bot.new(bot_params)
-    bot.webhook_id = params[:webhook_id] if params[:webhook_id].present?
-    bot.bot_type = params[:type] || 'webhook'
+    bot.webhook_id = params[:webhook_id] || bot_params[:webhook_id]
+    bot.bot_type = params[:type] || bot_params[:bot_type] || 'webhook'
     bot.active = true
-    
+
+    Rails.logger.info "Bot attributes before save: #{bot.attributes}"
+
     if bot.save
       render_success({
         bot: {
@@ -51,6 +55,7 @@ class Api::V1::BotsController < Api::V1::BaseController
         }
       }, 'Bot created successfully')
     else
+      Rails.logger.error "Bot creation failed: #{bot.errors.full_messages}"
       render_error("Failed to create bot: #{bot.errors.full_messages.join(', ')}")
     end
   end
@@ -107,6 +112,11 @@ class Api::V1::BotsController < Api::V1::BaseController
   end
   
   def bot_params
-    params.permit(:name, :description, :active)
+    # Handle both nested bot params and direct params
+    if params[:bot].present?
+      params.require(:bot).permit(:name, :description, :webhook_id, :bot_type, :active)
+    else
+      params.permit(:name, :description, :webhook_id, :bot_type, :active)
+    end
   end
 end

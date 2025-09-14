@@ -39,13 +39,15 @@ class Api::V1::BaseController < ApplicationController
   end
   
   def create_system_user
+    password = SecureRandom.hex(16)
     User.create!(
       username: 'system',
-      password: SecureRandom.hex(16),
-      password_confirmation: 'ignored',
+      password: password,
+      password_confirmation: password,
       role: 'user'
     )
-  rescue ActiveRecord::RecordInvalid
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.warn "Failed to create system user: #{e.message}"
     User.find_by(username: 'system')
   end
   
