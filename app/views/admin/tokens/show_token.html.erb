@@ -1,0 +1,58 @@
+<%= turbo_frame_tag "token_modal" do %>
+  <!-- Token Display Modal -->
+  <div id="tokenModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Token Created</h3>
+        <%= link_to admin_tokens_path, data: { turbo_frame: "_top" }, class: "text-gray-400 hover:text-gray-600" do %>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        <% end %>
+      </div>
+
+      <div class="mb-4">
+        <p class="text-sm text-gray-600 mb-2">Token for "<%= @token.name %>":</p>
+        <div class="bg-gray-50 border rounded p-3 break-all">
+          <code id="tokenValue" class="text-sm"><%= @token.token %></code>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <p class="text-sm text-red-600 font-medium">⚠️ Important: This token will only be shown once. Copy it now!</p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button
+          onclick="copyToken()"
+          class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
+        >
+          Copy Token
+        </button>
+        <%= link_to "Done", admin_tokens_path, data: { turbo_frame: "_top" }, class: "px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-center" %>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function copyToken() {
+      const tokenValue = document.getElementById('tokenValue').textContent;
+      navigator.clipboard.writeText(tokenValue).then(function() {
+        // Update button text temporarily
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        button.classList.add('bg-green-600');
+
+        setTimeout(function() {
+          button.textContent = originalText;
+          button.classList.remove('bg-green-600');
+          button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+        }, 2000);
+      }).catch(function(err) {
+        alert('Failed to copy token. Please copy it manually.');
+      });
+    }
+  </script>
+<% end %>
