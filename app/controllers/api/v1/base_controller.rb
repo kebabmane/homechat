@@ -7,9 +7,12 @@ class Api::V1::BaseController < ApplicationController
   
   def authenticate_api_request
     token = request.headers['Authorization']&.gsub(/^Bearer /, '')
-    
+
+    Rails.logger.info "API Authentication attempt - Token present: #{!token.blank?}, Token prefix: #{token&.first(8)}..."
+
     unless token && valid_api_token?(token)
-      render json: { error: 'Unauthorized' }, status: :unauthorized
+      Rails.logger.warn "API Authentication failed - Token: #{token ? 'present but invalid' : 'missing'}"
+      render json: { error: 'Unauthorized - Invalid or missing API token' }, status: :unauthorized
     end
   end
   
