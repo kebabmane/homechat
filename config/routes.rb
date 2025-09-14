@@ -40,6 +40,7 @@ Rails.application.routes.draw do
   resource :settings, only: [:edit, :update]
   namespace :admin do
     get '/', to: 'dashboard#index', as: :dashboard
+    get '/credentials', to: 'dashboard#admin_credentials', as: :credentials
     resource :settings, only: [:edit, :update]
     resources :users, only: [:index, :update]
     resources :integrations, only: [:index] do
