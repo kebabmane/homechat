@@ -6,13 +6,26 @@ class Api::V1::BaseController < ApplicationController
   private
   
   def authenticate_api_request
-    token = request.headers['Authorization']&.gsub(/^Bearer /, '')
+    # Log all headers for debugging
+    auth_header = request.headers['Authorization']
+    x_api_key = request.headers['X-API-Key']
 
-    Rails.logger.info "API Authentication attempt - Token present: #{!token.blank?}, Token prefix: #{token&.first(8)}..."
+    Rails.logger.info "=== API Authentication Debug ==="
+    Rails.logger.info "All headers: #{request.headers.to_h.select { |k, v| k.start_with?('HTTP_') || k.include?('AUTH') || k.include?('API') }}"
+    Rails.logger.info "Authorization header: #{auth_header}"
+    Rails.logger.info "X-API-Key header: #{x_api_key}"
+
+    # Try both Authorization header and X-API-Key header
+    token = auth_header&.gsub(/^Bearer /, '') || x_api_key
+
+    Rails.logger.info "Extracted token present: #{!token.blank?}, Token prefix: #{token&.first(8)}..."
 
     unless token && valid_api_token?(token)
       Rails.logger.warn "API Authentication failed - Token: #{token ? 'present but invalid' : 'missing'}"
+      Rails.logger.warn "Valid tokens available: #{ApiToken.active.count}"
       render json: { error: 'Unauthorized - Invalid or missing API token' }, status: :unauthorized
+    else
+      Rails.logger.info "API Authentication successful!"
     end
   end
   
