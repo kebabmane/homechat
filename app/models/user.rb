@@ -1,15 +1,18 @@
 class User < ApplicationRecord
   has_secure_password
   has_one_attached :avatar
-  
+
   validates :username, presence: true, uniqueness: true, length: { minimum: 3, maximum: 50 }
   validates :role, inclusion: { in: %w[user admin] }
-  
+
   # Associations
   has_many :messages, dependent: :destroy
   has_many :created_channels, class_name: 'Channel', foreign_key: 'created_by_id', dependent: :destroy
   has_many :channel_memberships, dependent: :destroy
   has_many :channels, through: :channel_memberships
+
+  # Callbacks
+  after_create :join_default_channels
   
   def admin?
     role == 'admin'
@@ -27,5 +30,15 @@ class User < ApplicationRecord
     return true if channel.public?
     return true if channel.created_by == self
     member_of?(channel)
+  end
+
+  private
+
+  def join_default_channels
+    # Join the default "home" channel if it exists
+    home_channel = Channel.find_by(name: 'home', channel_type: 'public')
+    if home_channel && !member_of?(home_channel)
+      home_channel.add_member(self)
+    end
   end
 end
