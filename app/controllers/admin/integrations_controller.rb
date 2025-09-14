@@ -12,16 +12,16 @@ class Admin::IntegrationsController < ApplicationController
   end
   
   def create_token
-    @api_token = ApiToken.generate_for_integration(params[:name] || "Home Assistant")
-    redirect_to admin_integrations_path, notice: "API token created successfully"
+    @token = ApiToken.generate_for_integration(params[:name] || "Home Assistant")
+    render :show_token
   rescue ActiveRecord::RecordInvalid => e
     redirect_to admin_integrations_path, alert: "Failed to create token: #{e.record.errors.full_messages.join(', ')}"
   end
-  
+
   def regenerate_token
-    @api_token = ApiToken.find(params[:id])
-    @api_token.regenerate!
-    redirect_to admin_integrations_path, notice: "API token regenerated successfully"
+    @token = ApiToken.find(params[:id])
+    @token.regenerate!
+    render :show_token
   rescue ActiveRecord::RecordNotFound
     redirect_to admin_integrations_path, alert: "Token not found"
   end

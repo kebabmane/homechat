@@ -35,22 +35,3 @@ if User.count == 0
 
   Rails.logger.info "Admin user created: #{admin_username}"
 end
-
-# Create default "home" channel if it doesn't exist
-home_channel = Channel.find_by(name: 'home')
-unless home_channel
-  admin_user = User.find_by(username: 'admin') || User.first
-
-  home_channel = Channel.create!(
-    name: 'home',
-    description: 'Default home channel for all users',
-    channel_type: 'public',
-    created_by: admin_user
-  )
-
-  # Add the admin user to the home channel
-  home_channel.add_member(admin_user) if admin_user
-
-  puts "🏠 Default 'home' channel created successfully!"
-  Rails.logger.info "Default home channel created"
-end

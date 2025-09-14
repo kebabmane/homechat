@@ -35,8 +35,19 @@ class User < ApplicationRecord
   private
 
   def join_default_channels
-    # Join the default "home" channel if it exists
+    # Create home channel if it doesn't exist and this is the first user
     home_channel = Channel.find_by(name: 'home', channel_type: 'public')
+    unless home_channel
+      home_channel = Channel.create!(
+        name: 'home',
+        description: 'Default home channel for all users',
+        channel_type: 'public',
+        created_by: self
+      )
+      Rails.logger.info "✅ Default 'home' channel created by first user: #{username}"
+    end
+
+    # Join the home channel if not already a member
     if home_channel && !member_of?(home_channel)
       home_channel.add_member(self)
     end

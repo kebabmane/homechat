@@ -35,6 +35,11 @@ class ApiToken < ApplicationRecord
     return nil if token.blank?
     "#{token[0..7]}#{'*' * (token.length - 12)}#{token[-4..-1]}"
   end
+
+  def short_token
+    return nil if token.blank?
+    "...#{token[-4..-1]}"
+  end
   
   private
   

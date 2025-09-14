@@ -2,10 +2,10 @@
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-12">
 
   <div class="bg-white rounded-lg border border-gray-200 p-5 mb-6">
-    <%= form_with url: admin_tokens_path, method: :post, local: true, class: "flex items-end space-x-3" do |f| %>
+    <%= form_with model: [@new_token], url: admin_tokens_path, method: :post, data: { turbo_frame: "token_modal" }, class: "flex items-end space-x-3" do |f| %>
       <div>
         <label class="block text-sm font-medium text-gray-700">Name</label>
-        <input type="text" name="api_token[name]" class="mt-1 block w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Home Assistant" required>
+        <%= f.text_field :name, class: "mt-1 block w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500", placeholder: "Home Assistant", required: true %>
       </div>
       <div>
         <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">Create Token</button>
@@ -14,14 +14,15 @@
   </div>
 
   <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-    <table class="min-w-full divide-y divide-gray-200">
+    <div class="overflow-x-auto">
+      <table class="w-full divide-y divide-gray-200" style="min-width: 900px;">
       <thead class="bg-gray-50">
         <tr>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Name</th>
           <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Token</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Used</th>
-          <th class="px-4 py-3"></th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Status</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Last Used</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80">Actions</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-200">
@@ -29,10 +30,7 @@
           <tr class="hover:bg-gray-50 transition-colors">
             <td class="px-4 py-3 text-sm text-gray-900"><%= t.name %></td>
             <td class="px-4 py-3 text-sm text-gray-700">
-              <code><%= t.masked_token || '-' %></code>
-              <% if t.token.present? %>
-                <button type="button" class="ml-2 text-blue-600 hover:text-blue-700 text-xs underline" onclick="navigator.clipboard.writeText('<%= t.token %>')">Copy</button>
-              <% end %>
+              <code><%= t.short_token || '-' %></code>
             </td>
             <td class="px-4 py-3 text-sm">
               <% if t.active? %>
@@ -42,18 +40,23 @@
               <% end %>
             </td>
             <td class="px-4 py-3 text-sm text-gray-700"><%= t.last_used_at&.strftime('%Y-%m-%d %H:%M') || '—' %></td>
-            <td class="px-4 py-3 text-right space-x-2">
-              <%= button_to "Regenerate", regenerate_admin_token_path(t), method: :post, class: "text-sm px-3 py-1.5 rounded-md bg-yellow-500 text-white hover:bg-yellow-600" %>
-              <% if t.active? %>
-                <%= button_to "Deactivate", deactivate_admin_token_path(t), method: :post, class: "text-sm px-3 py-1.5 rounded-md bg-gray-600 text-white hover:bg-gray-700" %>
-              <% else %>
-                <%= button_to "Activate", activate_admin_token_path(t), method: :post, class: "text-sm px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700" %>
-              <% end %>
-              <%= button_to "Delete", admin_token_path(t), method: :delete, data: { turbo_confirm: "Delete token '#{t.name}'?" }, class: "text-sm px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700" %>
+            <td class="px-4 py-3 text-right">
+              <div class="flex justify-end gap-2">
+                <%= button_to "Regenerate", regenerate_admin_token_path(t), method: :post, data: { turbo_frame: "token_modal" }, class: "text-sm px-3 py-1.5 rounded-md bg-yellow-500 text-white hover:bg-yellow-600 whitespace-nowrap" %>
+                <% if t.active? %>
+                  <%= button_to "Deactivate", deactivate_admin_token_path(t), method: :post, class: "text-sm px-3 py-1.5 rounded-md bg-gray-600 text-white hover:bg-gray-700 whitespace-nowrap" %>
+                <% else %>
+                  <%= button_to "Activate", activate_admin_token_path(t), method: :post, class: "text-sm px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap" %>
+                <% end %>
+                <%= button_to "Delete", admin_token_path(t), method: :delete, data: { turbo_confirm: "Delete token '#{t.name}'?" }, class: "text-sm px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 whitespace-nowrap" %>
+              </div>
             </td>
           </tr>
         <% end %>
       </tbody>
-    </table>
+      </table>
+    </div>
   </div>
 </div>
+
+<%= turbo_frame_tag "token_modal" %>

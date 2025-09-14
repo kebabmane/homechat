@@ -9,15 +9,22 @@ module Admin
     end
 
     def create
-      token = ApiToken.create!(name: params[:api_token][:name], active: true)
-      redirect_to admin_tokens_path, notice: "Token created: #{token.masked_token}"
-    rescue ActiveRecord::RecordInvalid => e
-      redirect_to admin_tokens_path, alert: e.record.errors.full_messages.to_sentence
+      @token = ApiToken.new(token_params.merge(active: true))
+
+      if @token.save
+        # Return the modal content with the token
+        render :show_token
+      else
+        @tokens = ApiToken.order(:name)
+        @new_token = @token
+        flash.now[:alert] = @token.errors.full_messages.to_sentence
+        render :index
+      end
     end
 
     def regenerate
       @token.regenerate!
-      redirect_to admin_tokens_path, notice: "Token regenerated: #{@token.masked_token}"
+      render :show_token
     end
 
     def activate
@@ -42,6 +49,10 @@ module Admin
       @token = ApiToken.find(params[:id])
     rescue ActiveRecord::RecordNotFound
       redirect_to admin_tokens_path, alert: 'Token not found.'
+    end
+
+    def token_params
+      params.require(:api_token).permit(:name)
     end
   end
 end
