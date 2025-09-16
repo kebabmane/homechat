@@ -27,7 +27,7 @@ class ApiToken < ApplicationRecord
   end
   
   def regenerate!
-    generate_token
+    self.token = SecureRandom.hex(32)
     save!
   end
   

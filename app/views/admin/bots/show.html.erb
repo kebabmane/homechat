@@ -1,0 +1,146 @@
+<%= render 'admin/header' %>
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-12">
+  <div class="mb-6">
+    <%= link_to admin_bots_path, class: "text-blue-600 hover:text-blue-800 flex items-center" do %>
+      ← Back to Bots
+    <% end %>
+  </div>
+
+  <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <div class="flex justify-between items-start mb-6">
+      <div>
+        <h1 class="text-2xl font-semibold text-gray-900"><%= @bot.name %></h1>
+        <p class="text-sm text-gray-500 mt-1">Bot Details</p>
+      </div>
+      <div class="flex items-center space-x-2">
+        <% if @bot.active? %>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">Active</span>
+        <% else %>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">Inactive</span>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Bot Information</h3>
+        <dl class="space-y-3">
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Name</dt>
+            <dd class="text-sm text-gray-900"><%= @bot.name %></dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Type</dt>
+            <dd class="text-sm text-gray-900 capitalize"><%= @bot.bot_type %></dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Created</dt>
+            <dd class="text-sm text-gray-900"><%= @bot.created_at.strftime('%B %d, %Y at %I:%M %p') %></dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Status</dt>
+            <dd class="text-sm text-gray-900">
+              <%= @bot.active? ? 'Active' : 'Inactive' %>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <% if @bot.webhook? %>
+        <div>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Webhook Configuration</h3>
+          <dl class="space-y-3">
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Webhook URL</dt>
+              <dd class="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
+                <%= @bot.webhook_url(request.base_url) %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Webhook ID</dt>
+              <dd class="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
+                <%= @bot.webhook_id %>
+              </dd>
+            </div>
+            <% if @bot.webhook_secret.present? %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Webhook Secret</dt>
+                <dd class="text-sm text-gray-900">
+                  <div class="bg-gray-50 p-2 rounded border">
+                    <div class="flex justify-between items-center">
+                      <code class="font-mono text-xs break-all" id="webhook-secret" style="display: none;"><%= @bot.webhook_secret %></code>
+                      <span class="text-gray-500" id="secret-hidden">••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••</span>
+                      <button type="button"
+                              onclick="toggleSecret()"
+                              class="ml-2 text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                              id="toggle-btn">
+                        Show
+                      </button>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">
+                    Use this secret to sign webhook payloads with HMAC-SHA256. Include the signature in the X-Hub-Signature-256 header as "sha256=&lt;signature&gt;".
+                  </p>
+                </dd>
+              </div>
+            <% end %>
+          </dl>
+
+          <div class="mt-6 pt-4 border-t border-gray-200">
+            <h4 class="text-sm font-medium text-gray-900 mb-2">Webhook Usage</h4>
+            <div class="bg-gray-50 p-3 rounded text-xs">
+              <p class="text-gray-700 mb-2">Send POST requests to the webhook URL with:</p>
+              <ul class="text-gray-600 space-y-1 list-disc list-inside">
+                <li>Content-Type: application/json</li>
+                <li>X-Hub-Signature-256: sha256=&lt;hmac_signature&gt;</li>
+                <li>Body: JSON with action, message, room_id, etc.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-3">
+      <% if @bot.webhook? && @bot.webhook_secret.present? %>
+        <%= button_to "Regenerate Secret", regenerate_secret_admin_bot_path(@bot),
+                      method: :post,
+                      data: { turbo_confirm: "This will invalidate the current secret. Continue?" },
+                      class: "px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50" %>
+      <% end %>
+
+      <% if @bot.active? %>
+        <%= button_to "Deactivate", deactivate_admin_bot_path(@bot),
+                      method: :post,
+                      class: "px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700" %>
+      <% else %>
+        <%= button_to "Activate", activate_admin_bot_path(@bot),
+                      method: :post,
+                      class: "px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700" %>
+      <% end %>
+
+      <%= button_to "Delete", admin_bot_path(@bot),
+                    method: :delete,
+                    data: { turbo_confirm: "Delete bot #{@bot.name}? This cannot be undone." },
+                    class: "px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700" %>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleSecret() {
+  const secret = document.getElementById('webhook-secret');
+  const hidden = document.getElementById('secret-hidden');
+  const btn = document.getElementById('toggle-btn');
+
+  if (secret.style.display === 'none') {
+    secret.style.display = 'block';
+    hidden.style.display = 'none';
+    btn.textContent = 'Hide';
+  } else {
+    secret.style.display = 'none';
+    hidden.style.display = 'block';
+    btn.textContent = 'Show';
+  }
+}
+</script>

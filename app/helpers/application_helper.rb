@@ -2,11 +2,12 @@ module ApplicationHelper
   AVATAR_COLORS = %w[bg-blue-500 bg-emerald-500 bg-fuchsia-500 bg-amber-500 bg-indigo-500 bg-rose-500 bg-cyan-500 bg-violet-500].freeze
 
   def avatar_for(user, size: 'h-10 w-10')
-    initial = (user.username || '?')[0].upcase
+    username = user.username.presence || 'Unknown'
+    initial = username[0].upcase
     if user.respond_to?(:avatar) && user.avatar&.attached?
-      image_tag user.avatar, alt: user.username, class: "#{size} rounded-full object-cover"
+      image_tag user.avatar, alt: username, class: "#{size} rounded-full object-cover"
     else
-      color = AVATAR_COLORS[user.username.to_s.hash % AVATAR_COLORS.length]
+      color = AVATAR_COLORS[username.hash % AVATAR_COLORS.length]
       content_tag :div, class: "#{size} #{color} rounded-full flex items-center justify-center text-white" do
         content_tag(:span, initial, class: 'font-medium')
       end

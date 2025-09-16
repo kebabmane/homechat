@@ -21,7 +21,7 @@ class MessagesController < ApplicationController
       redirect_to @channel, notice: 'Message sent successfully.'
     else
       @messages = @channel.messages.includes(:user).recent.limit(50)
-      render 'channels/show', status: :unprocessable_entity
+      render 'channels/show', status: :unprocessable_content
     end
   end
 

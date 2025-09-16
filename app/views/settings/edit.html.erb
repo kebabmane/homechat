@@ -23,14 +23,26 @@
     </div>
 
     <div class="bg-white border border-gray-200 rounded-lg p-6">
+      <h2 class="text-lg font-medium text-gray-900 mb-4">Security</h2>
+      <div class="space-y-4">
+        <div>
+          <%= f.label :current_password, 'Current Password', class: "block text-sm font-medium text-gray-700" %>
+          <%= f.password_field :current_password, required: true, class: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" %>
+          <p class="text-xs text-gray-500 mt-1">Required to update any settings for security.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
       <h2 class="text-lg font-medium text-gray-900 mb-4">Change Password</h2>
       <div class="grid sm:grid-cols-2 gap-4">
         <div>
-          <%= f.label :password, class: "block text-sm font-medium text-gray-700" %>
+          <%= f.label :password, 'New Password', class: "block text-sm font-medium text-gray-700" %>
           <%= f.password_field :password, class: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" %>
+          <p class="text-xs text-gray-500 mt-1">Leave blank to keep current password.</p>
         </div>
         <div>
-          <%= f.label :password_confirmation, class: "block text-sm font-medium text-gray-700" %>
+          <%= f.label :password_confirmation, 'Confirm New Password', class: "block text-sm font-medium text-gray-700" %>
           <%= f.password_field :password_confirmation, class: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" %>
         </div>
       </div>

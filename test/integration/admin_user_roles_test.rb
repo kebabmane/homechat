@@ -14,15 +14,19 @@ class AdminUserRolesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "admin", user.reload.role
 
-    # Attempt to demote the only admin (if we demote admin, there would still be the promoted user)
-    # First, demote original admin and ensure at least one admin remains
+    # Now sign in as the new admin user to test demoting the last admin
+    # (We can't demote the original admin while signed in as them, since they'd lose admin privileges)
+    delete signout_path
+    sign_in_as(user)
+
+    # Try to demote the last remaining admin (the original admin) -> should work since we have 2 admins
     patch admin_user_path(admin), params: { user: { role: "user" } }
     assert_response :redirect
     follow_redirect!
     assert_response :success
     assert_equal "user", admin.reload.role
 
-    # Now try to demote the last remaining admin -> should be blocked
+    # Now try to demote the last remaining admin (ourselves) -> should be blocked
     patch admin_user_path(user), params: { user: { role: "user" } }
     assert_response :redirect
     follow_redirect!

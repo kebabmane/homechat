@@ -55,10 +55,11 @@ Rails.application.routes.draw do
         patch :activate_token
       end
     end
-    resources :bots, only: [:index, :destroy] do
+    resources :bots, only: [:index, :show, :destroy] do
       member do
         post :activate
         post :deactivate
+        post :regenerate_secret
       end
     end
     resources :tokens, only: [:index, :create, :destroy] do

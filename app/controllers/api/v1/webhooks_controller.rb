@@ -3,7 +3,9 @@ class Api::V1::WebhooksController < Api::V1::BaseController
   before_action :authenticate_webhook, only: [:receive]
   
   def receive
-    webhook_data = webhook_params
+    # Get raw body for JSON parsing (already read for signature verification, need to rewind)
+    request.body.rewind
+    webhook_data = JSON.parse(request.body.read).with_indifferent_access
     webhook_id = params[:webhook_id]
     
     Rails.logger.info "Received webhook #{webhook_id}: #{webhook_data}"
@@ -41,15 +43,54 @@ class Api::V1::WebhooksController < Api::V1::BaseController
   private
   
   def authenticate_webhook
-    # For webhook security, you might want to verify a signature
-    # For now, we'll use the webhook_id as basic authentication
     webhook_id = params[:webhook_id]
-    
-    unless webhook_id.present? && Bot.exists?(webhook_id: webhook_id)
-      render_error('Invalid webhook', :unauthorized)
+
+    unless webhook_id.present?
+      render_error('Missing webhook ID', :unauthorized)
+      return
     end
+
+    bot = Bot.find_by(webhook_id: webhook_id, active: true)
+    unless bot
+      render_error('Invalid webhook ID or bot inactive', :unauthorized)
+      return
+    end
+
+    # Get the raw request body for signature verification
+    request.body.rewind
+    payload = request.body.read
+    request.body.rewind
+
+    # Get signature from header
+    signature_header = request.headers['X-Hub-Signature-256'] || request.headers['X-Signature-256']
+
+    unless bot.verify_webhook_signature(payload, signature_header)
+      Rails.logger.warn "Webhook signature verification failed for bot #{bot.name} (ID: #{webhook_id})"
+      render_error('Invalid webhook signature', :unauthorized)
+      return
+    end
+
+    Rails.logger.debug "Webhook signature verified for bot #{bot.name}"
   end
-  
+
+  def current_api_user
+    # Return a system user for webhook requests
+    @current_api_user ||= User.find_by(username: 'system') || create_system_user
+  end
+
+  def create_system_user
+    password = SecureRandom.hex(16)
+    User.create!(
+      username: 'system',
+      password: password,
+      password_confirmation: password,
+      role: 'user'
+    )
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.warn "Failed to create system user: #{e.message}"
+    User.find_by(username: 'system')
+  end
+
   def webhook_params
     params.permit(:action, :message, :room_id, :user_id, :title, :priority, :data, :command, :args => [])
   end
@@ -137,12 +178,11 @@ class Api::V1::WebhooksController < Api::V1::BaseController
   
   def bot_user(bot)
     # Create or find a user for this bot
-    User.find_by(username: bot.name.parameterize) || 
+    User.find_by(username: bot.name.parameterize) ||
     User.create!(
       username: bot.name.parameterize,
-      email: "#{bot.name.parameterize}@bots.homechat.local",
       password: SecureRandom.hex(32),
-      admin: false
+      role: 'user'
     )
   rescue ActiveRecord::RecordInvalid
     # If username is taken, use the system user
@@ -151,11 +191,12 @@ class Api::V1::WebhooksController < Api::V1::BaseController
   
   def find_or_create_channel(room_id)
     room_id = 'home-assistant' if room_id.blank?
-    
+
     Channel.find_by(name: room_id) || Channel.create!(
       name: room_id,
       description: "Auto-created channel for #{room_id}",
-      private: false
+      channel_type: 'public',
+      created_by: current_api_user
     )
   end
   

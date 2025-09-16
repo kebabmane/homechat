@@ -38,5 +38,11 @@ module Homechat
 
     # Don't generate system test files.
     config.generators.system_tests = nil
+
+    # Discovery service configuration
+    config.discovery = ActiveSupport::OrderedOptions.new
+    config.discovery.enabled = ENV.fetch('DISCOVERY_ENABLED', 'true') == 'true'
+    config.discovery.server_name = ENV['DISCOVERY_SERVER_NAME']
+    config.discovery.port = ENV['DISCOVERY_PORT']&.to_i
   end
 end

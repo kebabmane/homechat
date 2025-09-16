@@ -3,8 +3,19 @@ class Setting < ApplicationRecord
 
   def self.fetch(key, default = nil)
     rec = find_by(key: key.to_s)
-    return YAML.safe_load(rec.value, permitted_classes: [Symbol], aliases: true) if rec&.value
-    default
+    if rec&.value
+      begin
+        parsed = YAML.safe_load(rec.value, permitted_classes: [Symbol], aliases: true)
+        # If YAML parsing returns the original string or parsed value, use it
+        # Otherwise fall back to the raw string value
+        parsed.nil? ? rec.value : parsed
+      rescue Psych::SyntaxError
+        # If YAML parsing fails, return the raw string value
+        rec.value
+      end
+    else
+      default
+    end
   end
 
   def self.set(key, value)
