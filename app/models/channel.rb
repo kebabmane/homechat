@@ -15,6 +15,12 @@ class Channel < ApplicationRecord
   scope :private_channels, -> { where(channel_type: 'private') }
   scope :dm_channels, -> { where(channel_type: 'dm') }
   scope :accessible_by, ->(user) { where(id: user.channels.select(:id)).or(public_channels) }
+
+  def accessible_by?(user)
+    return true if public?
+    return true if members.include?(user)
+    false
+  end
   
   def public?
     channel_type == 'public'

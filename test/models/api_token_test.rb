@@ -25,16 +25,24 @@ class ApiTokenTest < ActiveSupport::TestCase
     assert token.active?
   end
 
-  test "should have unique token" do
+  test "should have unique token digest" do
     token1 = ApiToken.create!(name: "Token 1")
-    token2 = ApiToken.new(name: "Token 2", token: token1.token)
+    raw_token1 = token1.token
+
+    # Create a token with the same raw token (should create same digest)
+    token2 = ApiToken.new(name: "Token 2")
+    token2.instance_variable_set(:@skip_generate, true) # skip automatic generation
+    token2.token = raw_token1
     assert_not token2.valid?
-    assert_includes token2.errors[:token], "has already been taken"
+    assert_includes token2.errors[:token_digest], "has already been taken"
   end
 
   test "should validate token correctly" do
     token = ApiToken.create!(name: "Test Token")
-    assert ApiToken.valid_token?(token.token)
+    raw_token = token.token  # capture before it's cleared
+    token.save!  # hash the token
+
+    assert ApiToken.valid_token?(raw_token)
     assert_not ApiToken.valid_token?("invalid_token")
     assert_not ApiToken.valid_token?(nil)
   end
@@ -48,11 +56,12 @@ class ApiTokenTest < ActiveSupport::TestCase
 
   test "should regenerate token" do
     token = ApiToken.create!(name: "Test Token")
-    original_token = token.token
+    original_digest = token.token_digest
+
     token.regenerate!
-    token.reload # Reload to get the updated token from database
-    assert_not_equal original_token, token.token
+    assert_not_nil token.token  # raw token available after regeneration
     assert_equal 64, token.token.length
+    assert_not_equal original_digest, token.token_digest
   end
 
   test "should mask token for display" do
@@ -83,6 +92,6 @@ class ApiTokenTest < ActiveSupport::TestCase
     token = ApiToken.generate_for_integration("Test Integration")
     assert_equal "Test Integration", token.name
     assert token.active?
-    assert_not_nil token.token
+    assert_not_nil token.token_digest
   end
 end

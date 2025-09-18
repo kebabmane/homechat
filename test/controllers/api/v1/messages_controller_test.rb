@@ -4,6 +4,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
   def setup
     @user = create_user
     @token = ApiToken.create!(name: "Test Token")
+    @raw_token = @token.token  # capture before it's cleared
     @channel = Channel.create!(name: "api-test", channel_type: "public", creator: @user)
     @channel.add_member(@user)
   end
@@ -17,7 +18,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_difference("Message.count") do
       post api_v1_messages_path,
            params: { message: "Test message", room: @channel.name },
-           headers: { "Authorization" => "Bearer #{@token.token}" }
+           headers: { "Authorization" => "Bearer #{@raw_token}" }
     end
 
     assert_response :success
@@ -38,7 +39,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_difference("Message.count") do
       post api_v1_messages_path,
            params: { message: "Test message" },
-           headers: { "Authorization" => "Bearer #{@token.token}" }
+           headers: { "Authorization" => "Bearer #{@raw_token}" }
     end
 
     assert_response :success
@@ -57,7 +58,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
   test "should reject message with missing content" do
     post api_v1_messages_path,
          params: { room: @channel.name },
-         headers: { "Authorization" => "Bearer #{@token.token}" }
+         headers: { "Authorization" => "Bearer #{@raw_token}" }
 
     assert_response :bad_request
   end
@@ -65,7 +66,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
   test "should reject message to nonexistent room" do
     post api_v1_messages_path,
          params: { message: "Test message", room: "nonexistent" },
-         headers: { "Authorization" => "Bearer #{@token.token}" }
+         headers: { "Authorization" => "Bearer #{@raw_token}" }
 
     # Note: API currently falls back to home channel for nonexistent rooms
     # This might be the intended behavior or a bug to fix
@@ -79,7 +80,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
 
     get api_v1_messages_path,
         params: { channel: @channel.name },
-        headers: { "Authorization" => "Bearer #{@token.token}" }
+        headers: { "Authorization" => "Bearer #{@raw_token}" }
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -94,7 +95,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
 
     get api_v1_messages_path,
         params: { channel: @channel.name, limit: 5 },
-        headers: { "Authorization" => "Bearer #{@token.token}" }
+        headers: { "Authorization" => "Bearer #{@raw_token}" }
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -109,7 +110,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_difference("Message.count") do
       post api_v1_user_messages_path(other_user),
            params: { message: "Direct message" },
-           headers: { "Authorization" => "Bearer #{@token.token}" }
+           headers: { "Authorization" => "Bearer #{@raw_token}" }
     end
 
     assert_response :success
@@ -128,7 +129,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
 
     post api_v1_messages_path,
          params: { message: "Test message", room: @channel.name },
-         headers: { "Authorization" => "Bearer #{@token.token}" }
+         headers: { "Authorization" => "Bearer #{@raw_token}" }
 
     @token.reload
     if original_time

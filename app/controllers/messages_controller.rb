@@ -14,14 +14,18 @@ class MessagesController < ApplicationController
       end
     end
 
-    @message = @channel.messages.build(message_params)
-    @message.user = current_user
+    begin
+      @message = @channel.messages.build(message_params)
+      @message.user = current_user
 
-    if @message.save
-      redirect_to @channel, notice: 'Message sent successfully.'
-    else
-      @messages = @channel.messages.includes(:user).recent.limit(50)
-      render 'channels/show', status: :unprocessable_content
+      if @message.save
+        redirect_to @channel, notice: 'Message sent successfully.'
+      else
+        # Redirect for validation failures with alert
+        redirect_to @channel, alert: "Message could not be sent: #{@message.errors.full_messages.join(', ')}"
+      end
+    rescue ActionController::ParameterMissing
+      redirect_to @channel, alert: 'Message content is required.'
     end
   end
 

@@ -76,12 +76,11 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     sign_in_as(@user)
     long_message = "A" * 5000
 
-    assert_difference("Message.count") do
+    assert_no_difference("Message.count") do
       post channel_messages_path(@channel), params: { message: { content: long_message } }
     end
 
-    message = Message.last
-    assert_equal long_message, message.content
+    assert_redirected_to channel_path(@channel)
   end
 
   test "should handle messages with special characters" do
@@ -144,9 +143,11 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
   test "should handle nonexistent channel" do
     sign_in_as(@user)
 
-    assert_raises(ActiveRecord::RecordNotFound) do
-      post "/channels/99999/messages", params: { message: { content: "Test" } }
-    end
+    post channel_messages_path(99999), params: { message: { content: "Test" } }
+
+    # In test environment, Rails might render error pages instead of raising
+    # Check for 404 response instead
+    assert_response :not_found
   end
 
   test "should track user activity when posting message" do

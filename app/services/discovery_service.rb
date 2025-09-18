@@ -68,11 +68,11 @@ class DiscoveryService
   end
 
   def build_txt_record
-    {
+    DNSSD::TextRecord.new(
       'version' => '1.0',
       'platform' => 'rails',
       'features' => 'chat,api,webhooks',
       'secure' => Rails.env.production? ? 'true' : 'false'
-    }
+    )
   end
 end

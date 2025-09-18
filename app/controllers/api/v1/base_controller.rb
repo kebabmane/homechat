@@ -6,26 +6,24 @@ class Api::V1::BaseController < ApplicationController
   private
   
   def authenticate_api_request
-    # Log all headers for debugging
     auth_header = request.headers['Authorization']
     x_api_key = request.headers['X-API-Key']
 
-    Rails.logger.info "=== API Authentication Debug ==="
-    Rails.logger.info "All headers: #{request.headers.to_h.select { |k, v| k.start_with?('HTTP_') || k.include?('AUTH') || k.include?('API') }}"
-    Rails.logger.info "Authorization header: #{auth_header}"
-    Rails.logger.info "X-API-Key header: #{x_api_key}"
+    # Only log debug info in development
+    if Rails.env.development?
+      Rails.logger.debug "=== API Authentication Debug ==="
+      Rails.logger.debug "Authorization header present: #{auth_header.present?}"
+      Rails.logger.debug "X-API-Key header present: #{x_api_key.present?}"
+    end
 
     # Try both Authorization header and X-API-Key header
     token = auth_header&.gsub(/^Bearer /, '') || x_api_key
 
-    Rails.logger.info "Extracted token present: #{!token.blank?}, Token prefix: #{token&.first(8)}..."
-
     unless token && valid_api_token?(token)
       Rails.logger.warn "API Authentication failed - Token: #{token ? 'present but invalid' : 'missing'}"
-      Rails.logger.warn "Valid tokens available: #{ApiToken.active.count}"
       render json: { error: 'Unauthorized - Invalid or missing API token' }, status: :unauthorized
     else
-      Rails.logger.info "API Authentication successful!"
+      Rails.logger.debug "API Authentication successful!" if Rails.env.development?
     end
   end
   
@@ -60,5 +58,13 @@ class Api::V1::BaseController < ApplicationController
     response[:message] = message if message
     response[:data] = data unless data.empty?
     render json: response
+  end
+
+  def ensure_channel_access(channel)
+    unless channel.accessible_by?(current_api_user)
+      render_error('Unauthorized - No access to this channel', :forbidden)
+      return false
+    end
+    true
   end
 end

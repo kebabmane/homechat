@@ -69,9 +69,9 @@ class Admin::BotsControllerTest < ActionDispatch::IntegrationTest
   test "should handle deleting nonexistent bot" do
     sign_in_as(@admin)
 
-    assert_raises(ActiveRecord::RecordNotFound) do
-      delete admin_bot_path(99999)
-    end
+    delete admin_bot_path(99999)
+    assert_redirected_to admin_bots_path
+    assert_match /not found/, flash[:alert]
   end
 
   test "should show webhook URL for webhook bots" do
@@ -109,17 +109,17 @@ class Admin::BotsControllerTest < ActionDispatch::IntegrationTest
   test "should handle bot activation for nonexistent bot" do
     sign_in_as(@admin)
 
-    assert_raises(ActiveRecord::RecordNotFound) do
-      post activate_admin_bot_path(99999)
-    end
+    post activate_admin_bot_path(99999)
+    assert_redirected_to admin_bots_path
+    assert_match /not found/, flash[:alert]
   end
 
   test "should handle bot deactivation for nonexistent bot" do
     sign_in_as(@admin)
 
-    assert_raises(ActiveRecord::RecordNotFound) do
-      post deactivate_admin_bot_path(99999)
-    end
+    post deactivate_admin_bot_path(99999)
+    assert_redirected_to admin_bots_path
+    assert_match /not found/, flash[:alert]
   end
 
   test "should not allow regular user to activate bot" do

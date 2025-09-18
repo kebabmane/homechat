@@ -24,7 +24,10 @@ class Api::V1::MessagesController < Api::V1::BaseController
       if message.save
         # Broadcast the message to the channel
         broadcast_message(message, channel)
-        
+
+        # Send push notifications
+        FcmNotificationService.send_message_notification(message, exclude_user: user)
+
         render_success({
           message: {
             id: message.id,
@@ -50,13 +53,20 @@ class Api::V1::MessagesController < Api::V1::BaseController
   def index
     channel_id = params[:channel_id]
     limit = [params[:limit]&.to_i || 50, 100].min
-    
+
     begin
       if channel_id
         channel = Channel.find(channel_id)
+        return unless ensure_channel_access(channel)
         messages = channel.messages.includes(:user).order(created_at: :desc).limit(limit)
       else
-        messages = Message.includes(:user, :channel).order(created_at: :desc).limit(limit)
+        # Only show messages from channels the user has access to
+        accessible_channels = Channel.accessible_by(current_api_user)
+        messages = Message.includes(:user, :channel)
+                         .joins(:channel)
+                         .where(channel: accessible_channels)
+                         .order(created_at: :desc)
+                         .limit(limit)
       end
       
       render json: {
@@ -64,7 +74,13 @@ class Api::V1::MessagesController < Api::V1::BaseController
           {
             id: message.id,
             content: message.content,
-            user: message.user.username,
+            user: {
+              id: message.user.id,
+              username: message.user.username,
+              avatar_url: message.user.avatar_url,
+              avatar_initials: message.user.avatar_initials,
+              avatar_color_index: message.user.avatar_color_index
+            },
             channel: message.channel.name,
             created_at: message.created_at.iso8601,
             message_type: message.message_type || 'chat'
@@ -169,7 +185,10 @@ class Api::V1::MessagesController < Api::V1::BaseController
           content: message.content,
           user: {
             id: message.user.id,
-            username: message.user.username
+            username: message.user.username,
+            avatar_url: message.user.avatar_url,
+            avatar_initials: message.user.avatar_initials,
+            avatar_color_index: message.user.avatar_color_index
           },
           created_at: message.created_at.iso8601,
           message_type: message.message_type
@@ -186,12 +205,32 @@ class Api::V1::MessagesController < Api::V1::BaseController
   # POST /api/v1/channels/:id/messages
   def create_for_channel
     channel = Channel.find(params[:id])
+    return unless ensure_channel_access(channel)
+
     user = current_api_user
     message = channel.messages.build(user: user, content: params.require(:message))
 
     if message.save
       broadcast_message(message, channel)
-      render_success({ id: message.id, channel_id: channel.id }, 'Message sent')
+
+      # Send push notifications
+      FcmNotificationService.send_message_notification(message, exclude_user: user)
+
+      render_success({
+        message: {
+          id: message.id,
+          content: message.content,
+          user: {
+            id: message.user.id,
+            username: message.user.username,
+            avatar_url: message.user.avatar_url,
+            avatar_initials: message.user.avatar_initials,
+            avatar_color_index: message.user.avatar_color_index
+          },
+          channel: channel.name,
+          created_at: message.created_at.iso8601
+        }
+      }, 'Message sent')
     else
       render_error(message.errors.full_messages.join(', '))
     end
@@ -204,6 +243,8 @@ class Api::V1::MessagesController < Api::V1::BaseController
   # POST /api/v1/channels/:id/media
   def create_media
     channel = Channel.find(params[:id])
+    return unless ensure_channel_access(channel)
+
     user = current_api_user
     message = channel.messages.build(user: user, content: params[:caption].presence || 'Attachment')
 
@@ -234,12 +275,45 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
     if message.save
       broadcast_message(message, channel)
+
+      # Send push notifications to DM recipient
+      FcmNotificationService.send_direct_message_notification(message, target)
+
       render_success({ id: message.id, channel_id: channel.id }, 'DM sent')
     else
       render_error(message.errors.full_messages.join(', '))
     end
   rescue ActiveRecord::RecordNotFound
     render_error('User not found', :not_found)
+  rescue ActionController::ParameterMissing => e
+    render_error("Missing required parameter: #{e.param}")
+  end
+
+  # POST /api/v1/dm/start
+  def start_dm_by_username
+    username = params.require(:username)
+    target = User.find_by(username: username)
+
+    if target.nil?
+      render_error('User not found', :not_found)
+      return
+    end
+
+    user = current_api_user
+    if target == user
+      render_error('Cannot DM self') and return
+    end
+
+    channel = find_or_create_dm(user, target)
+
+    render_success({
+      channel: {
+        id: channel.id,
+        name: channel.name,
+        type: channel.channel_type,
+        members: channel.channel_memberships.includes(:user).map { |m| m.user.username }
+      }
+    }, 'DM channel ready')
   rescue ActionController::ParameterMissing => e
     render_error("Missing required parameter: #{e.param}")
   end

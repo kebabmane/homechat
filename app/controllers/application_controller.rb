@@ -7,6 +7,7 @@ class ApplicationController < ActionController::Base
   layout :determine_layout
   before_action :set_sidebar_data, if: :logged_in?
   before_action :mark_active, if: :logged_in?
+  before_action :check_session_timeout, if: :logged_in?
   
   helper_method :current_user, :logged_in?
   
@@ -44,8 +45,28 @@ class ApplicationController < ActionController::Base
   end
 
   def require_admin
-    unless logged_in? && current_user.admin?
+    unless logged_in?
+      redirect_to signin_path, alert: 'Please sign in to continue'
+      return
+    end
+
+    unless current_user.admin?
       redirect_to dashboard_path, alert: 'Admins only.'
     end
+  end
+
+  def check_session_timeout
+    session_timeout = 8.hours
+    last_activity = session[:last_activity_time]
+
+    if last_activity && Time.current > Time.parse(last_activity) + session_timeout
+      reset_session
+      redirect_to signin_path, alert: 'Your session has expired. Please sign in again.'
+    else
+      session[:last_activity_time] = Time.current.to_s
+    end
+  rescue StandardError => e
+    Rails.logger.warn "Session timeout check failed: #{e.message}"
+    session[:last_activity_time] = Time.current.to_s
   end
 end

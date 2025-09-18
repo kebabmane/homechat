@@ -5,14 +5,33 @@
     <div class="bg-white border border-gray-200 rounded-lg p-6">
       <h2 class="text-lg font-medium text-gray-900 mb-4">Profile</h2>
       <div class="space-y-4">
-        <div class="flex items-center gap-4">
-          <div>
-            <%= avatar_for(current_user, size: 'h-12 w-12') %>
+        <div class="flex items-start gap-6">
+          <div class="flex flex-col items-center gap-2">
+            <%= avatar_for(current_user, size: 'h-20 w-20') %>
+            <% if current_user.avatar.attached? %>
+              <%= button_to "Remove", settings_path, method: :delete,
+                  params: { remove_avatar: true },
+                  data: { confirm: "Are you sure you want to remove your avatar?" },
+                  class: "text-xs text-red-600 hover:text-red-800 underline" %>
+            <% end %>
           </div>
-          <div>
-            <%= f.label :avatar, 'Avatar', class: "block text-sm font-medium text-gray-700" %>
-            <%= f.file_field :avatar, accept: 'image/*', class: "mt-1 block w-full text-sm" %>
-            <p class="text-xs text-gray-500 mt-1">Square images look best.</p>
+          <div class="flex-1">
+            <%= f.label :avatar, 'Upload New Avatar', class: "block text-sm font-medium text-gray-700 mb-2" %>
+            <%= f.file_field :avatar, accept: 'image/jpeg,image/jpg,image/png,image/gif,image/webp',
+                class: "mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100",
+                data: { "avatar-preview-target": "input", "action": "change->avatar-preview#preview" } %>
+            <div class="mt-2 space-y-1">
+              <p class="text-xs text-gray-500">• Square images look best (will be cropped to fit)</p>
+              <p class="text-xs text-gray-500">• Maximum file size: 5MB</p>
+              <p class="text-xs text-gray-500">• Supported formats: JPEG, PNG, GIF, WebP</p>
+            </div>
+            <% if current_user.errors[:avatar].any? %>
+              <div class="mt-2">
+                <% current_user.errors[:avatar].each do |error| %>
+                  <p class="text-sm text-red-600"><%= error %></p>
+                <% end %>
+              </div>
+            <% end %>
           </div>
         </div>
         <div>

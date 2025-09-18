@@ -1,8 +1,11 @@
 class ApiToken < ApplicationRecord
   validates :name, presence: true, uniqueness: true
-  validates :token, presence: true, uniqueness: true
-  
+  validates :token_digest, presence: true, uniqueness: true
+
   before_validation :generate_token, on: :create
+  before_validation :hash_token
+
+  attr_accessor :token
   
   scope :active, -> { where(active: true) }
   
@@ -12,8 +15,9 @@ class ApiToken < ApplicationRecord
   
   def self.valid_token?(token_string)
     return false if token_string.blank?
-    
-    token_record = active.find_by(token: token_string)
+
+    token_digest = hash_token_string(token_string)
+    token_record = active.find_by(token_digest: token_digest)
     if token_record
       token_record.update(last_used_at: Time.current)
       true
@@ -27,7 +31,7 @@ class ApiToken < ApplicationRecord
   end
   
   def regenerate!
-    self.token = SecureRandom.hex(32)
+    generate_token
     save!
   end
   
@@ -42,8 +46,19 @@ class ApiToken < ApplicationRecord
   end
   
   private
-  
+
   def generate_token
-    self.token = SecureRandom.hex(32) if token.blank?
+    return if @skip_generate
+    self.token = SecureRandom.hex(32)
+  end
+
+  def hash_token
+    if token.present?
+      self.token_digest = self.class.hash_token_string(token)
+    end
+  end
+
+  def self.hash_token_string(token)
+    Digest::SHA256.hexdigest(token)
   end
 end

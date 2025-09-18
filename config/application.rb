@@ -44,5 +44,13 @@ module Homechat
     config.discovery.enabled = ENV.fetch('DISCOVERY_ENABLED', 'true') == 'true'
     config.discovery.server_name = ENV['DISCOVERY_SERVER_NAME']
     config.discovery.port = ENV['DISCOVERY_PORT']&.to_i
+
+    # Session configuration
+    config.session_store :cookie_store,
+      key: '_homechat_session',
+      expire_after: 30.days,
+      secure: Rails.env.production?,
+      httponly: true,
+      same_site: :lax
   end
 end

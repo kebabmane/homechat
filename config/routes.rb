@@ -80,19 +80,34 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Health check endpoint
       get :health, to: 'health#show'
+
+      # Authentication endpoints
+      post :signin, to: 'auth#signin'
+      post :signup, to: 'auth#signup'
+      delete :signout, to: 'auth#signout'
+
+      # FCM token endpoint
+      put :fcm_token, to: 'fcm#update_token'
       
       # Message endpoints
       post :messages, to: 'messages#create'
       get :messages, to: 'messages#index'
+      # Search endpoint
+      get :search, to: 'search#index'
+
       # Channel-scoped API
       resources :channels, only: [:index] do
         member do
           post :messages, to: 'messages#create_for_channel'
           post :media, to: 'messages#create_media'
+          post :join
+          delete :leave
+          get :members
         end
       end
-      # DM endpoint
+      # DM endpoints
       post 'users/:id/messages', to: 'messages#create_dm', as: :user_messages
+      post 'dm/start', to: 'messages#start_dm_by_username'
       
       # Bot management endpoints
       resources :bots, only: [:create, :show, :index, :update, :destroy] do

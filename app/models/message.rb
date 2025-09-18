@@ -5,6 +5,7 @@ class Message < ApplicationRecord
   has_many_attached :files
 
   validates :content, presence: true, length: { minimum: 1, maximum: 2000 }
+  validate :content_not_blank
   
   scope :recent, -> { order(created_at: :desc) }
   scope :for_channel, ->(channel) { where(channel: channel) }
@@ -16,6 +17,12 @@ class Message < ApplicationRecord
   after_create_commit -> { broadcast_append }
 
   private
+
+  def content_not_blank
+    if content.present? && content.strip.blank?
+      errors.add(:content, "cannot be blank")
+    end
+  end
 
   def broadcast_append
     broadcast_append_to channel,

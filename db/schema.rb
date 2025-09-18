@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_16_094515) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_18_073021) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -51,13 +51,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_16_094515) do
 
   create_table "api_tokens", force: :cascade do |t|
     t.string "name"
-    t.string "token"
     t.boolean "active", default: true, null: false
     t.datetime "last_used_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "token_digest"
     t.index ["name"], name: "index_api_tokens_on_name", unique: true
-    t.index ["token"], name: "index_api_tokens_on_token", unique: true
+    t.index ["token_digest"], name: "index_api_tokens_on_token_digest", unique: true
   end
 
   create_table "bots", force: :cascade do |t|
@@ -120,6 +120,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_16_094515) do
     t.string "role", default: "user", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "last_seen_at"
+    t.string "status", default: "Available"
+    t.boolean "is_online", default: false
+    t.string "fcm_token"
+    t.index ["fcm_token"], name: "index_users_on_fcm_token"
+    t.index ["is_online"], name: "index_users_on_is_online"
+    t.index ["last_seen_at"], name: "index_users_on_last_seen_at"
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 

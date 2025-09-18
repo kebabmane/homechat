@@ -33,6 +33,16 @@ class SettingsController < ApplicationController
     end
   end
 
+  def destroy
+    # Handle avatar removal
+    if params[:remove_avatar] && current_user.avatar.attached?
+      current_user.avatar.purge
+      redirect_to edit_settings_path, notice: 'Avatar removed successfully.'
+    else
+      redirect_to edit_settings_path, alert: 'Could not remove avatar.'
+    end
+  end
+
   private
 
   def user_params
