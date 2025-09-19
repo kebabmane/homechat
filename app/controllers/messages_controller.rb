@@ -19,7 +19,7 @@ class MessagesController < ApplicationController
       @message.user = current_user
 
       if @message.save
-        redirect_to @channel, notice: 'Message sent successfully.'
+        redirect_to @channel
       else
         # Redirect for validation failures with alert
         redirect_to @channel, alert: "Message could not be sent: #{@message.errors.full_messages.join(', ')}"
