@@ -60,16 +60,35 @@ module Homechat
       # This is safe because we're in a controlled home environment
       config.action_controller.forgery_protection_origin_check = false
 
-      # Trust common internal networks (in case there are proxies involved)
-      config.action_dispatch.trusted_proxies = [
-        ActionDispatch::RemoteIp::TRUSTED_PROXIES,
-        IPAddr.new('172.30.0.0/16'),   # Home Assistant Docker networks
-        IPAddr.new('192.168.0.0/16'),  # Common home network range
-        IPAddr.new('10.0.0.0/8'),      # Private network range
-        IPAddr.new('172.16.0.0/12'),   # Private network range
-        IPAddr.new('127.0.0.1'),       # Localhost
-        IPAddr.new('::1')              # IPv6 localhost
-      ].flatten
+      # Dynamically detect and trust network ranges
+      begin
+        require_relative '../lib/home_assistant_network_detector'
+        detected_ranges = HomeAssistantNetworkDetector.detect_network_ranges
+        detected_ipaddrs = HomeAssistantNetworkDetector.to_ipaddr_objects(detected_ranges)
+
+        config.action_dispatch.trusted_proxies = [
+          ActionDispatch::RemoteIp::TRUSTED_PROXIES,
+          *detected_ipaddrs,
+          IPAddr.new('127.0.0.1'),       # Localhost
+          IPAddr.new('::1')              # IPv6 localhost
+        ].flatten
+
+        Rails.logger.info "Dynamically configured trusted proxies: #{detected_ranges}"
+      rescue => e
+        Rails.logger.warn "Failed to detect network ranges dynamically: #{e.message}"
+        Rails.logger.warn "Falling back to default network ranges"
+
+        # Fallback to static ranges if dynamic detection fails
+        config.action_dispatch.trusted_proxies = [
+          ActionDispatch::RemoteIp::TRUSTED_PROXIES,
+          IPAddr.new('172.30.0.0/16'),   # Home Assistant Docker networks
+          IPAddr.new('192.168.0.0/16'),  # Common home network range
+          IPAddr.new('10.0.0.0/8'),      # Private network range
+          IPAddr.new('172.16.0.0/12'),   # Private network range
+          IPAddr.new('127.0.0.1'),       # Localhost
+          IPAddr.new('::1')              # IPv6 localhost
+        ].flatten
+      end
     end
 
     # Session configuration
