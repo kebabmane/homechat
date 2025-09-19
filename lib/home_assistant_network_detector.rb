@@ -18,12 +18,29 @@ class HomeAssistantNetworkDetector
 
   private
 
+  # Safe logging methods that handle nil Rails.logger during startup
+  def self.log_info(message)
+    if defined?(Rails) && Rails.logger
+      Rails.logger.info message
+    else
+      puts "[INFO] #{message}"
+    end
+  end
+
+  def self.log_warn(message)
+    if defined?(Rails) && Rails.logger
+      Rails.logger.warn message
+    else
+      puts "[WARN] #{message}"
+    end
+  end
+
   # Detect network ranges using Home Assistant Supervisor API
   def self.detect_from_supervisor_api
     return [] unless ENV['SUPERVISOR_TOKEN']
 
     begin
-      Rails.logger.info "Attempting to detect network ranges via Supervisor API"
+      log_info "Attempting to detect network ranges via Supervisor API"
 
       # Make API call to supervisor
       require 'net/http'
@@ -42,13 +59,13 @@ class HomeAssistantNetworkDetector
       if response.code == '200'
         network_info = JSON.parse(response.body)
         ranges = extract_ranges_from_supervisor_response(network_info)
-        Rails.logger.info "Detected network ranges from Supervisor API: #{ranges}"
+        log_info "Detected network ranges from Supervisor API: #{ranges}"
         return ranges
       else
-        Rails.logger.warn "Supervisor API returned #{response.code}: #{response.body}"
+        log_warn "Supervisor API returned #{response.code}: #{response.body}"
       end
     rescue => e
-      Rails.logger.warn "Failed to detect network via Supervisor API: #{e.message}"
+      log_warn "Failed to detect network via Supervisor API: #{e.message}"
     end
 
     []
@@ -89,7 +106,7 @@ class HomeAssistantNetworkDetector
     ranges = []
 
     begin
-      Rails.logger.info "Attempting to detect network ranges via ip route"
+      log_info "Attempting to detect network ranges via ip route"
 
       # Get default route
       default_route = `ip route show default 2>/dev/null`.strip
@@ -110,9 +127,9 @@ class HomeAssistantNetworkDetector
         end
       end
 
-      Rails.logger.info "Detected network ranges from ip route: #{ranges}" if ranges.any?
+      log_info "Detected network ranges from ip route: #{ranges}" if ranges.any?
     rescue => e
-      Rails.logger.warn "Failed to detect network via ip route: #{e.message}"
+      log_warn "Failed to detect network via ip route: #{e.message}"
     end
 
     ranges
@@ -123,7 +140,7 @@ class HomeAssistantNetworkDetector
     ranges = []
 
     begin
-      Rails.logger.info "Attempting to detect network ranges via network interfaces"
+      log_info "Attempting to detect network ranges via network interfaces"
 
       # Use ip addr command to get interface information
       interfaces_output = `ip addr show 2>/dev/null`
@@ -138,9 +155,9 @@ class HomeAssistantNetworkDetector
         ranges << ip_with_cidr if valid_ip_range?(ip_with_cidr)
       end
 
-      Rails.logger.info "Detected network ranges from interfaces: #{ranges}" if ranges.any?
+      log_info "Detected network ranges from interfaces: #{ranges}" if ranges.any?
     rescue => e
-      Rails.logger.warn "Failed to detect network via interfaces: #{e.message}"
+      log_warn "Failed to detect network via interfaces: #{e.message}"
     end
 
     ranges
@@ -164,7 +181,7 @@ class HomeAssistantNetworkDetector
 
     ranges.concat(docker_ranges)
 
-    Rails.logger.info "Added environment/Docker network ranges: #{ranges}" if ranges.any?
+    log_info "Added environment/Docker network ranges: #{ranges}" if ranges.any?
     ranges
   end
 
@@ -197,7 +214,7 @@ class HomeAssistantNetworkDetector
       begin
         IPAddr.new(range)
       rescue
-        Rails.logger.warn "Invalid IP range: #{range}"
+        log_warn "Invalid IP range: #{range}"
         nil
       end
     end.compact

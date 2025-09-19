@@ -73,10 +73,10 @@ module Homechat
           IPAddr.new('::1')              # IPv6 localhost
         ].flatten
 
-        Rails.logger.info "Dynamically configured trusted proxies: #{detected_ranges}"
+        Rails.logger.info "Dynamically configured trusted proxies: #{detected_ranges}" if Rails.logger
       rescue => e
-        Rails.logger.warn "Failed to detect network ranges dynamically: #{e.message}"
-        Rails.logger.warn "Falling back to default network ranges"
+        Rails.logger.warn "Failed to detect network ranges dynamically: #{e.message}" if Rails.logger
+        Rails.logger.warn "Falling back to default network ranges" if Rails.logger
 
         # Fallback to static ranges if dynamic detection fails
         config.action_dispatch.trusted_proxies = [
