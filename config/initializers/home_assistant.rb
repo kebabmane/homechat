@@ -6,32 +6,9 @@ if ENV['HOME_ASSISTANT_ADDON'] == 'true'
     # Log configuration for Home Assistant environment
     Rails.logger.info "HomeChat running in Home Assistant add-on mode"
 
-    # Configure middleware for ingress proxy
-    config.middleware.insert_before ActionDispatch::Session::CookieStore, Rack::MethodOverride
-
-    # Additional CSRF token configuration for Home Assistant ingress
-    config.action_controller.forgery_protection_origin_check = false
-
-    # Allow iframe embedding in Home Assistant
-    config.force_ssl = false
-    config.ssl_options = { redirect: false }
-
-    # Trust all origins when running in Home Assistant (controlled environment)
-    config.action_dispatch.trusted_proxies = ActionDispatch::RemoteIp::TRUSTED_PROXIES + [
-      IPAddr.new('172.30.33.0/24'),  # Home Assistant supervisor network
-      IPAddr.new('172.30.32.0/24'),  # Alternative HA network
-      IPAddr.new('10.0.0.0/8'),      # Common internal networks
-      IPAddr.new('192.168.0.0/16'),
-      IPAddr.new('172.16.0.0/12')
-    ]
-
-    # Configure for Home Assistant's ingress path handling
-    config.relative_url_root = ENV['X_INGRESS_PATH'] if ENV['X_INGRESS_PATH'].present?
-
-    # Enhanced logging for debugging proxy issues
+    # Enhanced logging for debugging ingress issues
     config.log_level = :info
     Rails.logger.info "Home Assistant add-on configuration loaded"
-    Rails.logger.info "X-Ingress-Path: #{ENV['X_INGRESS_PATH']}" if ENV['X_INGRESS_PATH']
   end
 
   # Custom middleware to handle Home Assistant ingress headers
@@ -65,25 +42,60 @@ if ENV['HOME_ASSISTANT_ADDON'] == 'true'
   # Override CSRF token validation for specific scenarios
   module HomeAssistantCSRFPatch
     def verified_request?
-      # Log the verification attempt
-      Rails.logger.debug "CSRF verification check in Home Assistant mode"
-      Rails.logger.debug "Form authenticity token: #{form_authenticity_token}"
-      Rails.logger.debug "Request authenticity token: #{request.headers['X-CSRF-Token'] || params[request_forgery_protection_token]}"
+      # Enhanced logging for debugging CSRF issues
+      Rails.logger.info "CSRF verification check in Home Assistant mode"
+      Rails.logger.info "Request format: #{request.format}"
+      Rails.logger.info "Request method: #{request.method}"
+      Rails.logger.info "Request path: #{request.path}"
+      Rails.logger.info "Remote IP: #{request.remote_ip}"
+      Rails.logger.info "X-Forwarded-For: #{request.headers['X-Forwarded-For']}"
+      Rails.logger.info "X-Ingress-Path: #{request.headers['X-Ingress-Path']}"
+      Rails.logger.info "Origin: #{request.headers['Origin']}"
+      Rails.logger.info "Referer: #{request.headers['Referer']}"
 
-      # If we're in Home Assistant and this is a form post, be more lenient
-      if request.format.html? && request.post? && ENV['HOME_ASSISTANT_ADDON'] == 'true'
-        # Try the standard verification first
-        return true if super
+      # Log CSRF token information
+      submitted_token = request.headers['X-CSRF-Token'] || params[request_forgery_protection_token]
+      session_token = session[:_csrf_token] if session.respond_to?(:key?) && session.key?(:_csrf_token)
+      Rails.logger.info "Submitted token present: #{!submitted_token.nil?}"
+      Rails.logger.info "Session token present: #{!session_token.nil?}"
+      Rails.logger.info "Authenticity token param: #{params[:authenticity_token].present?}"
 
-        # If that fails, check if we have a valid session (indicating user is logged in)
-        # This provides some security while working around ingress CSRF issues
-        if session[:user_id].present?
-          Rails.logger.warn "CSRF verification failed but allowing due to valid session in HA add-on mode"
-          return true
+      # Try the standard verification first
+      standard_result = super
+      Rails.logger.info "Standard CSRF verification result: #{standard_result}"
+      return true if standard_result
+
+      # If we're in Home Assistant and this is a form submission, be more lenient
+      if ENV['HOME_ASSISTANT_ADDON'] == 'true'
+        # Handle HTML forms and Turbo Stream requests
+        if (request.format.html? || request.format.turbo_stream?) &&
+           (request.post? || request.patch? || request.put? || request.delete?)
+
+          Rails.logger.warn "CSRF verification failed for #{request.format} #{request.method} request"
+
+          # Check if we have a valid session (user is signed in)
+          # This provides some security while working around ingress CSRF issues
+          if session[:user_id].present?
+            Rails.logger.warn "Allowing request due to valid user session in HA add-on mode"
+            return true
+          end
+
+          # Check if this is a signup request (no session required)
+          if request.path == '/signup' && request.post?
+            Rails.logger.warn "Allowing signup request in HA add-on mode"
+            return true
+          end
+
+          # Check if this is a signin request (no session required)
+          if request.path == '/signin' && request.post?
+            Rails.logger.warn "Allowing signin request in HA add-on mode"
+            return true
+          end
         end
       end
 
-      super
+      Rails.logger.warn "CSRF verification failed and no fallback conditions met"
+      false
     end
   end
 
