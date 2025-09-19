@@ -17,6 +17,7 @@ Rails.application.routes.draw do
       post :invite
     end
     resources :messages, only: [:create]
+    resources :channel_memberships, only: [:index]
   end
   
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

@@ -24,6 +24,7 @@
   </head>
 
   <body class="antialiased font-sans bg-white text-gray-900" data-controller="shortcuts">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:rounded-md focus:bg-white focus:text-blue-600 focus:shadow">Skip to main content</a>
     <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
       <div data-controller="install-prompt" data-install-prompt-target="toast" class="hidden fixed bottom-6 right-6 z-40">
         <div class="flex items-center space-x-3 px-4 py-3 bg-gray-900 text-white rounded-lg shadow-lg">
@@ -43,19 +44,21 @@
     <% end %>
     <%# Global flashes removed from full-width; shown inside main content below %>
 
-    <div class="relative flex h-screen bg-gray-100 overflow-hidden" data-controller="sidebar">
+    <div class="relative flex min-h-dvh md:h-dvh md:overflow-hidden bg-gray-100" data-controller="sidebar">
       <!-- Backdrop (mobile) -->
-      <div class="fixed inset-0 bg-black/40 z-30 hidden md:hidden" data-sidebar-target="backdrop" data-action="click->sidebar#close"></div>
+      <div class="fixed inset-0 bg-black/40 z-30 hidden md:hidden" data-sidebar-target="backdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
 
       <!-- Sidebar -->
-      <div class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out bg-gray-900 text-white md:relative md:flex-shrink-0 flex flex-col min-h-0" data-sidebar-target="panel">
+      <aside class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full transition-transform duration-200 ease-in-out bg-gray-900 text-white flex flex-col md:relative md:translate-x-0 md:transform-none md:flex-shrink-0 md:w-64 md:h-dvh md:overflow-y-auto" data-sidebar-target="panel" data-sidebar-panel aria-label="Primary">
         <%= render "shared/channels_sidebar" %>
-      </div>
+      </aside>
 
       <!-- Main Content -->
-      <div class="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+      <div class="flex-1 flex flex-col min-h-dvh md:h-dvh md:min-h-0 min-w-0 md:overflow-hidden">
         <% top_pad = content_for?(:no_top_padding) ? '' : ' pt-6 sm:pt-8' %>
-        <main class="flex-1 flex flex-col min-h-0 bg-white overflow-y-auto<%= top_pad %>">
+        <% scroll_class = content_for?(:lock_main_scroll) ? ' overflow-y-auto md:overflow-hidden' : ' overflow-y-auto' %>
+        <% scroll_padding = content_for?(:scroll_padding) ? " #{content_for(:scroll_padding).strip}" : '' %>
+        <main id="main-content" class="flex-1 flex flex-col min-h-0 bg-white<%= scroll_class %><%= top_pad %><%= scroll_padding %>" tabindex="-1">
           <% if flash[:notice] %>
             <div data-controller="flash" data-flash-timeout-value="4000" class="mx-4 md:mx-6 mt-3 mb-2 rounded-md bg-green-500 text-white px-4 py-2 text-center relative opacity-100">
               <%= flash[:notice] %>
@@ -68,6 +71,14 @@
               <button type="button" aria-label="Dismiss" class="absolute right-2 top-1/2 -translate-y-1/2 text-white/80 hover:text-white" data-action="click->flash#close">&times;</button>
             </div>
           <% end %>
+          <div data-sidebar-target="opener" class="hidden md:flex px-4 sm:px-6 pt-4">
+            <button type="button" data-action="click->sidebar#openPinned" class="inline-flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:border-blue-200 hover:text-blue-700 hover:bg-blue-50">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h16" />
+              </svg>
+              Show sidebar
+            </button>
+          </div>
           <%= yield %>
         </main>
       </div>

@@ -1,7 +1,10 @@
-<div class="sticky top-0 z-10 bg-white shadow-sm">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+<% content_for :no_top_padding, true %>
+<% content_for :scroll_padding do %>scroll-pt-28 md:scroll-pt-32<% end %>
+
+<div class="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-200 shadow-sm">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
     <div class="flex items-center justify-between">
-      <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Admin</h1>
+      <h1 class="text-xl sm:text-2xl font-semibold text-gray-900">Admin</h1>
     </div>
     <%= render 'admin/nav' %>
   </div>

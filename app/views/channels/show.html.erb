@@ -1,24 +1,25 @@
 <% content_for :no_top_padding, true %>
-<div class="flex flex-col h-full min-h-0" data-controller="message-list" data-channel-id="<%= @channel.id %>">
+<% content_for :lock_main_scroll, true %>
+<div class="flex flex-col h-full min-h-0" data-controller="message-list" data-channel-id="<%= @channel.id %>" data-message-list-autoscroll-value="true">
   <!-- Channel Header -->
-  <div class="sticky top-0 z-10 px-6 py-4 bg-white border-b border-gray-100" data-message-list-target="header">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center">
+  <div class="sticky top-0 z-10 px-4 sm:px-6 py-3 md:py-4 bg-white/95 backdrop-blur border-b border-gray-100" data-message-list-target="header" role="region" aria-label="Channel header">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0">
         <!-- Mobile: open sidebar -->
-        <button type="button" class="md:hidden -ml-2 mr-2 p-2 rounded hover:bg-gray-100" data-action="click->sidebar#open" aria-label="Open sidebar">
+        <button type="button" class="md:hidden -ml-2 mr-1 p-2 rounded-lg hover:bg-gray-100" data-action="click->sidebar#open" aria-label="Open sidebar">
           <svg class="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
         <% if @channel.dm? %>
           <% other = @channel.members.where.not(id: current_user.id).first %>
-          <div class="flex items-center space-x-3">
-            <div class="h-9 w-9 bg-gray-200 rounded-full flex items-center justify-center">
-              <span class="text-sm font-medium text-gray-700"><%= other&.username&.first&.upcase || '?' %></span>
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold text-gray-700">
+              <span><%= other&.username&.first&.upcase || '?' %></span>
             </div>
-            <div>
-              <h1 class="text-xl font-bold text-gray-900">@<%= other&.username || @channel.name.sub(/^dm-/, '').gsub('-', ' & ') %></h1>
-              <div class="text-xs text-gray-500">
+            <div class="min-w-0">
+              <h1 class="text-lg sm:text-xl font-semibold text-gray-900 truncate">@<%= other&.username || @channel.name.sub(/^dm-/, '').gsub('-', ' & ') %></h1>
+              <div class="text-xs text-gray-500 mt-1">
                 <% if other %>
                   <% if user_online?(other) %>
                     <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-green-500 mr-1"></span>Online</span>
@@ -30,45 +31,53 @@
             </div>
           </div>
         <% else %>
-          <h1 class="text-xl font-bold text-gray-900">#<%= @channel.name %></h1>
-          <% if @channel.description.present? %>
-            <p class="text-sm text-gray-500"><%= @channel.description %></p>
-          <% end %>
+          <div class="min-w-0">
+            <h1 class="text-lg sm:text-xl font-semibold text-gray-900 truncate">#<%= @channel.name %></h1>
+            <% if @channel.description.present? %>
+              <p class="text-sm text-gray-500 mt-1 line-clamp-2"><%= @channel.description %></p>
+            <% end %>
+          </div>
         <% end %>
       </div>
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center gap-3 sm:gap-4">
         <% unless @channel.dm? %>
-          <div class="flex items-center space-x-3 text-sm text-gray-500">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"></path>
-            </svg>
-            <span id="<%= dom_id(@channel, :member_count) %>"><%= @channel.member_count %></span>
-            <span class="flex items-center text-xs text-gray-400">
-              <span class="w-2 h-2 rounded-full bg-green-500 mr-1"></span>
-              <%= @channel.online_members_count %> online
-            </span>
+          <div class="relative" data-controller="channel-members" data-channel-members-url-value="<%= channel_channel_memberships_path(@channel) %>">
+            <button type="button" class="flex items-center gap-3 text-sm text-gray-600 hover:text-gray-900" data-action="channel-members#toggle">
+              <span class="flex items-center gap-1">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"></path>
+                </svg>
+                <span id="<%= dom_id(@channel, :member_count) %>"><%= @channel.member_count %></span>
+              </span>
+              <span class="hidden sm:inline text-gray-400">•</span>
+              <span class="flex items-center text-xs sm:text-sm text-gray-500">
+                <span class="w-2 h-2 rounded-full bg-green-500 mr-1"></span>
+                <%= @channel.online_members_count %> online
+              </span>
+            </button>
+            <div class="channel-members-panel hidden absolute right-0 mt-3 w-72 rounded-xl border border-gray-200 bg-white shadow-lg z-30" data-channel-members-target="panel" role="dialog" aria-label="Channel members"></div>
           </div>
         <% end %>
         <% if (current_user.admin? || @channel.creator == current_user) && !@channel.dm? %>
           <%= link_to edit_channel_path(@channel), class: "text-gray-500 hover:text-gray-700" do %>
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path d="M13.586 3.586a2 2 0 112.828 2.828l-9.9 9.9-3.536.354.354-3.536 9.9-9.9zM15 5l-1.414-1.414-9.9 9.9L5 15l.354-1.414 9.546-9.546z"></path>
             </svg>
-          <% end %>
+            <% end %>
         <% end %>
       </div>
     </div>
   </div>
 
   <!-- Messages Area -->
-  <div class="flex-1 min-h-0 overflow-y-auto" data-message-list-target="container">
+  <div class="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6" data-message-list-target="container">
     <%= turbo_stream_from @channel %>
     <% if @messages.any? %>
-      <div class="space-y-6 pb-6" id="<%= dom_id(@channel, :messages) %>">
+      <div class="space-y-4 sm:space-y-6 pb-6" id="<%= dom_id(@channel, :messages) %>">
         <% divider_rendered = false %>
         <% @messages.reverse.each do |message| %>
           <% if !divider_rendered && @last_read_at && message.created_at > @last_read_at %>
-            <div class="px-6">
+            <div>
               <div class="relative my-4 text-center">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
                   <div class="w-full border-t border-gray-200"></div>
@@ -82,33 +91,33 @@
         <% end %>
       </div>
     <% else %>
-      <div class="flex flex-col items-center justify-center h-full">
-        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div class="flex flex-col items-center justify-center h-full text-center py-12">
+        <div class="w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <span class="text-4xl">💬</span>
         </div>
-        <h3 class="text-2xl font-semibold text-gray-900 mb-2">No messages yet</h3>
-        <p class="text-gray-500 max-w-md mx-auto text-center">This is the beginning of the <strong>#<%= @channel.name %></strong> channel. Be the first to say something!</p>
+        <h3 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">No messages yet</h3>
+        <p class="text-gray-500 max-w-sm sm:max-w-md mx-auto">This is the beginning of the <strong>#<%= @channel.name %></strong> channel. Be the first to say something!</p>
       </div>
     <% end %>
   </div>
 
   <!-- Message Form -->
-  <div class="py-4 bg-white border-t border-gray-200">
+  <div class="py-3 sm:py-4 bg-white border-t border-gray-200" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);">
     <% if @channel.private? && (current_user.admin? || @channel.creator == current_user) %>
-      <div class="px-6 pb-4">
-        <%= form_with url: invite_channel_path(@channel), method: :post, local: true, class: "flex items-center space-x-2 text-sm" do |f| %>
+      <div class="px-4 sm:px-6 pb-3">
+        <%= form_with url: invite_channel_path(@channel), method: :post, local: true, class: "flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 text-sm" do |f| %>
           <%= f.text_field :username, name: :username, placeholder: "Invite by username",
                 class: "flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" %>
-          <%= f.submit "Invite", class: "px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md" %>
+          <%= f.submit "Invite", class: "inline-flex items-center justify-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md" %>
         <% end %>
       </div>
     <% end %>
-    <%= form_with model: [ @channel, Message.new ], local: true, class: "px-6", data: { controller: "mentions upload", mentions_users_value: @channel.members.order(:username).pluck(:username).to_json, action: "turbo:submit-end->message-list#afterSubmit" } do |form| %>
-      <div class="relative flex items-center gap-3">
+    <%= form_with model: [ @channel, Message.new ], local: true, class: "px-4 sm:px-6", data: { controller: "mentions upload", mentions_users_value: @channel.members.order(:username).pluck(:username).to_json, action: "turbo:submit-end->message-list#afterSubmit" } do |form| %>
+      <div class="relative flex flex-wrap items-end gap-2 sm:flex-nowrap sm:gap-3">
         <%= form.text_area :content,
             placeholder: ( @channel.dm? ? "Message @#{@channel.members.where.not(id: current_user.id).first&.username || 'user'}" : "Message ##{@channel.name}" ),
             rows: 1,
-            class: "flex-1 pl-4 pr-4 py-3 border border-gray-300 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none",
+            class: "flex-1 min-w-[220px] pl-4 pr-4 py-3 border border-gray-300 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none",
             style: "min-height: 44px;",
             data: { message_list_target: "textarea", mentions_target: "textarea", upload_target: "textarea", action: "input->message-list#autoResize input->mentions#onInput keydown.enter->mentions#maybeAccept keydown.enter->message-list#submit" } %>
 
@@ -119,11 +128,11 @@
           <%= form.file_field :files, multiple: true, class: "hidden", direct_upload: true, data: { upload_target: 'input', action: 'change->upload#change' } %>
         </label>
 
-        <%= form.submit "Send", class: "px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex items-center justify-center", style: "min-height: 44px;" %>
+        <%= form.submit "Send", class: "inline-flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer", style: "min-height: 44px;" %>
       </div>
 
-      <div data-mentions-target="menu" class="absolute left-6 bottom-16 z-10 bg-white border border-gray-200 rounded-md shadow-sm hidden"></div>
-      <div data-upload-target="previews" class="px-0 pt-2 flex gap-2"></div>
+      <div data-mentions-target="menu" class="absolute left-4 sm:left-6 bottom-16 z-10 bg-white border border-gray-200 rounded-md shadow-sm hidden"></div>
+      <div data-upload-target="previews" class="px-0 pt-2 flex flex-wrap gap-2"></div>
     <% end %>
   </div>
 

@@ -1,10 +1,40 @@
-<nav class="mb-4">
-  <ul class="flex space-x-4 text-sm -mb-px">
-    <li><%= link_to 'Dashboard', admin_dashboard_path, class: class_names('pb-3 border-b-2', 'border-blue-600 text-blue-600' => current_page?(admin_dashboard_path), 'border-transparent text-gray-600 hover:text-gray-900' => !current_page?(admin_dashboard_path)) %></li>
-    <li><%= link_to 'Integrations', admin_integrations_path, class: class_names('pb-3 border-b-2', 'border-blue-600 text-blue-600' => current_page?(admin_integrations_path), 'border-transparent text-gray-600 hover:text-gray-900' => !current_page?(admin_integrations_path)) %></li>
-    <li><%= link_to 'Tokens', admin_tokens_path, class: class_names('pb-3 border-b-2', 'border-blue-600 text-blue-600' => current_page?(admin_tokens_path), 'border-transparent text-gray-600 hover:text-gray-900' => !current_page?(admin_tokens_path)) %></li>
-    <li><%= link_to 'Bots', admin_bots_path, class: class_names('pb-3 border-b-2', 'border-blue-600 text-blue-600' => current_page?(admin_bots_path), 'border-transparent text-gray-600 hover:text-gray-900' => !current_page?(admin_bots_path)) %></li>
-    <li><%= link_to 'Users', admin_users_path, class: class_names('pb-3 border-b-2', 'border-blue-600 text-blue-600' => current_page?(admin_users_path), 'border-transparent text-gray-600 hover:text-gray-900' => !current_page?(admin_users_path)) %></li>
-    <li class="ml-auto"><%= link_to 'Server Settings', edit_admin_settings_path, class: 'text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-100' %></li>
+<% links = [
+  { label: 'Dashboard', path: admin_dashboard_path },
+  { label: 'Integrations', path: admin_integrations_path },
+  { label: 'Tokens', path: admin_tokens_path },
+  { label: 'Bots', path: admin_bots_path },
+  { label: 'Users', path: admin_users_path }
+] %>
+
+<!-- Mobile select -->
+<div class="md:hidden mb-4" data-controller="nav-switcher">
+  <label for="admin-nav" class="sr-only">Admin section</label>
+  <select id="admin-nav" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          data-action="change->nav-switcher#change">
+    <% links.each do |link| %>
+      <option value="<%= link[:path] %>" <%= 'selected' if current_page?(link[:path]) %>><%= link[:label] %></option>
+    <% end %>
+    <option value="<%= edit_admin_settings_path %>" <%= 'selected' if current_page?(edit_admin_settings_path) %>>Server Settings</option>
+  </select>
+</div>
+
+<!-- Desktop pills -->
+<nav class="hidden md:block mb-6">
+  <ul class="flex items-center gap-4 text-sm">
+    <% links.each do |link| %>
+      <% active = current_page?(link[:path]) %>
+      <li>
+        <%= link_to link[:label], link[:path],
+              class: class_names('inline-flex items-center rounded-full px-3 py-2 transition-colors duration-150',
+                                'bg-blue-50 text-blue-700 shadow-sm' => active,
+                                'text-gray-600 hover:text-gray-900 hover:bg-gray-100' => !active) %>
+      </li>
+    <% end %>
+    <li class="ml-auto">
+      <%= link_to 'Server Settings', edit_admin_settings_path,
+            class: class_names('inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition-colors duration-150',
+                              'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' => current_page?(edit_admin_settings_path),
+                              'border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300' => !current_page?(edit_admin_settings_path)) %>
+    </li>
   </ul>
 </nav>

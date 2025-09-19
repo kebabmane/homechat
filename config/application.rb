@@ -60,17 +60,27 @@ module Homechat
       # This is safe because we're in a controlled home environment
       config.action_controller.forgery_protection_origin_check = false
 
-      # Use broad trusted proxies for Home Assistant environment
-      # Dynamic detection will be done later during initialization
-      config.action_dispatch.trusted_proxies = [
+      # Configure trusted proxies based on user configuration
+      trusted_ranges = [
         ActionDispatch::RemoteIp::TRUSTED_PROXIES,
         IPAddr.new('172.30.0.0/16'),   # Home Assistant Docker networks
-        IPAddr.new('192.168.0.0/16'),  # Common home network range
-        IPAddr.new('10.0.0.0/8'),      # Private network range
-        IPAddr.new('172.16.0.0/12'),   # Private network range
         IPAddr.new('127.0.0.1'),       # Localhost
         IPAddr.new('::1')              # IPv6 localhost
-      ].flatten
+      ]
+
+      # Add user-configured network range
+      if ENV['NETWORK_RANGE'].present?
+        begin
+          user_range = IPAddr.new(ENV['NETWORK_RANGE'])
+          trusted_ranges << user_range
+          puts "[INFO] Added user-configured network range: #{ENV['NETWORK_RANGE']}"
+        rescue IPAddr::InvalidAddressError => e
+          puts "[WARN] Invalid network range configured: #{ENV['NETWORK_RANGE']} - #{e.message}"
+          puts "[WARN] Using default ranges only"
+        end
+      end
+
+      config.action_dispatch.trusted_proxies = trusted_ranges.flatten
     end
 
     # Session configuration
