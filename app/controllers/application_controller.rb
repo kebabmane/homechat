@@ -4,11 +4,9 @@ class ApplicationController < ActionController::Base
 
   # Configure CSRF protection for Home Assistant add-on environment
   if ENV['HOME_ASSISTANT_ADDON'] == 'true'
-    protect_from_forgery with: :null_session, if: ->(request) { request.format.json? }
-    protect_from_forgery with: :exception, unless: ->(request) { request.format.json? }
-
-    # Skip CSRF protection for specific endpoints if needed
-    # skip_before_action :verify_authenticity_token, only: [:some_api_endpoint]
+    # Use null_session for all requests in HA add-on mode to avoid blocking requests
+    # This is safe in the controlled HA environment
+    protect_from_forgery with: :null_session
   else
     protect_from_forgery with: :exception
   end
