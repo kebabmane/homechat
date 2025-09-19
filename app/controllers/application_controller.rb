@@ -2,7 +2,16 @@ class ApplicationController < ActionController::Base
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
 
-  protect_from_forgery with: :exception
+  # Configure CSRF protection for Home Assistant add-on environment
+  if ENV['HOME_ASSISTANT_ADDON'] == 'true'
+    protect_from_forgery with: :null_session, if: ->(request) { request.format.json? }
+    protect_from_forgery with: :exception, unless: ->(request) { request.format.json? }
+
+    # Skip CSRF protection for specific endpoints if needed
+    # skip_before_action :verify_authenticity_token, only: [:some_api_endpoint]
+  else
+    protect_from_forgery with: :exception
+  end
   
   layout :determine_layout
   before_action :set_sidebar_data, if: :logged_in?
@@ -68,5 +77,21 @@ class ApplicationController < ActionController::Base
   rescue StandardError => e
     Rails.logger.warn "Session timeout check failed: #{e.message}"
     session[:last_activity_time] = Time.current.to_s
+  end
+
+  # Handle CSRF token validation for Home Assistant ingress environment
+  def handle_unverified_request
+    if ENV['HOME_ASSISTANT_ADDON'] == 'true'
+      Rails.logger.warn "CSRF token verification failed in Home Assistant add-on environment"
+
+      # For form submissions in HA add-on, try to gracefully handle the error
+      if request.format.html? && request.post?
+        Rails.logger.warn "Form submission CSRF failure - X-Ingress-Path: #{request.headers['X-Ingress-Path']}"
+        redirect_back(fallback_location: root_path, alert: 'Security verification failed. Please try again.')
+        return
+      end
+    end
+
+    super
   end
 end

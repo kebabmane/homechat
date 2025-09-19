@@ -45,12 +45,30 @@ module Homechat
     config.discovery.server_name = ENV['DISCOVERY_SERVER_NAME']
     config.discovery.port = ENV['DISCOVERY_PORT']&.to_i
 
+    # Home Assistant add-on proxy configuration
+    if ENV['HOME_ASSISTANT_ADDON'] == 'true'
+      # Home Assistant uses the 172.30.33.0/24 network for add-ons
+      config.force_ssl = false  # SSL termination handled by HA ingress proxy
+
+      # Trust the Home Assistant proxy network
+      config.action_dispatch.trusted_proxies = [
+        ActionDispatch::RemoteIp::TRUSTED_PROXIES,
+        IPAddr.new('172.30.33.0/24'),  # Home Assistant add-on network
+        IPAddr.new('127.0.0.1'),       # Localhost
+        IPAddr.new('::1')              # IPv6 localhost
+      ].flatten
+
+      # Configure for ingress proxy environment
+      config.action_dispatch.default_headers['X-Frame-Options'] = 'ALLOWALL'
+      config.hosts.clear  # Allow any host when behind HA ingress
+    end
+
     # Session configuration
     config.session_store :cookie_store,
       key: '_homechat_session',
       expire_after: 30.days,
-      secure: Rails.env.production?,
+      secure: ENV['HOME_ASSISTANT_ADDON'] == 'true' ? false : Rails.env.production?,
       httponly: true,
-      same_site: :lax
+      same_site: ENV['HOME_ASSISTANT_ADDON'] == 'true' ? :none : :lax
   end
 end
