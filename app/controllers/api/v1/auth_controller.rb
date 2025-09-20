@@ -7,8 +7,18 @@ class Api::V1::AuthController < Api::V1::BaseController
 
     if user&.authenticate(params[:password])
       # Create or find an API token for this user
-      api_token = ApiToken.find_or_create_by(name: "Mobile App - #{user.username}") do |token|
-        token.active = true
+      api_token = ApiToken.find_by(name: "Mobile App - #{user.username}")
+
+      if api_token.nil?
+        # Create new token
+        api_token = ApiToken.create!(name: "Mobile App - #{user.username}", active: true)
+      elsif !api_token.active?
+        # Reactivate existing token
+        api_token.update!(active: true)
+        api_token.regenerate!
+      else
+        # Regenerate token for existing active token to ensure we have the plain text
+        api_token.regenerate!
       end
 
       render json: {

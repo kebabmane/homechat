@@ -73,7 +73,7 @@
   <div class="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6" data-message-list-target="container">
     <%= turbo_stream_from @channel %>
     <% if @messages.any? %>
-      <div class="space-y-4 sm:space-y-6 pb-6" id="<%= dom_id(@channel, :messages) %>">
+      <div class="space-y-4 sm:space-y-6 pt-6 pb-6" id="<%= dom_id(@channel, :messages) %>">
         <% divider_rendered = false %>
         <% @messages.reverse.each do |message| %>
           <% if !divider_rendered && @last_read_at && message.created_at > @last_read_at %>

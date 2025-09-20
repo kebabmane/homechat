@@ -3,12 +3,17 @@ import { Controller } from "@hotwired/stimulus"
 const COLLAPSE_KEY = "sidebarCollapsed"
 
 export default class extends Controller {
-  static targets = ["panel", "backdrop", "opener"]
+  static targets = ["panel", "backdrop"]
 
   connect() {
     this.collapsed = this.readPersistedCollapse()
-    this._onKeydown = (event) => { if (event.key === "Escape") this.close() }
-    this._onResize = () => this.applyCollapse()
+
+    this._onKeydown = (event) => {
+      if (event.key === "Escape") this.close()
+    }
+    this._onResize = () => {
+      this.applyCollapse()
+    }
     window.addEventListener("keydown", this._onKeydown)
     window.addEventListener("resize", this._onResize)
     this.applyCollapse()
@@ -39,7 +44,6 @@ export default class extends Controller {
 
   togglePinned(event) {
     event?.preventDefault()
-    console.debug("sidebar#togglePinned", { desktop: this.isDesktop(), collapsed: this.collapsed })
     if (this.isDesktop()) {
       this.setCollapsed(!this.collapsed)
     } else {
@@ -49,7 +53,6 @@ export default class extends Controller {
 
   openPinned(event) {
     event?.preventDefault()
-    console.debug("sidebar#openPinned")
     this.setCollapsed(false)
   }
 
@@ -62,18 +65,23 @@ export default class extends Controller {
   applyCollapse() {
     const desktop = this.isDesktop()
     const shouldCollapse = desktop && this.collapsed
-    console.debug("sidebar#applyCollapse", { desktop, shouldCollapse })
 
     if (this.hasPanelTarget) {
       if (desktop) {
-        this.panelTarget.classList.remove("-translate-x-full")
-        this.panelTarget.classList.add("translate-x-0")
+        // On desktop, sidebar should always be visible unless collapsed
+        if (shouldCollapse) {
+          // Hide the sidebar completely when collapsed
+          this.panelTarget.classList.add("hidden")
+        } else {
+          // Show the sidebar when not collapsed
+          this.panelTarget.classList.remove("hidden")
+          this.panelTarget.classList.remove("-translate-x-full")
+          this.panelTarget.classList.add("translate-x-0")
+        }
+      } else {
+        // On mobile, never use hidden class, use transform instead
+        this.panelTarget.classList.remove("hidden")
       }
-      this.panelTarget.classList.toggle("hidden", shouldCollapse)
-    }
-
-    if (this.hasOpenerTarget) {
-      this.openerTarget.classList.toggle("hidden", !(desktop && shouldCollapse))
     }
 
     if (!desktop) {

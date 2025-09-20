@@ -2,6 +2,7 @@ Rails.application.routes.draw do
   # Authentication routes
   get "/signup", to: "users#new"
   post "/signup", to: "users#create"
+  get "/users/search", to: "users#search"
   get "/signin", to: "sessions#new"
   post "/signin", to: "sessions#create"
   delete "/signout", to: "sessions#destroy"
@@ -95,6 +96,7 @@ Rails.application.routes.draw do
       get :messages, to: 'messages#index'
       # Search endpoint
       get :search, to: 'search#index'
+      get 'users/search', to: 'search#search_users'
 
       # Channel-scoped API
       resources :channels, only: [:index] do

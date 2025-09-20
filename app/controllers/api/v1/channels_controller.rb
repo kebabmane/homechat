@@ -2,16 +2,29 @@ class Api::V1::ChannelsController < Api::V1::BaseController
   # GET /api/v1/channels
   def index
     user = current_api_user
-    channels = Channel.accessible_by(user).includes(members: []).order(:name)
+    channels = Channel.accessible_by(user).includes(:members, :messages).order(:name)
     render json: {
       channels: channels.map do |c|
+        last_message = c.messages.order(:created_at).last
         {
           id: c.id,
           name: c.name,
+          description: c.description,
           type: c.channel_type,
-          members: c.member_count,
+          member_count: c.member_count,
+          online_member_count: c.members.where(is_online: true).count,
+          last_message: last_message ? {
+            id: last_message.id,
+            content: last_message.content,
+            created_at: last_message.created_at.iso8601,
+            user: {
+              id: last_message.user.id,
+              username: last_message.user.username
+            }
+          } : nil,
+          unread_count: 0, # TODO: Implement unread tracking
           is_member: c.members.include?(user),
-          online_members: c.members.where(is_online: true).count
+          created_at: c.created_at&.iso8601
         }
       end
     }

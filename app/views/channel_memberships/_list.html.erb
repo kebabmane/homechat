@@ -1,0 +1,25 @@
+<div class="max-h-64 overflow-y-auto">
+  <div class="px-4 py-3 border-b border-gray-100">
+    <h3 class="text-sm font-semibold text-gray-900">Members (<%= channel.member_count %>)</h3>
+  </div>
+  <ul class="divide-y divide-gray-100 text-sm">
+    <% channel.members.order(:username).each do |member| %>
+      <li class="flex items-center gap-3 px-4 py-2">
+        <%= avatar_for(member, size: 'h-8 w-8') %>
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-gray-900 truncate"><%= member.username %></p>
+          <p class="text-xs text-gray-500">
+            <% if user_online?(member) %>
+              <span class="inline-flex items-center text-emerald-600"><span class="inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1"></span>Online</span>
+            <% else %>
+              <%= last_seen_text(member) %>
+            <% end %>
+          </p>
+        </div>
+        <% if member == channel.creator %>
+          <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">Owner</span>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+</div>

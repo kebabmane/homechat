@@ -4,9 +4,9 @@ class ApplicationController < ActionController::Base
 
   # Configure CSRF protection for Home Assistant add-on environment
   if ENV['HOME_ASSISTANT_ADDON'] == 'true'
-    # Use null_session for all requests in HA add-on mode to avoid blocking requests
-    # This is safe in the controlled HA environment
-    protect_from_forgery with: :null_session
+    # Skip CSRF protection entirely in HA add-on mode due to ingress proxy issues
+    # This is safe in the controlled HA environment behind the ingress proxy
+    skip_before_action :verify_authenticity_token
   else
     protect_from_forgery with: :exception
   end
@@ -77,19 +77,11 @@ class ApplicationController < ActionController::Base
     session[:last_activity_time] = Time.current.to_s
   end
 
-  # Handle CSRF token validation for Home Assistant ingress environment
+  # Handle CSRF token validation for non-Home Assistant environments
   def handle_unverified_request
-    if ENV['HOME_ASSISTANT_ADDON'] == 'true'
-      Rails.logger.warn "CSRF token verification failed in Home Assistant add-on environment"
-
-      # For form submissions in HA add-on, try to gracefully handle the error
-      if request.format.html? && request.post?
-        Rails.logger.warn "Form submission CSRF failure - X-Ingress-Path: #{request.headers['X-Ingress-Path']}"
-        redirect_back(fallback_location: root_path, alert: 'Security verification failed. Please try again.')
-        return
-      end
-    end
-
+    # CSRF protection is skipped for Home Assistant add-on environment
+    # Only non-HA environments will reach this method
+    Rails.logger.warn "CSRF token verification failed"
     super
   end
 end
