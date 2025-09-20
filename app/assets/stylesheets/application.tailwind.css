@@ -33,6 +33,37 @@
   }
 }
 
+@layer components {
+  .tabs-trigger {
+    @apply inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
+  }
+  .tabs-trigger.is-active {
+    @apply bg-blue-50 text-blue-700 shadow-inner;
+  }
+  .status-dot {
+    @apply inline-flex h-2.5 w-2.5 rounded-full border border-current;
+  }
+  .status-dot--ok {
+    @apply bg-emerald-500/90 text-emerald-500;
+  }
+  .status-dot--warn {
+    @apply bg-amber-400/90 text-amber-500;
+  }
+  .quick-action-link {
+    @apply flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-gray-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700;
+  }
+  .quick-action-icon {
+    @apply text-base font-semibold;
+  }
+  .chip-link {
+    @apply inline-flex items-center rounded-full border border-gray-200 px-3 py-1.5 text-gray-600 transition hover:border-blue-200 hover:text-blue-700 hover:bg-blue-50;
+  }
+}
+
+@media (min-width: 768px) {
+  .sidebar-panel-hidden { display: none !important; }
+}
+
 /* Dark mode polish for message content */
 @layer components {
   .dark .message-body .hc-link { @apply text-blue-400 hover:text-blue-300; }

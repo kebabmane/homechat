@@ -1,62 +1,64 @@
 <%= render 'admin/header' %>
-<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-12">
 
-  <div class="bg-white rounded-lg border border-gray-200 p-5 mb-6">
-    <%= form_with model: [@new_token], url: admin_tokens_path, method: :post, data: { turbo_frame: "token_modal" }, class: "flex items-end space-x-3" do |f| %>
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Name</label>
-        <%= f.text_field :name, class: "mt-1 block w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500", placeholder: "Home Assistant", required: true %>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pb-24 space-y-8">
+  <section class="rounded-xl border border-blue-100 bg-blue-50/70 p-6 shadow-sm" id="create-token">
+    <h2 class="text-lg font-semibold text-blue-900">Generate API token</h2>
+    <p class="mt-1 text-sm text-blue-700">Tokens authenticate Home Assistant and other automation clients.</p>
+    <%= form_with model: [@new_token], url: admin_tokens_path, method: :post, data: { turbo_frame: "token_modal" }, class: "mt-4 flex flex-col gap-3 sm:flex-row sm:items-end" do |f| %>
+      <div class="sm:flex-1">
+        <%= f.label :name, 'Token name', class: "block text-sm font-medium text-blue-900" %>
+        <%= f.text_field :name, placeholder: "Home Assistant", class: "mt-1 block w-full rounded-md border-blue-200 bg-white px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
+        <p class="mt-1 text-xs text-blue-600">Choose a descriptive name so you can revoke tokens safely.</p>
       </div>
       <div>
-        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">Create Token</button>
+        <button type="submit" class="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Create token</button>
       </div>
     <% end %>
-  </div>
+  </section>
 
-  <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+  <section class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <header class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-900">Active tokens</h2>
+      <span class="text-sm text-gray-500"><%= @tokens.size %> total</span>
+    </header>
     <div class="overflow-x-auto">
-      <table class="w-full divide-y divide-gray-200" style="min-width: 900px;">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Name</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Token</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Status</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Last Used</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-200">
-        <% @tokens.each do |t| %>
-          <tr class="hover:bg-gray-50 transition-colors">
-            <td class="px-4 py-3 text-sm text-gray-900"><%= t.name %></td>
-            <td class="px-4 py-3 text-sm text-gray-700">
-              <code><%= t.short_token || '-' %></code>
-            </td>
-            <td class="px-4 py-3 text-sm">
-              <% if t.active? %>
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Active</span>
-              <% else %>
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">Inactive</span>
-              <% end %>
-            </td>
-            <td class="px-4 py-3 text-sm text-gray-700"><%= t.last_used_at&.strftime('%Y-%m-%d %H:%M') || '—' %></td>
-            <td class="px-4 py-3 text-right">
-              <div class="flex justify-end gap-2">
-                <%= button_to "Regenerate", regenerate_admin_token_path(t), method: :post, data: { turbo_frame: "token_modal" }, class: "text-sm px-3 py-1.5 rounded-md bg-yellow-500 text-white hover:bg-yellow-600 whitespace-nowrap" %>
-                <% if t.active? %>
-                  <%= button_to "Deactivate", deactivate_admin_token_path(t), method: :post, class: "text-sm px-3 py-1.5 rounded-md bg-gray-600 text-white hover:bg-gray-700 whitespace-nowrap" %>
-                <% else %>
-                  <%= button_to "Activate", activate_admin_token_path(t), method: :post, class: "text-sm px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap" %>
-                <% end %>
-                <%= button_to "Delete", admin_token_path(t), method: :delete, data: { turbo_confirm: "Delete token '#{t.name}'?" }, class: "text-sm px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 whitespace-nowrap" %>
-              </div>
-            </td>
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+          <tr>
+            <th class="px-5 py-3 text-left">Name</th>
+            <th class="px-5 py-3 text-left">Last 4</th>
+            <th class="px-5 py-3 text-left">Status</th>
+            <th class="px-5 py-3 text-left">Last used</th>
+            <th class="px-5 py-3 text-right">Actions</th>
           </tr>
-        <% end %>
-      </tbody>
+        </thead>
+        <tbody class="divide-y divide-gray-200 text-sm text-gray-700">
+          <% @tokens.each do |t| %>
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-5 py-3 font-medium text-gray-900"><%= t.name %></td>
+              <td class="px-5 py-3 font-mono"><%= t.short_token || '—' %></td>
+              <td class="px-5 py-3">
+                <span class="status-dot <%= t.active? ? 'status-dot--ok' : 'status-dot--warn' %> mr-2"></span>
+                <span><%= t.active? ? 'Active' : 'Inactive' %></span>
+              </td>
+              <td class="px-5 py-3"><%= t.last_used_at&.strftime('%Y-%m-%d %H:%M') || '—' %></td>
+              <td class="px-5 py-3">
+                <div class="flex flex-wrap justify-end gap-2">
+                  <%= button_to "Regenerate", regenerate_admin_token_path(t), method: :post, data: { turbo_frame: "token_modal" }, class: "inline-flex items-center rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600" %>
+                  <% if t.active? %>
+                    <%= button_to "Deactivate", deactivate_admin_token_path(t), method: :post, class: "inline-flex items-center rounded-md bg-gray-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700" %>
+                  <% else %>
+                    <%= button_to "Activate", activate_admin_token_path(t), method: :post, class: "inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700" %>
+                  <% end %>
+                  <%= button_to "Delete", admin_token_path(t), method: :delete, data: { turbo_confirm: "Delete token '#{t.name}'?" }, class: "inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700" %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
       </table>
     </div>
-  </div>
+  </section>
 </div>
 
 <%= turbo_frame_tag "token_modal" %>

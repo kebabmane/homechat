@@ -6,7 +6,7 @@
       <p class="text-gray-600 mt-1 hidden sm:block">Update your channel settings</p>
     </div>
 
-    <%= form_with model: @channel, local: true, class: "p-6 pb-24" do |form| %>
+    <%= form_with model: @channel, local: true, class: "p-6" do |form| %>
       <% if @channel.errors.any? %>
         <div class="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
           <h4 class="font-medium">Please fix the following errors:</h4>
@@ -65,17 +65,18 @@
         <% end %>
       </div>
 
-      <!-- Sticky action bar -->
-      <div class="sticky bottom-0 left-0 right-0 bg-gray-50 border-t border-gray-200 -mx-6 mt-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between rounded-b-lg" style="padding-bottom: env(safe-area-inset-bottom)">
-        <%= link_to "Cancel", channel_path(@channel), class: "text-gray-600 hover:text-gray-900 text-sm font-medium" %>
-        <div class="flex space-x-3">
-          <%= link_to "Delete Channel", channel_path(@channel),
-              data: {
-                turbo_method: :delete,
-                turbo_confirm: "Are you sure you want to delete this channel? This action cannot be undone."
-              },
-              class: "bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out" %>
-          <%= form.submit "Update Channel", class: "bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out" %>
+        <!-- Action buttons -->
+        <div class="flex items-center justify-between pt-6 border-t border-gray-200 mt-8">
+          <%= link_to "Cancel", channel_path(@channel), class: "text-gray-600 hover:text-gray-900 text-sm font-medium" %>
+          <div class="flex space-x-3">
+            <%= link_to "Delete Channel", channel_path(@channel),
+                data: {
+                  turbo_method: :delete,
+                  turbo_confirm: "Are you sure you want to delete this channel? This action cannot be undone."
+                },
+                class: "bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out" %>
+            <%= form.submit "Update Channel", class: "bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out" %>
+          </div>
         </div>
       </div>
     <% end %>

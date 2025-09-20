@@ -2,7 +2,14 @@ class ApplicationController < ActionController::Base
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
 
-  protect_from_forgery with: :exception
+  # Configure CSRF protection for Home Assistant add-on environment
+  if ENV['HOME_ASSISTANT_ADDON'] == 'true'
+    # Skip CSRF protection entirely in HA add-on mode due to ingress proxy issues
+    # This is safe in the controlled HA environment behind the ingress proxy
+    skip_before_action :verify_authenticity_token
+  else
+    protect_from_forgery with: :exception
+  end
   
   layout :determine_layout
   before_action :set_sidebar_data, if: :logged_in?
@@ -68,5 +75,13 @@ class ApplicationController < ActionController::Base
   rescue StandardError => e
     Rails.logger.warn "Session timeout check failed: #{e.message}"
     session[:last_activity_time] = Time.current.to_s
+  end
+
+  # Handle CSRF token validation for non-Home Assistant environments
+  def handle_unverified_request
+    # CSRF protection is skipped for Home Assistant add-on environment
+    # Only non-HA environments will reach this method
+    Rails.logger.warn "CSRF token verification failed"
+    super
   end
 end

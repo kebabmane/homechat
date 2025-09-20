@@ -1,15 +1,15 @@
-<div class="flex items-start space-x-4 px-6">
+<div class="flex items-start gap-3 sm:gap-4">
   <div class="flex-shrink-0">
     <%= avatar_for(message.user) %>
   </div>
   <div class="flex-1 min-w-0">
-    <div class="flex items-baseline space-x-2 mb-1">
-      <span class="font-semibold text-gray-900"><%= message.user.username %></span>
+    <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1">
+      <span class="font-semibold text-gray-900 truncate"><%= message.user.username %></span>
       <span class="text-xs text-gray-500" title="<%= message.created_at.strftime('%B %d, %Y at %I:%M %p') %>">
         <%= message.created_at.strftime('%I:%M %p') %>
       </span>
     </div>
-    <div class="message-body text-gray-800 leading-relaxed"><%= render_message_body(message.content).html_safe %></div>
+    <div class="message-body text-gray-800 leading-relaxed break-words"><%= render_message_body(message.content).html_safe %></div>
     <%= render_link_previews(message) %>
     <% if message.files.attached? %>
       <div class="mt-2 space-y-2">

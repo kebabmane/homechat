@@ -1,58 +1,63 @@
-<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-  <h1 class="text-2xl font-bold text-gray-900 mb-6">Server Settings</h1>
+<%= render 'admin/header' %>
 
-  <%= form_with url: admin_settings_path, method: :patch, local: true, class: "space-y-6" do %>
-    <div class="bg-white border border-gray-200 rounded-lg p-6">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">General</h2>
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Site name</label>
-          <input type="text" name="site_name" value="<%= @site_name %>" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-          <p class="text-xs text-gray-500 mt-1">Shown in headers and titles.</p>
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pb-24 space-y-8">
+  <section class="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <header class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-900">General</h2>
+      <p class="text-sm text-gray-500">Control how HomeChat is presented to your team.</p>
+    </header>
+    <div class="px-6 py-6">
+      <%= form_with url: admin_settings_path, method: :patch, local: true, class: "space-y-6" do %>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-900">Site name</label>
+            <input type="text" name="site_name" value="<%= @site_name %>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <p class="mt-1 text-xs text-gray-500">Shown in window titles and the sidebar header.</p>
+          </div>
+          <label class="flex items-start gap-3">
+            <input type="checkbox" name="allow_signups" value="1" <%= 'checked' if @allow_signups %> class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+            <span class="text-sm text-gray-700">Allow new user sign-ups</span>
+          </label>
         </div>
-        <label class="flex items-center space-x-3">
-          <input type="checkbox" name="allow_signups" value="1" <%= 'checked' if @allow_signups %> class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-          <span class="text-sm text-gray-700">Allow new user sign-ups</span>
-        </label>
-      </div>
-    </div>
 
-    <div class="bg-white border border-gray-200 rounded-lg p-6">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">PWA</h2>
-      <div class="space-y-4">
-        <label class="flex items-center space-x-3">
-          <input type="checkbox" name="pwa_enabled" value="1" <%= 'checked' if @pwa_enabled %> class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-          <span class="text-sm text-gray-700">Enable installable PWA + offline cache</span>
-        </label>
-        <div class="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Short name</label>
-            <input type="text" name="pwa_short_name" value="<%= @pwa_short_name %>" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Display mode</label>
-            <select name="pwa_display" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-              <option value="standalone" <%= 'selected' if @pwa_display == 'standalone' %>>Standalone (app-like)</option>
-              <option value="browser" <%= 'selected' if @pwa_display == 'browser' %>>Browser (tabs + URL bar)</option>
-            </select>
+        <div class="rounded-xl border border-gray-100 bg-gray-50/80 px-4 py-5">
+          <h3 class="text-sm font-semibold text-gray-900">Progressive Web App</h3>
+          <p class="text-xs text-gray-500">Control installation prompts and manifest metadata.</p>
+          <div class="mt-4 space-y-4">
+            <label class="flex items-start gap-3">
+              <input type="checkbox" name="pwa_enabled" value="1" <%= 'checked' if @pwa_enabled %> class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+              <span class="text-sm text-gray-700">Enable installable PWA + offline cache</span>
+            </label>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class="block text-sm font-medium text-gray-900">Short name</label>
+                <input type="text" name="pwa_short_name" value="<%= @pwa_short_name %>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-900">Display mode</label>
+                <select name="pwa_display" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                  <option value="standalone" <%= 'selected' if @pwa_display == 'standalone' %>>Standalone (app-like)</option>
+                  <option value="browser" <%= 'selected' if @pwa_display == 'browser' %>>Browser (tabs + URL bar)</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class="block text-sm font-medium text-gray-900">Theme color</label>
+                <input type="text" name="pwa_theme_color" value="<%= @pwa_theme_color %>" placeholder="#2563eb" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-900">Background color</label>
+                <input type="text" name="pwa_bg_color" value="<%= @pwa_bg_color %>" placeholder="#ffffff" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              </div>
+            </div>
+            <p class="text-xs text-gray-500">Icons are served from <code class="font-mono">/icon.png</code> and <code class="font-mono">/icon.svg</code>.</p>
           </div>
         </div>
-        <div class="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Theme color</label>
-            <input type="text" name="pwa_theme_color" value="<%= @pwa_theme_color %>" placeholder="#2563eb" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Background color</label>
-            <input type="text" name="pwa_bg_color" value="<%= @pwa_bg_color %>" placeholder="#ffffff" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-          </div>
+        <div class="flex justify-end">
+          <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Save settings</button>
         </div>
-        <p class="text-xs text-gray-500">Colors apply to the PWA manifest and OS UI. Icons are served from /icon.png and /icon.svg.</p>
-      </div>
+      <% end %>
     </div>
-
-    <div class="flex items-center justify-end">
-      <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">Save Settings</button>
-    </div>
-  <% end %>
+  </section>
 </div>

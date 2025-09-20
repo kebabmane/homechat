@@ -37,12 +37,22 @@ class DiscoveryService
     return unless @running && @service
 
     begin
-      @service.close
+      # DNSSD service cleanup - the service will be garbage collected
+      # Stop method for DNSSD service if it exists, otherwise just clear the reference
+      if @service.respond_to?(:stop)
+        @service.stop
+      elsif @service.respond_to?(:close)
+        @service.close
+      end
+
       @service = nil
       @running = false
       Rails.logger.info "HomeChat discovery service stopped"
     rescue => e
       Rails.logger.error "Error stopping discovery service: #{e.message}"
+      # Force cleanup even if there's an error
+      @service = nil
+      @running = false
     end
   end
 

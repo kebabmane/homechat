@@ -4,10 +4,16 @@ import { subscribeToTyping, broadcastTyping } from "channels/typing_channel"
 // Manages channel message area interactions: scroll, header shadow, textarea autosize.
 export default class extends Controller {
   static targets = ["container", "header", "textarea", "scrollButton"]
+  static values = {
+    autoscroll: { type: Boolean, default: true },
+    autofocus: { type: Boolean, default: false }
+  }
 
   connect() {
-    // Ensure newest messages are visible
-    this.scrollToBottom()
+    // Ensure newest messages are visible when desired
+    if (this.autoscrollValue) {
+      requestAnimationFrame(() => this._scrollToBottom(true))
+    }
 
     // Header shadow on scroll
     if (this.hasContainerTarget) {
@@ -18,13 +24,23 @@ export default class extends Controller {
       this.containerTarget.addEventListener("scroll", this._onScroll)
       this.updateHeaderShadow()
       this.updateScrollButton()
+
+      // Watch for new messages being appended
+      this._observer = new MutationObserver((mutations) => {
+        if (!this.autoscrollValue) return
+        if (mutations.some((mutation) => mutation.addedNodes.length > 0)) {
+          this._scrollToBottom(false)
+        }
+      })
+      this._observer.observe(this.containerTarget, { childList: true, subtree: true })
     }
 
     // Autosize composer
     if (this.hasTextareaTarget) {
       this.autoResize()
-      // Auto-focus composer on load
-      this.textareaTarget.focus()
+      if (this.autofocusValue) {
+        this.textareaTarget.focus()
+      }
     }
 
     // Subscribe to typing events for this channel (read from data-channel-id on root)
@@ -39,6 +55,10 @@ export default class extends Controller {
     if (this._onScroll && this.hasContainerTarget) {
       this.containerTarget.removeEventListener("scroll", this._onScroll)
     }
+    if (this._observer) {
+      this._observer.disconnect()
+      this._observer = null
+    }
   }
 
   // Called on turbo:submit-end from the form
@@ -46,9 +66,11 @@ export default class extends Controller {
     if (this.hasTextareaTarget) {
       this.textareaTarget.value = ""
       this.autoResize()
-      this.textareaTarget.focus()
+      if (this.autofocusValue) {
+        this.textareaTarget.focus()
+      }
     }
-    this.scrollToBottom()
+    requestAnimationFrame(() => this._scrollToBottom(true))
   }
 
   submit(event) {
@@ -82,10 +104,13 @@ export default class extends Controller {
     this.debouncedBroadcastTyping()
   }
 
-  scrollToBottom() {
-    if (!this.hasContainerTarget) return
-    const el = this.containerTarget
-    el.scrollTop = el.scrollHeight
+  scrollToBottom(arg = false) {
+    if (arg instanceof Event) {
+      arg.preventDefault()
+      this._scrollToBottom(true)
+      return
+    }
+    this._scrollToBottom(Boolean(arg))
   }
 
   updateHeaderShadow() {
@@ -97,9 +122,9 @@ export default class extends Controller {
   updateScrollButton() {
     if (!this.hasContainerTarget) return
     if (!this.hasScrollButtonTarget) return
-    const el = this.containerTarget
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 16
-    this.scrollButtonTarget.classList.toggle("hidden", atBottom)
+    const nearBottom = this._isNearBottom()
+    this.scrollButtonTarget.classList.toggle("hidden", nearBottom)
+    this.autoscrollValue = nearBottom
   }
 
   showTyping({ username }) {
@@ -131,4 +156,19 @@ export default class extends Controller {
       }
     }
   })()
+
+  _scrollToBottom(force = false) {
+    if (!this.hasContainerTarget) return
+    if (!force && !this.autoscrollValue) return
+    const el = this.containerTarget
+    if (!force && !this._isNearBottom()) return
+    el.scrollTop = el.scrollHeight
+    this.updateScrollButton()
+  }
+
+  _isNearBottom(threshold = 96) {
+    if (!this.hasContainerTarget) return true
+    const el = this.containerTarget
+    return el.scrollHeight - el.scrollTop - el.clientHeight < threshold
+  }
 }

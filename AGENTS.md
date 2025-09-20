@@ -1,40 +1,35 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- App code lives in `app/`:
-  - `controllers/` (e.g., `channels_controller.rb`), `models/` (e.g., `channel.rb`), `views/` (e.g., `views/channels/index.html.erb`).
-  - Frontend assets in `app/assets/` and JS controllers in `app/javascript/controllers/`.
-- Configuration in `config/` (routes in `config/routes.rb`, credentials in `config/credentials.yml.enc`).
-- Database schema and migrations in `db/` (SQLite by default).
-- Executables in `bin/` (e.g., `bin/dev`, `bin/rails`, `bin/setup`).
-- Static files in `public/`; background and storage in `storage/`, temp in `tmp/`.
+- App code lives in `app/` with Rails MVC layout: `controllers/`, `models/`, `views/`, plus assets in `app/assets/` and JS controllers under `app/javascript/controllers/`.
+- Configuration files are in `config/`; update `config/routes.rb` for new endpoints and use encrypted credentials in `config/credentials.yml.enc`.
+- Database schema and migrations reside in `db/`; run migrations through Rails tasks rather than editing `schema.rb` manually.
+- Executables live in `bin/`; start local workflows with `bin/dev` and automate setup via `bin/setup`.
 
 ## Build, Test, and Development Commands
-- `bin/setup` — Install gems, prepare DB, and boot dev server unless `--skip-server`.
-- `bin/dev` — Run app locally via Foreman (Rails server + Tailwind watcher; see `Procfile.dev`).
-- `bin/rails db:prepare` — Create, migrate, and seed DB as needed.
-- `bin/rubocop` — Ruby/Rails lint (uses `rubocop-rails-omakase`).
-- `bundle exec erblint --lint-all` — Lint ERB templates.
-- `bin/brakeman` — Static security scan.
-- Docker: `docker-compose up --build` for containerized dev; deploy via Kamal (`bin/kamal ...`).
+- `bin/setup` — Install gems, prepare the database, and optionally launch the dev server.
+- `bin/dev` — Run the Rails server with Tailwind watcher via Foreman (see `Procfile.dev`).
+- `bin/rails db:prepare` — Create, migrate, and seed the database when schemas change.
+- `bin/rubocop` and `bundle exec erblint --lint-all` — Lint Ruby and ERB templates before pushing.
+- `bin/brakeman` — Perform static security scans when touching sensitive logic.
 
 ## Coding Style & Naming Conventions
-- Ruby: 2-space indentation, UTF-8, freeze magic not required.
-- Names: classes `CamelCase` (`Channel`), files `snake_case.rb` (`channels_controller.rb`), partials start with `_` (`_form.html.erb`).
-- Controllers are RESTful; routes use `resources` (see `config/routes.rb`).
-- Keep views dumb; move logic to helpers or presenters.
-- Run `bin/rubocop` and ERB lint before PRs; auto-correct with `bin/rubocop -A` where safe.
+- Ruby code uses 2-space indentation and UTF-8 encoding; follow Rails conventions for callbacks and validations.
+- Name classes with CamelCase and files with snake_case (e.g., `Channel`, `channel.rb`).
+- Keep complex view logic out of ERB; move to helpers or presenters in `app/helpers/`.
+- Rely on `rubocop-rails-omakase`; auto-correct with `bin/rubocop -A` when safe.
 
 ## Testing Guidelines
-- Preferred: Rails’ built-in Minitest. Place tests under `test/` with `*_test.rb` (e.g., `test/models/channel_test.rb`).
-- Use fixtures or factories consistently; keep tests deterministic.
-- Run all tests with `bin/rails test` (or narrower paths like `bin/rails test test/models`).
+- Use Rails Minitest under `test/`; match filenames to the class under test (`channel_test.rb`).
+- Keep fixtures consistent and deterministic; avoid external API calls in tests.
+- Run suites with `bin/rails test` or narrow paths like `bin/rails test test/models` before opening a PR.
 
 ## Commit & Pull Request Guidelines
-- Commits: use Conventional Commits style — `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`; keep scope small and messages imperative.
-- PRs: include summary, motivation, screenshots for UI, and linked issues. Note migrations and any config changes.
-- CI hygiene: lint and tests must pass locally (`bin/rubocop`, ERB lint, `bin/rails test`) before requesting review.
+- Follow Conventional Commits (`feat:`, `fix:`, `chore:`) with imperative summaries and minimal scope.
+- PRs include motivation, screenshots for UI tweaks, linked issues, and note migrations or config changes.
+- Ensure lint (`bin/rubocop`, ERB lint) and tests pass locally; share failure context if something cannot be run.
 
 ## Security & Configuration Tips
-- Do not commit secrets. Use Rails credentials (`config/credentials.yml.enc` + `config/master.key`) and Kamal `.kamal/secrets` for deployments.
-- Review `config/storage.yml` and `config/environments/*` before enabling third‑party services.
+- Do not commit secrets; manage service keys via Rails credentials or Kamal secrets.
+- Review `config/storage.yml` and environment configs before enabling third-party services.
+- Treat migrations and seeds as production-affecting changes; call them out explicitly in PRs.

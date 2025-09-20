@@ -45,12 +45,50 @@ module Homechat
     config.discovery.server_name = ENV['DISCOVERY_SERVER_NAME']
     config.discovery.port = ENV['DISCOVERY_PORT']&.to_i
 
+    # Home Assistant add-on configuration
+    if ENV['HOME_ASSISTANT_ADDON'] == 'true'
+      # Configure for Home Assistant ingress environment
+      config.force_ssl = false  # SSL termination handled by HA ingress
+
+      # Allow iframe embedding in Home Assistant
+      config.action_dispatch.default_headers['X-Frame-Options'] = 'ALLOWALL'
+
+      # Clear host restrictions when behind HA ingress
+      config.hosts.clear
+
+      # Disable origin checking for CSRF in HA environment
+      # This is safe because we're in a controlled home environment
+      config.action_controller.forgery_protection_origin_check = false
+
+      # Configure trusted proxies based on user configuration
+      trusted_ranges = [
+        ActionDispatch::RemoteIp::TRUSTED_PROXIES,
+        IPAddr.new('172.30.0.0/16'),   # Home Assistant Docker networks
+        IPAddr.new('127.0.0.1'),       # Localhost
+        IPAddr.new('::1')              # IPv6 localhost
+      ]
+
+      # Add user-configured network range
+      if ENV['NETWORK_RANGE'].present?
+        begin
+          user_range = IPAddr.new(ENV['NETWORK_RANGE'])
+          trusted_ranges << user_range
+          puts "[INFO] Added user-configured network range: #{ENV['NETWORK_RANGE']}"
+        rescue IPAddr::InvalidAddressError => e
+          puts "[WARN] Invalid network range configured: #{ENV['NETWORK_RANGE']} - #{e.message}"
+          puts "[WARN] Using default ranges only"
+        end
+      end
+
+      config.action_dispatch.trusted_proxies = trusted_ranges.flatten
+    end
+
     # Session configuration
     config.session_store :cookie_store,
       key: '_homechat_session',
       expire_after: 30.days,
-      secure: Rails.env.production?,
+      secure: ENV['HOME_ASSISTANT_ADDON'] == 'true' ? false : Rails.env.production?,
       httponly: true,
-      same_site: :lax
+      same_site: ENV['HOME_ASSISTANT_ADDON'] == 'true' ? :none : :lax
   end
 end

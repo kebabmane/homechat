@@ -2,6 +2,7 @@ Rails.application.routes.draw do
   # Authentication routes
   get "/signup", to: "users#new"
   post "/signup", to: "users#create"
+  get "/users/search", to: "users#search"
   get "/signin", to: "sessions#new"
   post "/signin", to: "sessions#create"
   delete "/signout", to: "sessions#destroy"
@@ -17,6 +18,7 @@ Rails.application.routes.draw do
       post :invite
     end
     resources :messages, only: [:create]
+    resources :channel_memberships, only: [:index]
   end
   
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
@@ -94,6 +96,7 @@ Rails.application.routes.draw do
       get :messages, to: 'messages#index'
       # Search endpoint
       get :search, to: 'search#index'
+      get 'users/search', to: 'search#search_users'
 
       # Channel-scoped API
       resources :channels, only: [:index] do

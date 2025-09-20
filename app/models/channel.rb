@@ -33,6 +33,12 @@ class Channel < ApplicationRecord
   def dm?
     channel_type == 'dm'
   end
+
+  # For DM channels, get the other participant (not the current user)
+  def other_user(current_user)
+    return nil unless dm?
+    members.where.not(id: current_user.id).first
+  end
   
   
   def add_member(user)

@@ -1,5 +1,29 @@
 class UsersController < ApplicationController
   layout 'authentication'
+  before_action :require_login, only: [:search]
+
+  def search
+    query = params[:q]&.strip
+
+    if query.blank? || query.length < 2
+      render json: []
+      return
+    end
+
+    users = User.where('LOWER(username) LIKE LOWER(?)', "%#{query}%")
+                .where.not(id: current_user.id)
+                .limit(10)
+                .map do |user|
+      {
+        id: user.id,
+        username: user.username,
+        is_online: user.online?
+      }
+    end
+
+    render json: users
+  end
+
   def new
     if !ActiveModel::Type::Boolean.new.cast(Setting.fetch(:allow_signups, true))
       redirect_to signin_path, alert: 'Sign ups are disabled by the administrator.' and return

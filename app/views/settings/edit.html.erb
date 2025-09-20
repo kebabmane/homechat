@@ -1,83 +1,134 @@
-<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-  <h1 class="text-2xl font-bold text-gray-900 mb-6">User Settings</h1>
+<%= content_for :title, 'User Settings' %>
 
-  <%= form_with model: current_user, url: settings_path, method: :patch, local: true, class: "space-y-6" do |f| %>
-    <div class="bg-white border border-gray-200 rounded-lg p-6">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">Profile</h2>
-      <div class="space-y-4">
-        <div class="flex items-start gap-6">
-          <div class="flex flex-col items-center gap-2">
-            <%= avatar_for(current_user, size: 'h-20 w-20') %>
-            <% if current_user.avatar.attached? %>
-              <%= button_to "Remove", settings_path, method: :delete,
-                  params: { remove_avatar: true },
-                  data: { confirm: "Are you sure you want to remove your avatar?" },
-                  class: "text-xs text-red-600 hover:text-red-800 underline" %>
-            <% end %>
-          </div>
-          <div class="flex-1">
-            <%= f.label :avatar, 'Upload New Avatar', class: "block text-sm font-medium text-gray-700 mb-2" %>
-            <%= f.file_field :avatar, accept: 'image/jpeg,image/jpg,image/png,image/gif,image/webp',
-                class: "mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100",
-                data: { "avatar-preview-target": "input", "action": "change->avatar-preview#preview" } %>
-            <div class="mt-2 space-y-1">
-              <p class="text-xs text-gray-500">• Square images look best (will be cropped to fit)</p>
-              <p class="text-xs text-gray-500">• Maximum file size: 5MB</p>
-              <p class="text-xs text-gray-500">• Supported formats: JPEG, PNG, GIF, WebP</p>
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">User Settings</h1>
+    <p class="mt-1 text-sm text-gray-600">Update your profile, security credentials, and app preferences.</p>
+  </div>
+
+  <%= form_with model: current_user, url: settings_path, method: :patch, local: true,
+                data: { controller: "dirty-form" }, class: "space-y-6" do |f| %>
+    <div data-controller="tabs" data-tabs-active-value="profile" class="bg-white border border-gray-200 rounded-2xl shadow-sm">
+      <div class="flex flex-wrap gap-2 border-b border-gray-200 px-4 sm:px-6 pt-4" role="tablist" aria-label="Settings sections">
+        <button type="button" id="settings-tab-profile" aria-controls="settings-panel-profile"
+                data-tabs-target="tab" data-tabs-id="profile"
+                class="tabs-trigger" data-action="tabs#select">Profile</button>
+        <button type="button" id="settings-tab-security" aria-controls="settings-panel-security"
+                data-tabs-target="tab" data-tabs-id="security"
+                class="tabs-trigger" data-action="tabs#select">Security</button>
+        <button type="button" id="settings-tab-password" aria-controls="settings-panel-password"
+                data-tabs-target="tab" data-tabs-id="password"
+                class="tabs-trigger" data-action="tabs#select">Password</button>
+        <button type="button" id="settings-tab-preferences" aria-controls="settings-panel-preferences"
+                data-tabs-target="tab" data-tabs-id="preferences"
+                class="tabs-trigger" data-action="tabs#select">Preferences</button>
+      </div>
+
+      <div class="px-4 sm:px-6 py-6">
+        <section id="settings-panel-profile" role="tabpanel" aria-labelledby="settings-tab-profile"
+                 data-tabs-target="panel" data-tabs-id="profile" class="space-y-6">
+          <div class="grid gap-6 lg:grid-cols-[220px_1fr]">
+            <div class="flex flex-col items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 py-6">
+              <%= avatar_for(current_user, size: 'h-20 w-20') %>
+              <% if current_user.avatar.attached? %>
+                <%= link_to "Remove", settings_path,
+                    data: { turbo_method: :delete, turbo_confirm: "Remove your avatar?" },
+                    class: "text-xs text-red-600 hover:text-red-800" %>
+              <% end %>
             </div>
-            <% if current_user.errors[:avatar].any? %>
-              <div class="mt-2">
-                <% current_user.errors[:avatar].each do |error| %>
-                  <p class="text-sm text-red-600"><%= error %></p>
+            <div class="space-y-6">
+              <div>
+                <%= f.label :avatar, 'Upload new avatar', class: "block text-sm font-medium text-gray-900" %>
+                <%= f.file_field :avatar, accept: 'image/jpeg,image/jpg,image/png,image/gif,image/webp',
+                    class: "mt-2 block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:font-medium file:text-blue-700 hover:file:bg-blue-100",
+                    data: { "avatar-preview-target": "input", action: "change->avatar-preview#preview" } %>
+                <div class="mt-2 grid gap-1 text-xs text-gray-500">
+                  <p>• Square images look best (cropped to fit)</p>
+                  <p>• Maximum file size: 5MB</p>
+                  <p>• Supported formats: JPEG, PNG, GIF, WebP</p>
+                </div>
+                <% if current_user.errors[:avatar].any? %>
+                  <div class="mt-2 space-y-1">
+                    <% current_user.errors[:avatar].each do |error| %>
+                      <p class="text-sm text-red-600"><%= error %></p>
+                    <% end %>
+                  </div>
                 <% end %>
               </div>
-            <% end %>
+              <div>
+                <%= f.label :username, class: "block text-sm font-medium text-gray-900" %>
+                <%= f.text_field :username, class: "mt-2 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500" %>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="settings-panel-security" role="tabpanel" aria-labelledby="settings-tab-security"
+                 data-tabs-target="panel" data-tabs-id="security" class="space-y-4 hidden">
+          <div class="rounded-xl border border-gray-100 bg-gray-50/80 px-4 py-5">
+            <p class="text-sm text-gray-600">Confirm your current password whenever you change profile or password details.</p>
+          </div>
+          <div>
+            <%= f.label :current_password, 'Current password', class: "block text-sm font-medium text-gray-900" %>
+            <%= f.password_field :current_password, required: true, autocomplete: "current-password",
+                  class: "mt-2 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500" %>
+            <p class="text-xs text-gray-500 mt-1">We never store your password in plain text.</p>
+          </div>
+        </section>
+
+        <section id="settings-panel-password" role="tabpanel" aria-labelledby="settings-tab-password"
+                 data-tabs-target="panel" data-tabs-id="password" class="space-y-4 hidden">
+          <div class="rounded-xl border border-gray-100 bg-gray-50/80 px-4 py-5">
+            <p class="text-sm text-gray-600">Create a new password that is unique to HomeChat.</p>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <%= f.label :password, 'New password', class: "block text-sm font-medium text-gray-900" %>
+              <%= f.password_field :password, autocomplete: "new-password",
+                    class: "mt-2 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500" %>
+              <p class="text-xs text-gray-500 mt-1">Leave blank to keep your current password.</p>
+            </div>
+            <div>
+              <%= f.label :password_confirmation, 'Confirm new password', class: "block text-sm font-medium text-gray-900" %>
+              <%= f.password_field :password_confirmation, autocomplete: "new-password",
+                    class: "mt-2 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500" %>
+            </div>
+          </div>
+        </section>
+
+        <section id="settings-panel-preferences" role="tabpanel" aria-labelledby="settings-tab-preferences"
+                 data-tabs-target="panel" data-tabs-id="preferences" class="space-y-4 hidden" data-controller="preferences">
+          <div class="rounded-xl border border-gray-100 bg-gray-50/80 px-4 py-5">
+            <p class="text-sm text-gray-600">Personalise how the chat composer behaves on this device.</p>
+          </div>
+          <label class="flex items-start gap-3">
+            <input type="checkbox" data-preferences-target="enter" data-action="change->preferences#save"
+                   class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+            <span class="text-sm text-gray-700">Press Enter to send messages (Shift+Enter adds a new line).</span>
+          </label>
+          <p class="text-xs text-gray-500">Preference saves locally in this browser.</p>
+        </section>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end pt-2">
+      <%= f.submit "Save changes", class: "inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" %>
+    </div>
+
+    <div data-dirty-form-target="bar" class="hidden pointer-events-none">
+      <div class="pointer-events-auto fixed inset-x-0 bottom-4 px-4">
+        <div class="max-w-4xl mx-auto rounded-xl border border-blue-100 bg-white shadow-lg px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p class="text-sm font-medium text-gray-900">Unsaved changes</p>
+            <p class="text-xs text-gray-500">Finish editing or discard to keep your last saved settings.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button" data-action="dirty-form#reset"
+                    class="text-sm text-gray-600 hover:text-gray-800">Discard</button>
+            <%= f.submit "Save", class: "inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700" %>
           </div>
         </div>
-        <div>
-          <%= f.label :username, class: "block text-sm font-medium text-gray-700" %>
-          <%= f.text_field :username, class: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" %>
-        </div>
       </div>
-    </div>
-
-    <div class="bg-white border border-gray-200 rounded-lg p-6">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">Security</h2>
-      <div class="space-y-4">
-        <div>
-          <%= f.label :current_password, 'Current Password', class: "block text-sm font-medium text-gray-700" %>
-          <%= f.password_field :current_password, required: true, class: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" %>
-          <p class="text-xs text-gray-500 mt-1">Required to update any settings for security.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-white border border-gray-200 rounded-lg p-6">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">Change Password</h2>
-      <div class="grid sm:grid-cols-2 gap-4">
-        <div>
-          <%= f.label :password, 'New Password', class: "block text-sm font-medium text-gray-700" %>
-          <%= f.password_field :password, class: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" %>
-          <p class="text-xs text-gray-500 mt-1">Leave blank to keep current password.</p>
-        </div>
-        <div>
-          <%= f.label :password_confirmation, 'Confirm New Password', class: "block text-sm font-medium text-gray-700" %>
-          <%= f.password_field :password_confirmation, class: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" %>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-white border border-gray-200 rounded-lg p-6" data-controller="preferences">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">Preferences</h2>
-      <label class="flex items-center space-x-3">
-        <input type="checkbox" data-preferences-target="enter" data-action="change->preferences#save" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-        <span class="text-sm text-gray-700">Press Enter to send (Shift+Enter for newline)</span>
-      </label>
-      <p class="text-xs text-gray-500 mt-2">Saved to this device only.</p>
-    </div>
-
-    <div class="flex items-center justify-end">
-      <%= f.submit "Save Changes", class: "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md" %>
     </div>
   <% end %>
 </div>

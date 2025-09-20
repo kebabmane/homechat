@@ -1,151 +1,117 @@
 <% content_for :title, "Integrations" %>
 
 <%= render 'admin/header' %>
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-24">
-  <!-- Setup Instructions -->
-  <div class="mb-8 bg-blue-50 dark:bg-blue-900 rounded-lg p-6">
-    <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-4">
-      🏠 Home Assistant Setup Instructions
-    </h3>
 
-    <div class="space-y-4 text-sm text-blue-800 dark:text-blue-200">
-      <div>
-        <strong>1. Install the HomeChat Integration:</strong>
-        <p>Copy the custom integration to <code>&lt;ha_config&gt;/custom_components/homechat/</code></p>
-      </div>
-
-      <div>
-        <strong>2. Configuration Details:</strong>
-        <ul class="list-disc list-inside ml-4 space-y-1">
-          <li><strong>Host:</strong> <%= request.host %></li>
-          <li><strong>Port:</strong> <%= request.port %></li>
-          <li><strong>SSL:</strong> <%= request.ssl? ? "Enabled" : "Disabled" %></li>
-          <li><strong>API Token:</strong> Create one in the <%= link_to "Tokens", admin_tokens_path, class: "text-blue-600 hover:text-blue-800 underline" %> tab</li>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pb-24 space-y-8">
+  <section class="rounded-xl border border-blue-100 bg-blue-50/70 p-6 shadow-sm">
+    <h2 class="text-lg font-semibold text-blue-900 mb-4">🏠 Home Assistant setup</h2>
+    <ol class="list-decimal ml-5 space-y-4 text-sm text-blue-800">
+      <li>
+        <span class="font-medium">Install the integration</span>
+        <p class="mt-1 text-blue-700">Copy the custom integration into <code class="font-mono">&lt;ha_config&gt;/custom_components/homechat/</code>.</p>
+      </li>
+      <li>
+        <span class="font-medium">Configure your connection</span>
+        <ul class="mt-1 space-y-1 text-blue-700">
+          <li>Host: <code class="font-mono"><%= request.host %></code></li>
+          <li>Port: <code class="font-mono"><%= request.port %></code></li>
+          <li>SSL: <%= request.ssl? ? 'Enabled' : 'Disabled' %></li>
+          <li>API token: create one in the <%= link_to "Tokens", admin_tokens_path, class: "underline" %> tab.</li>
         </ul>
-      </div>
+      </li>
+      <li>
+        <span class="font-medium">Verify connectivity</span>
+        <p class="mt-1 text-blue-700">Use the <em>Test connection</em> button below to confirm Home Assistant can reach HomeChat.</p>
+      </li>
+    </ol>
+  </section>
 
-      <div>
-        <strong>3. Test Connection:</strong>
-        <p>Use the "Test Connection" button below to verify API connectivity.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Integration Settings -->
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-8">
-    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-      <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Integration Settings</h2>
-    </div>
-    
-    <div class="p-6">
+  <section class="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <header class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-900">Integration settings</h2>
+    </header>
+    <div class="px-6 py-6">
       <%= form_with url: update_settings_admin_integrations_path, method: :patch, local: true, class: "space-y-6" do |f| %>
-        <div>
-          <label class="flex items-center">
-            <%= f.check_box :home_assistant_enabled, 
-                checked: @integration_settings[:home_assistant_enabled], 
-                class: "rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" %>
-            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Enable Home Assistant Integration</span>
+        <div class="space-y-4">
+          <label class="flex items-start gap-3">
+            <%= f.check_box :home_assistant_enabled,
+                checked: @integration_settings[:home_assistant_enabled],
+                class: "mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+            <span>
+              <span class="text-sm font-medium text-gray-900">Enable Home Assistant integration</span>
+              <p class="text-xs text-gray-500">Allow Home Assistant to send messages and notifications to HomeChat.</p>
+            </span>
           </label>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Allow Home Assistant to send messages and notifications to HomeChat.
-          </p>
+
+          <label class="flex items-start gap-3">
+            <%= f.check_box :api_enabled,
+                checked: @integration_settings[:api_enabled],
+                class: "mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+            <span>
+              <span class="text-sm font-medium text-gray-900">Enable API access</span>
+              <p class="text-xs text-gray-500">Allow external services and automations to interact with HomeChat.</p>
+            </span>
+          </label>
+
+          <div>
+            <%= f.label :webhook_base_url, 'Webhook base URL', class: "block text-sm font-medium text-gray-900" %>
+            <%= f.text_field :webhook_base_url,
+                value: @integration_settings[:webhook_base_url],
+                placeholder: "https://homechat.local:3000",
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" %>
+            <p class="text-xs text-gray-500 mt-1">This address must be reachable from your Home Assistant instance.</p>
+          </div>
         </div>
 
-        <div>
-          <label class="flex items-center">
-            <%= f.check_box :api_enabled, 
-                checked: @integration_settings[:api_enabled], 
-                class: "rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" %>
-            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Enable API Access</span>
-          </label>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Allow external services to interact with HomeChat via API.
-          </p>
-        </div>
-
-        <div>
-          <label for="settings_webhook_base_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Webhook Base URL
-          </label>
-          <%= f.text_field :webhook_base_url, 
-              value: @integration_settings[:webhook_base_url],
-              placeholder: "https://homechat.local:3000",
-              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white" %>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Base URL for webhook callbacks. This should be accessible from Home Assistant.
-          </p>
-        </div>
-
-        <div class="flex gap-3">
-          <%= f.submit "Save Settings", 
-              class: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" %>
-          
-          <button type="button" id="test-connection" 
-                  class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-            Test Connection
-          </button>
+        <div class="flex flex-wrap gap-3">
+          <%= f.submit "Save settings", class: "inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" %>
+          <button type="button" id="test-connection" class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">Test connection</button>
         </div>
       <% end %>
     </div>
-  </div>
-
-
+  </section>
 </div>
 
 <script>
-function copyToClipboard(text, element) {
-  navigator.clipboard.writeText(text).then(function() {
-    const originalText = element.innerHTML;
-    element.innerHTML = 'Copied! ✓';
-    element.classList.add('text-green-600');
-    
-    setTimeout(function() {
-      element.innerHTML = originalText;
-      element.classList.remove('text-green-600');
-    }, 2000);
-  }).catch(function(err) {
-    console.error('Could not copy text: ', err);
-  });
-}
+(function() {
+  const button = document.getElementById('test-connection')
+  if (!button) return
 
-document.getElementById('test-connection').addEventListener('click', function() {
-  const button = this;
-  const originalText = button.textContent;
-  button.textContent = 'Testing...';
-  button.disabled = true;
-  
-  fetch('<%= test_connection_admin_integrations_path %>', {
-    headers: {
-      'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
-    }
+  button.addEventListener('click', () => {
+    if (button.dataset.busy === 'true') return
+    const original = button.textContent
+    button.dataset.busy = 'true'
+    button.textContent = 'Testing…'
+    button.disabled = true
+
+    fetch('<%= test_connection_admin_integrations_path %>', {
+      headers: { 'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content }
+    })
+      .then(resp => resp.json())
+      .then(data => {
+        const ok = data.status === 'success'
+        button.textContent = ok ? 'Connection OK ✓' : 'Test failed ✗'
+        button.classList.toggle('bg-emerald-600', ok)
+        button.classList.toggle('hover:bg-emerald-700', ok)
+        button.classList.toggle('bg-red-600', !ok)
+        button.classList.toggle('hover:bg-red-700', !ok)
+        if (!ok && data.message) alert('Test failed: ' + data.message)
+      })
+      .catch(error => {
+        button.textContent = 'Test failed ✗'
+        button.classList.remove('bg-emerald-600', 'hover:bg-emerald-700')
+        button.classList.add('bg-red-600', 'hover:bg-red-700')
+        alert('Test failed: ' + error)
+      })
+      .finally(() => {
+        setTimeout(() => {
+          button.textContent = original
+          button.classList.remove('bg-red-600', 'hover:bg-red-700')
+          button.classList.add('bg-emerald-600', 'hover:bg-emerald-700')
+          button.dataset.busy = 'false'
+          button.disabled = false
+        }, 2400)
+      })
   })
-  .then(response => response.json())
-  .then(data => {
-    if (data.status === 'success') {
-      button.textContent = 'Test Passed ✓';
-      button.classList.remove('bg-green-500', 'hover:bg-green-700');
-      button.classList.add('bg-green-600');
-    } else {
-      button.textContent = 'Test Failed ✗';
-      button.classList.remove('bg-green-500', 'hover:bg-green-700');
-      button.classList.add('bg-red-600');
-      alert('Test failed: ' + data.message);
-    }
-  })
-  .catch(error => {
-    button.textContent = 'Test Failed ✗';
-    button.classList.remove('bg-green-500', 'hover:bg-green-700');
-    button.classList.add('bg-red-600');
-    alert('Test failed: ' + error);
-  })
-  .finally(() => {
-    button.disabled = false;
-    setTimeout(() => {
-      button.textContent = originalText;
-      button.className = 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded';
-    }, 3000);
-  });
-});
+})()
 </script>
-
-<%= turbo_frame_tag "token_modal" %>

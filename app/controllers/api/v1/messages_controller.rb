@@ -77,15 +77,16 @@ class Api::V1::MessagesController < Api::V1::BaseController
             user: {
               id: message.user.id,
               username: message.user.username,
-              avatar_url: message.user.avatar_url,
-              avatar_initials: message.user.avatar_initials,
-              avatar_color_index: message.user.avatar_color_index
+              role: message.user.role,
+              created_at: message.user.created_at&.iso8601
             },
-            channel: message.channel.name,
+            channel_id: message.channel.id,
             created_at: message.created_at.iso8601,
-            message_type: message.message_type || 'chat'
+            message_type: message.message_type || 'chat',
+            files: [] # TODO: Implement file attachments
           }
-        end
+        end,
+        has_more: messages.count == limit
       }
       
     rescue ActiveRecord::RecordNotFound
@@ -208,7 +209,16 @@ class Api::V1::MessagesController < Api::V1::BaseController
     return unless ensure_channel_access(channel)
 
     user = current_api_user
-    message = channel.messages.build(user: user, content: params.require(:message))
+
+    # Support both direct message parameter and CreateMessageRequest format
+    content = params[:message]
+    message_type = params[:message_type] || 'chat'
+
+    message = channel.messages.build(
+      user: user,
+      content: content,
+      message_type: message_type
+    )
 
     if message.save
       broadcast_message(message, channel)
@@ -216,28 +226,30 @@ class Api::V1::MessagesController < Api::V1::BaseController
       # Send push notifications
       FcmNotificationService.send_message_notification(message, exclude_user: user)
 
-      render_success({
+      render json: {
+        success: true,
         message: {
           id: message.id,
           content: message.content,
           user: {
             id: message.user.id,
             username: message.user.username,
-            avatar_url: message.user.avatar_url,
-            avatar_initials: message.user.avatar_initials,
-            avatar_color_index: message.user.avatar_color_index
+            role: message.user.role,
+            created_at: message.user.created_at&.iso8601
           },
-          channel: channel.name,
-          created_at: message.created_at.iso8601
+          channel_id: channel.id,
+          created_at: message.created_at.iso8601,
+          message_type: message.message_type || 'chat',
+          files: []
         }
-      }, 'Message sent')
+      }
     else
-      render_error(message.errors.full_messages.join(', '))
+      render json: { success: false, error: message.errors.full_messages.join(', ') }, status: :unprocessable_entity
     end
   rescue ActiveRecord::RecordNotFound
-    render_error('Channel not found', :not_found)
+    render json: { success: false, error: 'Channel not found' }, status: :not_found
   rescue ActionController::ParameterMissing => e
-    render_error("Missing required parameter: #{e.param}")
+    render json: { success: false, error: "Missing required parameter: #{e.param}" }, status: :bad_request
   end
 
   # POST /api/v1/channels/:id/media
