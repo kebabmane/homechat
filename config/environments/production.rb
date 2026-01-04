@@ -27,11 +27,8 @@ Rails.application.configure do
   # SSL Configuration based on environment
   # - RAILS_ASSUME_SSL=true: Assume behind SSL-terminating reverse proxy (HA Ingress, nginx, etc.)
   # - RAILS_FORCE_SSL=true: Force HTTPS redirects (for direct SSL termination)
-  if ENV['RAILS_ASSUME_SSL'] == 'true' || ENV['HOME_ASSISTANT_ADDON'] == 'true'
-    config.assume_ssl = true
-  else
-    config.assume_ssl = false
-  end
+  # Note: HOME_ASSISTANT_ADDON sets RAILS_ASSUME_SSL based on access_mode in the run script
+  config.assume_ssl = ENV['RAILS_ASSUME_SSL'] == 'true'
 
   # Force SSL only when explicitly enabled and not using reverse proxy
   config.force_ssl = ENV['RAILS_FORCE_SSL'] == 'true'
