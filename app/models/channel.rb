@@ -58,7 +58,12 @@ class Channel < ApplicationRecord
   end
   
   def member_count
-    memberships_count || channel_memberships.count
+    # Use counter cache if column exists, otherwise count directly
+    if has_attribute?(:memberships_count) && memberships_count.present?
+      memberships_count
+    else
+      channel_memberships.count
+    end
   end
 
   def online_members_count(window: 5.minutes)

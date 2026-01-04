@@ -1,6 +1,6 @@
 class ChannelMembership < ApplicationRecord
   belongs_to :user
-  belongs_to :channel, counter_cache: :memberships_count
+  belongs_to :channel
   
   validates :user_id, uniqueness: { scope: :channel_id }
   
