@@ -3,34 +3,20 @@ class AddUserToApiTokens < ActiveRecord::Migration[8.0]
     # Add user_id column as nullable initially
     add_reference :api_tokens, :user, null: true, foreign_key: true
 
-    # Find or create system user for existing tokens
-    system_user = User.find_by(username: 'system')
-    if system_user.nil?
-      password = SecureRandom.hex(16)
-      system_user = User.create!(
-        username: 'system',
-        password: password,
-        password_confirmation: password,
-        role: 'user'
-      )
+    # Find or create system user for existing tokens using raw SQL to avoid model callbacks
+    system_user_id = execute("SELECT id FROM users WHERE username = 'system' LIMIT 1").first&.fetch('id', nil)
+
+    if system_user_id.nil?
+      password_digest = BCrypt::Password.create(SecureRandom.hex(16))
+      execute <<~SQL
+        INSERT INTO users (username, password_digest, role, created_at, updated_at)
+        VALUES ('system', '#{password_digest}', 'user', datetime('now'), datetime('now'))
+      SQL
+      system_user_id = execute("SELECT id FROM users WHERE username = 'system' LIMIT 1").first['id']
     end
 
-    # Update existing tokens to belong to appropriate users
-    ApiToken.find_each do |token|
-      if token.name&.include?('Mobile App -')
-        # Extract username from token name like "Mobile App - meow2"
-        username = token.name.sub('Mobile App - ', '')
-        user = User.find_by(username: username)
-        if user
-          token.update!(user_id: user.id)
-        else
-          token.update!(user_id: system_user.id)
-        end
-      else
-        # Non-mobile tokens (like Home Assistant) stay with system user
-        token.update!(user_id: system_user.id)
-      end
-    end
+    # Update all existing tokens to belong to system user
+    execute("UPDATE api_tokens SET user_id = #{system_user_id} WHERE user_id IS NULL")
 
     # Now make the column non-nullable
     change_column_null :api_tokens, :user_id, false
