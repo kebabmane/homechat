@@ -4,7 +4,7 @@ class Api::V1::BaseController < ApplicationController
   before_action :authenticate_api_request
   
   private
-  
+
   def authenticate_api_request
     auth_header = request.headers['Authorization']
     x_api_key = request.headers['X-API-Key']
@@ -19,21 +19,18 @@ class Api::V1::BaseController < ApplicationController
     # Try both Authorization header and X-API-Key header
     token = auth_header&.gsub(/^Bearer /, '') || x_api_key
 
-    unless token && valid_api_token?(token)
+    authenticated_user = token ? ApiToken.valid_token?(token) : false
+    unless authenticated_user
       Rails.logger.warn "API Authentication failed - Token: #{token ? 'present but invalid' : 'missing'}"
       render json: { error: 'Unauthorized - Invalid or missing API token' }, status: :unauthorized
     else
-      Rails.logger.debug "API Authentication successful!" if Rails.env.development?
+      @current_api_user = authenticated_user
+      Rails.logger.debug "API Authentication successful for user: #{@current_api_user.username}!" if Rails.env.development?
     end
   end
-  
-  def valid_api_token?(token)
-    ApiToken.valid_token?(token)
-  end
-  
+
   def current_api_user
-    # Return a system user for API requests
-    @current_api_user ||= User.find_by(username: 'system') || create_system_user
+    @current_api_user
   end
   
   def create_system_user

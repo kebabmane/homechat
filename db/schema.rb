@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_18_073021) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_04_100003) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -56,8 +56,30 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_18_073021) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "token_digest"
+    t.integer "user_id", null: false
+    t.string "token_prefix", limit: 8
+    t.index ["active", "token_prefix"], name: "index_api_tokens_on_active_and_prefix"
     t.index ["name"], name: "index_api_tokens_on_name", unique: true
     t.index ["token_digest"], name: "index_api_tokens_on_token_digest", unique: true
+    t.index ["token_prefix"], name: "index_api_tokens_on_token_prefix"
+    t.index ["user_id"], name: "index_api_tokens_on_user_id"
+  end
+
+  create_table "audit_logs", force: :cascade do |t|
+    t.integer "user_id"
+    t.string "action", null: false
+    t.string "resource_type", null: false
+    t.bigint "resource_id"
+    t.string "ip_address"
+    t.string "user_agent"
+    t.json "changes_made"
+    t.json "metadata"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["action"], name: "index_audit_logs_on_action"
+    t.index ["created_at"], name: "index_audit_logs_on_created_at"
+    t.index ["resource_type", "resource_id"], name: "index_audit_logs_on_resource_type_and_resource_id"
+    t.index ["user_id"], name: "index_audit_logs_on_user_id"
   end
 
   create_table "bots", force: :cascade do |t|
@@ -69,6 +91,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_18_073021) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "webhook_secret"
+    t.integer "identity_user_id"
+    t.text "instructions"
+    t.string "model"
+    t.index ["identity_user_id"], name: "index_bots_on_identity_user_id"
   end
 
   create_table "channel_memberships", force: :cascade do |t|
@@ -89,8 +115,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_18_073021) do
     t.integer "created_by_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "memberships_count", default: 0, null: false
+    t.datetime "last_message_at"
     t.index ["channel_type"], name: "index_channels_on_channel_type"
     t.index ["created_by_id"], name: "index_channels_on_created_by_id"
+    t.index ["last_message_at"], name: "index_channels_on_last_message_at"
     t.index ["name"], name: "index_channels_on_name", unique: true
   end
 
@@ -103,6 +132,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_18_073021) do
     t.string "message_type"
     t.index ["channel_id", "created_at"], name: "index_messages_on_channel_id_and_created_at"
     t.index ["channel_id"], name: "index_messages_on_channel_id"
+    t.index ["message_type"], name: "index_messages_on_message_type"
+    t.index ["user_id", "created_at"], name: "index_messages_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_messages_on_user_id"
   end
 
@@ -124,14 +155,24 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_18_073021) do
     t.string "status", default: "Available"
     t.boolean "is_online", default: false
     t.string "fcm_token"
+    t.integer "failed_attempts", default: 0, null: false
+    t.datetime "locked_until"
+    t.datetime "last_failed_at"
+    t.string "otp_secret"
+    t.boolean "otp_required_for_login", default: false, null: false
+    t.text "otp_backup_codes"
     t.index ["fcm_token"], name: "index_users_on_fcm_token"
     t.index ["is_online"], name: "index_users_on_is_online"
     t.index ["last_seen_at"], name: "index_users_on_last_seen_at"
+    t.index ["locked_until"], name: "index_users_on_locked_until"
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "api_tokens", "users"
+  add_foreign_key "audit_logs", "users"
+  add_foreign_key "bots", "users", column: "identity_user_id"
   add_foreign_key "channel_memberships", "channels"
   add_foreign_key "channel_memberships", "users"
   add_foreign_key "channels", "users", column: "created_by_id"

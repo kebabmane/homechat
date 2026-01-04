@@ -11,11 +11,10 @@ class ChannelManagementTest < ActionDispatch::IntegrationTest
 
     post join_channel_path(channel)
     assert_response :redirect
-    assert channel.reload.members.include?(user)
+    assert channel.reload.member?(user)
 
     delete leave_channel_path(channel)
     assert_response :redirect
-    refute channel.reload.members.include?(user)
+    refute channel.reload.member?(user)
   end
 end
-

@@ -14,11 +14,18 @@ class Channel < ApplicationRecord
   scope :public_channels, -> { where(channel_type: 'public') }
   scope :private_channels, -> { where(channel_type: 'private') }
   scope :dm_channels, -> { where(channel_type: 'dm') }
-  scope :accessible_by, ->(user) { where(id: user.channels.select(:id)).or(public_channels) }
+  scope :accessible_by, lambda { |user|
+    next public_channels if user.nil?
+
+    left_outer_joins(:channel_memberships)
+      .where('channels.channel_type = :public OR channel_memberships.user_id = :user_id',
+             public: 'public', user_id: user.id)
+      .distinct
+  }
 
   def accessible_by?(user)
     return true if public?
-    return true if members.include?(user)
+    return true if member?(user)
     false
   end
   
@@ -42,7 +49,7 @@ class Channel < ApplicationRecord
   
   
   def add_member(user)
-    return false if members.include?(user)
+    return false if member?(user)
     channel_memberships.create(user: user)
   end
   
@@ -51,10 +58,16 @@ class Channel < ApplicationRecord
   end
   
   def member_count
-    channel_memberships.count
+    memberships_count || channel_memberships.count
   end
 
   def online_members_count(window: 5.minutes)
     members.where('users.updated_at > ?', Time.current - window).count
+  end
+
+  def member?(user)
+    return false unless user
+
+    channel_memberships.exists?(user_id: user.id)
   end
 end

@@ -15,9 +15,9 @@ class Api::V1::SearchController < Api::V1::BaseController
 
     user = current_api_user
 
-    users = search_users(query, user)
-    channels = search_channels(query, user)
-    messages = search_messages(query, user)
+    users = find_users(query, user)
+    channels = find_channels(query, user)
+    messages = find_messages(query, user)
 
     results = {
       users: users,
@@ -43,15 +43,22 @@ class Api::V1::SearchController < Api::V1::BaseController
     end
 
     user = current_api_user
-    users = search_users(query, user)
+    users = find_users(query, user)
 
     render json: { users: users }
   end
 
   private
 
-  def search_users(query, current_user)
-    User.where('LOWER(username) LIKE LOWER(?)', "%#{query}%")
+  # Sanitize query by escaping SQL wildcards to prevent injection
+  def sanitize_search_query(query)
+    # Escape SQL LIKE wildcards: % and _
+    query.gsub(/[%_]/, '\\\\\0')
+  end
+
+  def find_users(query, current_user)
+    sanitized_query = sanitize_search_query(query)
+    User.where('LOWER(username) LIKE LOWER(?)', "%#{sanitized_query}%")
         .where.not(id: current_user.id)
         .limit(10)
         .map do |user|
@@ -68,30 +75,59 @@ class Api::V1::SearchController < Api::V1::BaseController
     end
   end
 
-  def search_channels(query, current_user)
-    Channel.accessible_by(current_user)
-           .where('LOWER(name) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?)', "%#{query}%", "%#{query}%")
-           .limit(10)
-           .map do |channel|
+  def find_channels(query, current_user)
+    sanitized_query = sanitize_search_query(query)
+    channels = Channel.accessible_by(current_user)
+                      .where.not(channel_type: 'dm')
+                      .where('LOWER(name) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?)', "%#{sanitized_query}%", "%#{sanitized_query}%")
+                      .order(:name)
+                      .limit(10)
+                      .load
+
+    channel_ids = channels.map(&:id)
+
+    membership_lookup = if current_user && channel_ids.any?
+      ChannelMembership
+        .where(channel_id: channel_ids, user_id: current_user.id)
+        .pluck(:channel_id)
+        .each_with_object({}) { |channel_id, memo| memo[channel_id] = true }
+    else
+      {}
+    end
+
+    online_counts = if channel_ids.any?
+      cutoff = Time.current - 5.minutes
+      ChannelMembership
+        .joins(:user)
+        .where(channel_id: channel_ids)
+        .where('users.updated_at > ?', cutoff)
+        .group(:channel_id)
+        .count
+    else
+      {}
+    end
+
+    channels.map do |channel|
       {
         id: channel.id,
         name: channel.name,
         type: channel.channel_type,
         description: channel.description,
         members: channel.member_count,
-        is_member: channel.members.include?(current_user),
-        online_members: channel.members.where(is_online: true).count
+        is_member: membership_lookup.key?(channel.id),
+        online_members: online_counts[channel.id] || 0
       }
     end
   end
 
-  def search_messages(query, current_user)
+  def find_messages(query, current_user)
+    sanitized_query = sanitize_search_query(query)
     # Search messages in channels the user has access to
-    accessible_channel_ids = Channel.accessible_by(current_user).pluck(:id)
+    accessible_channels = Channel.accessible_by(current_user).select(:id)
 
     Message.joins(:channel)
-           .where(channel_id: accessible_channel_ids)
-           .where('LOWER(content) LIKE LOWER(?)', "%#{query}%")
+           .where(channel_id: accessible_channels)
+           .where('LOWER(content) LIKE LOWER(?)', "%#{sanitized_query}%")
            .includes(:user, :channel)
            .order(created_at: :desc)
            .limit(10)

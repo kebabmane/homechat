@@ -55,20 +55,28 @@ class Api::V1::MessagesController < Api::V1::BaseController
     limit = [params[:limit]&.to_i || 50, 100].min
 
     begin
-      if channel_id
+      messages = if channel_id
         channel = Channel.find(channel_id)
         return unless ensure_channel_access(channel)
-        messages = channel.messages.includes(:user).order(created_at: :desc).limit(limit)
+
+        channel.messages
+               .includes(:user)
+               .order(created_at: :desc)
+               .limit(limit + 1)
+               .to_a
       else
-        # Only show messages from channels the user has access to
-        accessible_channels = Channel.accessible_by(current_api_user)
-        messages = Message.includes(:user, :channel)
-                         .joins(:channel)
-                         .where(channel: accessible_channels)
-                         .order(created_at: :desc)
-                         .limit(limit)
+        accessible_channels = Channel.accessible_by(current_api_user).select(:id)
+
+        Message.includes(:user, :channel)
+               .where(channel_id: accessible_channels)
+               .order(created_at: :desc)
+               .limit(limit + 1)
+               .to_a
       end
-      
+
+      has_more = messages.length > limit
+      messages = messages.first(limit)
+
       render json: {
         messages: messages.map do |message|
           {
@@ -80,13 +88,13 @@ class Api::V1::MessagesController < Api::V1::BaseController
               role: message.user.role,
               created_at: message.user.created_at&.iso8601
             },
-            channel_id: message.channel.id,
+            channel_id: message.channel_id,
             created_at: message.created_at.iso8601,
             message_type: message.message_type || 'chat',
             files: [] # TODO: Implement file attachments
           }
         end,
-        has_more: messages.count == limit
+        has_more: has_more
       }
       
     rescue ActiveRecord::RecordNotFound
@@ -299,6 +307,47 @@ class Api::V1::MessagesController < Api::V1::BaseController
     render_error('User not found', :not_found)
   rescue ActionController::ParameterMissing => e
     render_error("Missing required parameter: #{e.param}")
+  end
+
+  # GET /api/v1/dm/channels
+  def dm_channels
+    user = current_api_user
+
+    # Get all DM channels where user is a member
+    # Use last_message_at column for efficient sorting instead of subquery
+    dm_channels = Channel.dm_channels
+                        .joins(:channel_memberships)
+                        .where(channel_memberships: { user: user })
+                        .includes(:members)
+                        .order(Arel.sql('last_message_at DESC NULLS LAST'))
+
+    render json: {
+      channels: dm_channels.map do |c|
+        other_user = c.other_user(user)
+        last_message = c.messages.order(:created_at).last
+
+        {
+          id: c.id,
+          name: other_user&.username || "Unknown User", # Show as other person's name
+          description: nil, # DMs don't need descriptions
+          type: 'directMessage', # Use camelCase for iOS
+          member_count: c.member_count,
+          online_member_count: c.members.where(is_online: true).count,
+          last_message: last_message ? {
+            id: last_message.id,
+            content: last_message.content,
+            created_at: last_message.created_at.iso8601,
+            user: {
+              id: last_message.user.id,
+              username: last_message.user.username
+            }
+          } : nil,
+          unread_count: 0, # TODO: Implement unread tracking
+          is_member: true, # Always true for DMs
+          created_at: c.created_at&.iso8601
+        }
+      end
+    }
   end
 
   # POST /api/v1/dm/start

@@ -21,11 +21,31 @@ module ApplicationCable
     end
 
     def find_user_by_token
-      return nil unless request.params[:token].present?
+      token = request.params[:token] || extract_bearer_token
 
-      # Find user by API token (from BotToken model)
-      bot_token = BotToken.active.find_by(token: request.params[:token])
-      bot_token&.user
+      return nil unless token.present?
+
+      # Validate API token and return associated user
+      ApiToken.valid_token?(token)
+    end
+
+    def extract_bearer_token
+      auth_header = request.headers['Authorization']
+      return nil unless auth_header&.start_with?('Bearer ')
+      auth_header.gsub(/^Bearer /, '')
+    end
+
+    def create_system_user
+      password = SecureRandom.hex(16)
+      User.create!(
+        username: 'system',
+        password: password,
+        password_confirmation: password,
+        role: 'user'
+      )
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.warn "Failed to create system user for WebSocket: #{e.message}"
+      User.find_by(username: 'system')
     end
 
     def session

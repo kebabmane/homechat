@@ -1,24 +1,45 @@
-<div class="flex items-start gap-3 sm:gap-4">
-  <div class="flex-shrink-0">
-    <%= avatar_for(message.user) %>
+<div class="group message-bubble flex items-end gap-2 px-2 py-1"
+     data-message-username="<%= message.user.username.downcase %>"
+     data-message-user-id="<%= message.user_id %>">
+
+  <div class="message-avatar flex-shrink-0 mb-1">
+    <%= avatar_for(message.user, size: 'h-8 w-8') %>
   </div>
-  <div class="flex-1 min-w-0">
-    <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1">
-      <span class="font-semibold text-gray-900 truncate"><%= message.user.username %></span>
-      <span class="text-xs text-gray-500" title="<%= message.created_at.strftime('%B %d, %Y at %I:%M %p') %>">
+
+  <div class="message-content flex flex-col items-start max-w-[75%] min-w-0">
+    <div class="message-header flex items-center gap-2 mb-0.5 ml-1">
+      <span class="text-xs font-medium text-gray-600"><%= message.user.username %></span>
+    </div>
+
+    <div class="message-text bg-gray-100 text-gray-900 rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm text-[15px] leading-relaxed break-words">
+      <div class="message-body"><%= render_message_body(message.content).html_safe %></div>
+    </div>
+
+    <div class="message-time flex items-center gap-1 mt-0.5 ml-1">
+      <span class="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" title="<%= message.created_at.strftime('%B %d, %Y at %I:%M %p') %>">
         <%= message.created_at.strftime('%I:%M %p') %>
       </span>
     </div>
-    <div class="message-body text-gray-800 leading-relaxed break-words"><%= render_message_body(message.content).html_safe %></div>
-    <%= render_link_previews(message) %>
-    <% if message.files.attached? %>
-      <div class="mt-2 space-y-2">
-        <% message.files.each do |file| %>
-          <% if file.image? %>
-            <%= image_tag file, class: "max-h-56 rounded-lg border border-gray-200 cursor-zoom-in", data: { controller: 'lightbox', action: 'click->lightbox#open' } %>
-          <% else %>
-            <%= link_to file.filename, url_for(file), class: "text-sm text-blue-600 hover:text-blue-700 underline" %>
-          <% end %>
+
+    <% if message.files.attached? || message.content.match?(URI::DEFAULT_PARSER.make_regexp) %>
+      <div class="message-attachments mt-1.5 pl-1">
+        <%= render_link_previews(message) %>
+        <% if message.files.attached? %>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <% message.files.each do |file| %>
+              <% if file.image? %>
+                <%= image_tag file, class: "max-h-64 rounded-xl border border-gray-200 cursor-zoom-in shadow-sm hover:shadow-md transition-shadow", data: { controller: 'lightbox', action: 'click->lightbox#open' } %>
+              <% else %>
+                <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:border-blue-300 transition-colors">
+                  <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                  <div class="text-sm">
+                    <%= link_to file.filename, url_for(file), class: "font-medium text-gray-900 hover:text-blue-600 focus:outline-none" %>
+                    <div class="text-xs text-gray-500"><%= number_to_human_size(file.byte_size) %></div>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
         <% end %>
       </div>
     <% end %>

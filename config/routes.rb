@@ -6,6 +6,12 @@ Rails.application.routes.draw do
   get "/signin", to: "sessions#new"
   post "/signin", to: "sessions#create"
   delete "/signout", to: "sessions#destroy"
+
+  # Two-factor authentication
+  resource :two_factor_session, only: [:new, :create], path: "signin/2fa"
+  resource :two_factor_settings, only: [:show, :new, :create, :destroy], path: "settings/2fa" do
+    post :regenerate_backup_codes, on: :member
+  end
   
   # Dashboard routes
   get "/dashboard", to: "dashboard#index"
@@ -57,7 +63,7 @@ Rails.application.routes.draw do
         patch :activate_token
       end
     end
-    resources :bots, only: [:index, :show, :destroy] do
+    resources :bots, only: [:index, :show, :new, :create, :edit, :update, :destroy] do
       member do
         post :activate
         post :deactivate
@@ -82,6 +88,10 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Health check endpoint
       get :health, to: 'health#show'
+
+      # Metrics endpoints
+      get 'metrics/health', to: 'metrics#health'
+      get :metrics, to: 'metrics#index'
 
       # Authentication endpoints
       post :signin, to: 'auth#signin'
@@ -109,6 +119,7 @@ Rails.application.routes.draw do
         end
       end
       # DM endpoints
+      get 'dm/channels', to: 'messages#dm_channels'
       post 'users/:id/messages', to: 'messages#create_dm', as: :user_messages
       post 'dm/start', to: 'messages#start_dm_by_username'
       

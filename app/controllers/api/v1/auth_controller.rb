@@ -10,14 +10,15 @@ class Api::V1::AuthController < Api::V1::BaseController
       api_token = ApiToken.find_by(name: "Mobile App - #{user.username}")
 
       if api_token.nil?
-        # Create new token
-        api_token = ApiToken.create!(name: "Mobile App - #{user.username}", active: true)
+        # Create new token linked to the user
+        api_token = ApiToken.create!(name: "Mobile App - #{user.username}", active: true, user: user)
       elsif !api_token.active?
-        # Reactivate existing token
-        api_token.update!(active: true)
+        # Reactivate existing token and ensure it's linked to the user
+        api_token.update!(active: true, user: user)
         api_token.regenerate!
       else
-        # Regenerate token for existing active token to ensure we have the plain text
+        # Regenerate token for existing active token and ensure user link
+        api_token.update!(user: user)
         api_token.regenerate!
       end
 
@@ -47,7 +48,7 @@ class Api::V1::AuthController < Api::V1::BaseController
 
     if user.save
       # Create an API token for the new user
-      api_token = ApiToken.create!(name: "Mobile App - #{user.username}", active: true)
+      api_token = ApiToken.create!(name: "Mobile App - #{user.username}", active: true, user: user)
 
       render json: {
         success: true,

@@ -1,4 +1,9 @@
 class User < ApplicationRecord
+  include AccountLockable
+  include TwoFactorAuthenticatable
+
+  PRESENCE_STALE_WINDOW = 30.seconds
+
   has_secure_password
   has_one_attached :avatar
 
@@ -45,18 +50,37 @@ class User < ApplicationRecord
   end
 
   def mark_online!
-    update!(is_online: true, last_seen_at: Time.current)
+    timestamp = Time.current
+    return if online? && last_seen_at && last_seen_at >= timestamp - PRESENCE_STALE_WINDOW
+
+    update!(is_online: true, last_seen_at: timestamp)
     broadcast_presence_change
   end
 
   def mark_offline!
-    update!(is_online: false, last_seen_at: Time.current)
+    timestamp = Time.current
+
+    changes = {}
+    changes[:is_online] = false if online?
+    changes[:last_seen_at] = timestamp if last_seen_at.nil? || last_seen_at < timestamp - PRESENCE_STALE_WINDOW
+
+    return if changes.empty?
+
+    update!(changes)
     broadcast_presence_change
   end
 
   def update_presence!
-    update!(last_seen_at: Time.current)
-    mark_online! unless online?
+    timestamp = Time.current
+
+    changes = {}
+    changes[:last_seen_at] = timestamp if last_seen_at.nil? || last_seen_at < timestamp - PRESENCE_STALE_WINDOW
+    changes[:is_online] = true unless online?
+
+    return if changes.empty?
+
+    update!(changes)
+    broadcast_presence_change
   end
 
   def set_status!(new_status)

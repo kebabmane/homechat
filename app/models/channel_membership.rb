@@ -1,6 +1,6 @@
 class ChannelMembership < ApplicationRecord
   belongs_to :user
-  belongs_to :channel
+  belongs_to :channel, counter_cache: :memberships_count
   
   validates :user_id, uniqueness: { scope: :channel_id }
   
@@ -20,6 +20,6 @@ class ChannelMembership < ApplicationRecord
   def broadcast_member_count
     channel.broadcast_replace_to channel,
       target: ActionView::RecordIdentifier.dom_id(channel, :member_count),
-      html: channel.member_count.to_s
+      html: channel.reload.member_count.to_s
   end
 end

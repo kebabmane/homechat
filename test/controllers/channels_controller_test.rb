@@ -108,7 +108,7 @@ class ChannelsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to channel_path(@channel)
-    assert @channel.members.include?(other_user)
+    assert @channel.member?(other_user)
   end
 
   test "should leave channel" do
@@ -120,7 +120,7 @@ class ChannelsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to channels_path
-    assert_not @channel.members.include?(@user)
+    assert_not @channel.member?(@user)
   end
 
   test "should invite user to private channel" do
@@ -132,7 +132,7 @@ class ChannelsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to channel_path(@private_channel)
-    assert @private_channel.members.include?(other_user)
+    assert @private_channel.member?(other_user)
   end
 
   test "should not invite to channel if not creator" do

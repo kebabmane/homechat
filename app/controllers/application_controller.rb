@@ -2,14 +2,9 @@ class ApplicationController < ActionController::Base
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
 
-  # Configure CSRF protection for Home Assistant add-on environment
-  if ENV['HOME_ASSISTANT_ADDON'] == 'true'
-    # Skip CSRF protection entirely in HA add-on mode due to ingress proxy issues
-    # This is safe in the controlled HA environment behind the ingress proxy
-    skip_before_action :verify_authenticity_token
-  else
-    protect_from_forgery with: :exception
-  end
+  # Configure CSRF protection for all environments
+  protect_from_forgery with: :exception, unless: :home_assistant_verified?
+  before_action :verify_home_assistant_origin, if: :home_assistant_addon?
   
   layout :determine_layout
   before_action :set_sidebar_data, if: :logged_in?
@@ -48,7 +43,14 @@ class ApplicationController < ActionController::Base
 
   def mark_active
     # Touch user to indicate recent activity for simple presence tracking
+    return unless current_user
+
+    activity_window = 1.minute
+    return if current_user.updated_at && current_user.updated_at >= activity_window.ago
+
     current_user.touch
+  rescue ActiveRecord::ActiveRecordError => e
+    Rails.logger.debug "Failed to touch user for activity tracking: #{e.class} #{e.message}"
   end
 
   def require_admin
@@ -77,11 +79,50 @@ class ApplicationController < ActionController::Base
     session[:last_activity_time] = Time.current.to_s
   end
 
-  # Handle CSRF token validation for non-Home Assistant environments
+  def home_assistant_addon?
+    ENV['HOME_ASSISTANT_ADDON'] == 'true'
+  end
+
+  def home_assistant_verified?
+    return false unless home_assistant_addon?
+
+    # In HA addon mode, verify the request comes from the ingress proxy
+    # HA ingress adds X-Ingress-Path header
+    request.headers['X-Ingress-Path'].present? || verify_home_assistant_origin
+  end
+
+  def verify_home_assistant_origin
+    return true unless home_assistant_addon?
+
+    # Allow requests from Home Assistant ingress or local network
+    origin = request.headers['Origin'] || request.headers['Referer']
+
+    # Allow if no origin (direct access or HA ingress strips it)
+    return true if origin.blank?
+
+    # Parse origin and check if it's from expected sources
+    begin
+      uri = URI.parse(origin)
+      # Allow localhost, local IPs, or homeassistant.local
+      allowed = uri.host.match?(/^(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|homeassistant\.local)$/i)
+
+      unless allowed
+        Rails.logger.warn "Rejected request from unauthorized origin: #{origin}"
+        head :forbidden
+        return false
+      end
+
+      true
+    rescue URI::InvalidURIError => e
+      Rails.logger.warn "Invalid origin URI: #{origin} - #{e.message}"
+      head :forbidden
+      false
+    end
+  end
+
+  # Handle CSRF token validation
   def handle_unverified_request
-    # CSRF protection is skipped for Home Assistant add-on environment
-    # Only non-HA environments will reach this method
-    Rails.logger.warn "CSRF token verification failed"
+    Rails.logger.warn "CSRF token verification failed for #{request.path} from #{request.remote_ip}"
     super
   end
 end

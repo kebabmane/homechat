@@ -2,17 +2,62 @@ class Api::V1::ChannelsController < Api::V1::BaseController
   # GET /api/v1/channels
   def index
     user = current_api_user
-    channels = Channel.accessible_by(user).includes(:members, :messages).order(:name)
+
+    channels = Channel
+                 .accessible_by(user)
+                 .where.not(channel_type: 'dm')
+                 .order(:name)
+                 .load
+
+    channel_ids = channels.map(&:id)
+
+    membership_lookup = if user && channel_ids.any?
+      ChannelMembership
+        .where(channel_id: channel_ids, user_id: user.id)
+        .pluck(:channel_id)
+        .each_with_object({}) { |channel_id, memo| memo[channel_id] = true }
+    else
+      {}
+    end
+
+    online_counts = if channel_ids.empty?
+      {}
+    else
+      cutoff = Time.current - 5.minutes
+      ChannelMembership
+        .joins(:user)
+        .where(channel_id: channel_ids)
+        .where('users.updated_at > ?', cutoff)
+        .group(:channel_id)
+        .count
+    end
+
+    last_messages = if channel_ids.empty?
+      {}
+    else
+      recent_scope = Message
+                       .select('channel_id, MAX(created_at) AS latest_created_at')
+                       .where(channel_id: channel_ids)
+                       .group(:channel_id)
+
+      Message
+        .joins("INNER JOIN (#{recent_scope.to_sql}) AS recent_messages ON recent_messages.channel_id = messages.channel_id AND recent_messages.latest_created_at = messages.created_at")
+        .includes(:user)
+        .where(channel_id: channel_ids)
+        .group_by(&:channel_id)
+    end
+
     render json: {
-      channels: channels.map do |c|
-        last_message = c.messages.order(:created_at).last
+      channels: channels.map do |channel|
+        last_message = last_messages.fetch(channel.id, []).first
+
         {
-          id: c.id,
-          name: c.name,
-          description: c.description,
-          type: c.channel_type,
-          member_count: c.member_count,
-          online_member_count: c.members.where(is_online: true).count,
+          id: channel.id,
+          name: channel.name,
+          description: channel.description,
+          type: channel.channel_type,
+          member_count: channel.member_count,
+          online_member_count: online_counts[channel.id] || 0,
           last_message: last_message ? {
             id: last_message.id,
             content: last_message.content,
@@ -23,8 +68,8 @@ class Api::V1::ChannelsController < Api::V1::BaseController
             }
           } : nil,
           unread_count: 0, # TODO: Implement unread tracking
-          is_member: c.members.include?(user),
-          created_at: c.created_at&.iso8601
+          is_member: membership_lookup.key?(channel.id),
+          created_at: channel.created_at&.iso8601
         }
       end
     }
@@ -53,7 +98,7 @@ class Api::V1::ChannelsController < Api::V1::BaseController
     channel = Channel.find(params[:id])
     user = current_api_user
 
-    if channel.members.include?(user)
+    if channel.member?(user)
       channel.remove_member(user)
       render_success({ message: 'Successfully left channel' })
     else
@@ -89,4 +134,3 @@ class Api::V1::ChannelsController < Api::V1::BaseController
     render_error('Channel not found', :not_found)
   end
 end
-

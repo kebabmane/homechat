@@ -72,7 +72,7 @@
   </section>
 </div>
 
-<script>
+<%= javascript_tag nonce: true do %>
 (function() {
   const button = document.getElementById('test-connection')
   if (!button) return
@@ -114,4 +114,4 @@
       })
   })
 })()
-</script>
+<% end %>

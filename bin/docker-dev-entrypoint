@@ -1,0 +1,13 @@
+#!/bin/bash -e
+
+# Ensure gems are installed (for volume-mounted bundle cache)
+bundle check || bundle install
+
+# Ensure foreman is available
+gem list foreman -i --silent || gem install foreman
+
+# Prepare database
+./bin/rails db:prepare
+
+# Execute the command
+exec "$@"

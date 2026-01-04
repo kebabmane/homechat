@@ -177,13 +177,19 @@ class Api::V1::WebhooksController < Api::V1::BaseController
   end
   
   def bot_user(bot)
-    # Create or find a user for this bot
-    User.find_by(username: bot.name.parameterize) ||
-    User.create!(
-      username: bot.name.parameterize,
-      password: SecureRandom.hex(32),
-      role: 'user'
-    )
+    return bot.identity_user if bot.identity_user.present?
+
+    # Create or find a user for this bot (legacy webhook bots)
+    username = bot.name.parameterize
+    User.find_by(username: username) || begin
+      password = SecureRandom.hex(32)
+      User.create!(
+        username: username,
+        password: password,
+        password_confirmation: password,
+        role: 'user'
+      )
+    end
   rescue ActiveRecord::RecordInvalid
     # If username is taken, use the system user
     User.find_by(username: 'system') || current_api_user

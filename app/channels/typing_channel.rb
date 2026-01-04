@@ -11,10 +11,12 @@ class TypingChannel < ApplicationCable::Channel
     channel = find_channel
     return unless channel && can_access_channel?(channel)
 
+    typing_flag = data.key?('typing') ? ActiveModel::Type::Boolean.new.cast(data['typing']) : true
+
     # Use the authenticated user's username, not the data provided
     ActionCable.server.broadcast(stream_name, {
       username: current_user.username,
-      typing: true,
+      typing: typing_flag,
       timestamp: Time.current.iso8601
     })
   end
@@ -45,7 +47,6 @@ class TypingChannel < ApplicationCable::Channel
     return true if channel.creator == current_user
 
     # Check if user is a member of private channels
-    channel.members.include?(current_user)
+    channel.member?(current_user)
   end
 end
-

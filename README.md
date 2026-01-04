@@ -12,6 +12,7 @@ HomeChat is designed as **three complementary repositories** that work together:
 - User management and channels
 - Real-time messaging with WebSockets
 - File sharing and rich media support
+- Prompt-driven AI bots powered by LiteLLM
 - Works completely offline on your local network
 
 ### 🏠 **Home Assistant Add-on** ([homechat-addon](https://github.com/kebabmane/homechat-addon))
@@ -70,11 +71,16 @@ bin/rails test       # unit + integration + system (JS)
 
 - **Server Settings** (Admin): `/admin/settings`
   - Site name
-  - Allow sign‑ups (disable to lock down)
+  - Allow sign-ups (disable to lock down)
+  - LiteLLM proxy host, API key, and default model for AI bots
 - **Integration Settings** (Admin): `/admin/integrations`
   - API token management for Home Assistant
   - Bot configuration and webhook URLs
   - Connection testing and monitoring
+- **AI Bots** (Admin): `/admin/bots`
+  - Create LiteLLM-backed assistants with custom prompts
+  - Activate/deactivate bots and review webhook credentials
+  - Invite bots into channels or mention them with `@handle`
 - **User Settings**: `/settings`
   - Username, password
   - Enter‑to‑send (local device preference)
