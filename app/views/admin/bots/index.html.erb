@@ -3,18 +3,21 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pb-24 space-y-8">
   <section class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
     <header class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-gray-900">Automation bots</h2>
-      <span class="text-sm text-gray-500"><%= @bots.size %> configured</span>
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900">Automation bots</h2>
+        <span class="block text-sm text-gray-500"><%= @bots.size %> configured</span>
+      </div>
+      <%= link_to 'New AI bot', new_admin_bot_path, class: 'inline-flex items-center rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 shadow-sm' %>
     </header>
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50 text-xs uppercase text-gray-500">
           <tr>
-            <th class="px-5 py-3 text-left">Name</th>
-            <th class="px-5 py-3 text-left">Type</th>
-            <th class="px-5 py-3 text-left">Webhook</th>
-            <th class="px-5 py-3 text-left">Status</th>
-            <th class="px-5 py-3 text-right">Actions</th>
+            <th scope="col" class="px-5 py-3 text-left">Name</th>
+            <th scope="col" class="px-5 py-3 text-left">Type</th>
+            <th scope="col" class="px-5 py-3 text-left">Webhook</th>
+            <th scope="col" class="px-5 py-3 text-left">Status</th>
+            <th scope="col" class="px-5 py-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 text-sm text-gray-700">
@@ -29,13 +32,13 @@
               </td>
               <td class="px-5 py-3">
                 <div class="flex flex-wrap justify-end gap-2">
-                  <%= link_to "View", admin_bot_path(bot), class: "inline-flex items-center rounded-md bg-gray-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700" %>
+                  <%= link_to "View", admin_bot_path(bot), "aria-label": "View #{bot.name}", class: "inline-flex items-center rounded-md bg-gray-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700" %>
                   <% if bot.active? %>
-                    <%= button_to "Deactivate", deactivate_admin_bot_path(bot), method: :post, class: "inline-flex items-center rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600" %>
+                    <%= button_to "Deactivate", deactivate_admin_bot_path(bot), method: :post, "aria-label": "Deactivate #{bot.name}", class: "inline-flex items-center rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600" %>
                   <% else %>
-                    <%= button_to "Activate", activate_admin_bot_path(bot), method: :post, class: "inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700" %>
+                    <%= button_to "Activate", activate_admin_bot_path(bot), method: :post, "aria-label": "Activate #{bot.name}", class: "inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700" %>
                   <% end %>
-                  <%= button_to "Delete", admin_bot_path(bot), method: :delete, data: { turbo_confirm: "Delete bot #{bot.name}?" }, class: "inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700" %>
+                  <%= button_to "Delete", admin_bot_path(bot), method: :delete, "aria-label": "Delete #{bot.name}", data: { turbo_confirm: "Delete bot #{bot.name}?" }, class: "inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700" %>
                 </div>
               </td>
             </tr>

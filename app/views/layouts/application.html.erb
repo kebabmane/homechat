@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <title><%= content_for(:title) || Setting.fetch(:site_name, 'HomeChat') %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,6 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <%= action_cable_meta_tag %>
 
     <%= yield :head %>
 
@@ -19,6 +20,11 @@
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <%= javascript_importmap_tags %>
     <meta name="theme-color" content="<%= Setting.fetch(:pwa_theme_color, '#2563eb') %>">
   </head>
@@ -35,9 +41,9 @@
       </div>
     <% end %>
     <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
-      <script>
+      <%= javascript_tag nonce: true do %>
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('<%= pwa_service_worker_path %>') }
-      </script>
+      <% end %>
     <% end %>
     <% if logged_in? %>
       <span data-current-username data-current-username="<%= current_user.username %>" class="hidden"></span>
@@ -49,7 +55,7 @@
       <div class="fixed inset-0 bg-black/40 z-30 hidden md:hidden" data-sidebar-target="backdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
 
       <!-- Sidebar -->
-      <aside class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full transition-transform duration-200 ease-in-out bg-gray-900 text-white flex flex-col md:relative md:translate-x-0 md:transform-none md:flex-shrink-0 md:w-64 md:h-dvh md:overflow-y-auto" data-sidebar-target="panel" data-sidebar-panel aria-label="Primary">
+      <aside class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full transition-transform duration-200 ease-in-out bg-gray-50 border-r border-gray-200 text-gray-900 flex flex-col md:relative md:translate-x-0 md:transform-none md:flex-shrink-0 md:w-64 md:h-dvh md:overflow-y-auto" data-sidebar-target="panel" data-sidebar-panel aria-label="Primary">
         <%= render "shared/channels_sidebar" %>
       </aside>
 
@@ -60,7 +66,7 @@
         <% scroll_padding = content_for?(:scroll_padding) ? " #{content_for(:scroll_padding).strip}" : '' %>
         <main id="main-content" class="flex-1 flex flex-col min-h-0 bg-white<%= scroll_class %><%= top_pad %><%= scroll_padding %>" tabindex="-1">
           <% if flash[:notice] %>
-            <div data-controller="flash" data-flash-timeout-value="4000" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-green-200 bg-green-50 dark:bg-green-800 opacity-100">
+            <div role="status" aria-live="polite" data-controller="flash" data-flash-timeout-value="4000" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-green-200 bg-green-50 dark:bg-green-800 opacity-100">
               <div class="flex items-center mx-auto">
                 <p class="flex items-center text-sm font-normal text-green-800 dark:text-green-300">
                   <span class="inline-flex p-1 me-3 bg-green-200 rounded-full w-6 h-6 dark:bg-green-600">
@@ -79,7 +85,7 @@
             </div>
           <% end %>
           <% if flash[:alert] %>
-            <div data-controller="flash" data-flash-timeout-value="5000" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-red-200 bg-red-50 dark:bg-red-800 opacity-100">
+            <div role="alert" aria-live="assertive" data-controller="flash" data-flash-timeout-value="5000" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-red-200 bg-red-50 dark:bg-red-800 opacity-100">
               <div class="flex items-center mx-auto">
                 <p class="flex items-center text-sm font-normal text-red-800 dark:text-red-300">
                   <span class="inline-flex p-1 me-3 bg-red-200 rounded-full w-6 h-6 dark:bg-red-600">

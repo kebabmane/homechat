@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 // Drag-and-drop + preview thumbnails for message attachments
 export default class extends Controller {
-  static targets = ["input", "previews", "textarea", "hint"]
+  static targets = ["input", "previews", "textarea", "hint", "spinner"]
 
   connect() {
     this.element.addEventListener('dragover', this.onDragOver)
@@ -10,6 +10,8 @@ export default class extends Controller {
     this.element.addEventListener('dragleave', this.onDragLeave)
     this.element.addEventListener('drop', (e) => this.onDrop(e))
     this.element.addEventListener('dragend', () => this.hideHint())
+    this.element.addEventListener('turbo:submit-start', () => this.showUploading())
+    this.element.addEventListener('turbo:submit-end', () => this.hideUploading())
     this._hideTimer = null
   }
 
@@ -89,5 +91,33 @@ export default class extends Controller {
   hideHint() {
     if (this.hasHintTarget) this.hintTarget.classList.add('hidden')
     clearTimeout(this._hideTimer)
+  }
+
+  showUploading() {
+    const files = Array.from(this.inputTarget?.files || [])
+    if (files.length === 0) return
+
+    // Add uploading indicator to previews
+    if (this.hasPreviewsTarget) {
+      const indicator = document.createElement('div')
+      indicator.className = 'upload-indicator flex items-center gap-2 text-sm text-gray-600'
+      indicator.setAttribute('role', 'status')
+      indicator.setAttribute('aria-live', 'polite')
+      indicator.innerHTML = `
+        <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Uploading ${files.length} file${files.length > 1 ? 's' : ''}…</span>
+      `
+      this.previewsTarget.appendChild(indicator)
+    }
+  }
+
+  hideUploading() {
+    if (this.hasPreviewsTarget) {
+      const indicator = this.previewsTarget.querySelector('.upload-indicator')
+      if (indicator) indicator.remove()
+    }
   }
 }

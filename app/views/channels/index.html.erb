@@ -11,7 +11,9 @@
             class: "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors" %>
       </div>
       <div class="max-w-md">
+        <label for="channel-search" class="sr-only">Search channels</label>
         <input id="channel-search" name="q" type="search" placeholder="Search channels..." value="<%= params[:q] %>"
+               aria-label="Search channels"
                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                data-controller="channel-search <%= 'focus' if params[:focus] == 'search' %>"
                data-channel-search-target="input"

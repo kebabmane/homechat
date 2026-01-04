@@ -1,13 +1,13 @@
 <% content_for :no_top_padding, true %>
 <% content_for :lock_main_scroll, true %>
-<div class="flex flex-col h-full min-h-0" data-controller="message-list" data-channel-id="<%= @channel.id %>" data-message-list-autoscroll-value="true">
+<div class="flex flex-col h-full min-h-0" data-controller="message-list" data-channel-id="<%= @channel.id %>" data-message-list-autoscroll-value="true" data-message-list-current-user-value="<%= current_user.username %>">
   <!-- Channel Header -->
-  <div class="sticky top-0 z-10 px-4 sm:px-6 py-3 md:py-4 bg-white/95 backdrop-blur border-b border-gray-100" data-message-list-target="header" role="region" aria-label="Channel header">
-    <div class="flex flex-wrap items-start justify-between gap-4">
+  <div class="sticky top-0 z-20 px-4 sm:px-6 py-3 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm transition-all" data-message-list-target="header" role="region" aria-label="Channel header">
+    <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3 min-w-0">
         <!-- Mobile: open sidebar -->
-        <button type="button" class="md:hidden -ml-2 mr-1 p-2 rounded-lg hover:bg-gray-100" data-action="click->sidebar#open" aria-label="Open sidebar">
-          <svg class="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <button type="button" class="md:hidden -ml-2 mr-1 p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors" data-action="click->sidebar#open" aria-label="Open sidebar">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
@@ -55,7 +55,7 @@
                 <%= @channel.online_members_count %> online
               </span>
             </button>
-            <div class="channel-members-panel hidden absolute right-0 mt-3 w-72 rounded-xl border border-gray-200 bg-white shadow-lg z-30" data-channel-members-target="panel" role="dialog" aria-label="Channel members"></div>
+            <div class="channel-members-panel hidden absolute right-0 mt-3 w-[calc(100vw-2rem)] sm:w-72 max-w-sm rounded-xl border border-gray-200 bg-white shadow-lg z-30" data-channel-members-target="panel" role="dialog" aria-label="Channel members"></div>
           </div>
         <% end %>
         <% if (current_user.admin? || @channel.creator == current_user) && !@channel.dm? %>
@@ -73,7 +73,7 @@
   <div class="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6" data-message-list-target="container">
     <%= turbo_stream_from @channel %>
     <% if @messages.any? %>
-      <div class="space-y-4 sm:space-y-6 pt-6 pb-6" id="<%= dom_id(@channel, :messages) %>">
+      <div class="space-y-4 sm:space-y-6 pt-6 pb-4" id="<%= dom_id(@channel, :messages) %>" aria-live="polite" aria-label="Chat messages">
         <% divider_rendered = false %>
         <% @messages.reverse.each do |message| %>
           <% if !divider_rendered && @last_read_at && message.created_at > @last_read_at %>
@@ -92,17 +92,18 @@
       </div>
     <% else %>
       <div class="flex flex-col items-center justify-center h-full text-center py-12">
-        <div class="w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div class="w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6" aria-hidden="true">
           <span class="text-4xl">💬</span>
         </div>
-        <h3 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">No messages yet</h3>
+        <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">No messages yet</h2>
         <p class="text-gray-500 max-w-sm sm:max-w-md mx-auto">This is the beginning of the <strong>#<%= @channel.name %></strong> channel. Be the first to say something!</p>
       </div>
     <% end %>
+
   </div>
 
   <!-- Message Form -->
-  <div class="py-3 sm:py-4 bg-white border-t border-gray-200" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);">
+  <div class="py-3 sm:py-4 bg-white/90 backdrop-blur border-t border-gray-200 z-20" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);">
     <% if @channel.private? && (current_user.admin? || @channel.creator == current_user) %>
       <div class="px-4 sm:px-6 pb-3">
         <%= form_with url: invite_channel_path(@channel), method: :post, local: true, class: "flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 text-sm" do |f| %>
@@ -114,18 +115,20 @@
     <% end %>
     <%= form_with model: [ @channel, Message.new ], local: true, class: "px-4 sm:px-6", data: { controller: "mentions upload", mentions_users_value: @channel.members.order(:username).pluck(:username).to_json, action: "turbo:submit-end->message-list#afterSubmit" } do |form| %>
       <div class="relative flex flex-wrap items-end gap-2 sm:flex-nowrap sm:gap-3">
+        <% message_placeholder = @channel.dm? ? "Message @#{@channel.members.where.not(id: current_user.id).first&.username || 'user'}" : "Message ##{@channel.name}" %>
         <%= form.text_area :content,
-            placeholder: ( @channel.dm? ? "Message @#{@channel.members.where.not(id: current_user.id).first&.username || 'user'}" : "Message ##{@channel.name}" ),
+            placeholder: message_placeholder,
+            "aria-label": message_placeholder,
             rows: 1,
             class: "flex-1 min-w-[220px] pl-4 pr-4 py-3 border border-gray-300 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none",
             style: "min-height: 44px;",
             data: { message_list_target: "textarea", mentions_target: "textarea", upload_target: "textarea", action: "input->message-list#autoResize input->mentions#onInput keydown.enter->mentions#maybeAccept keydown.enter->message-list#submit" } %>
 
-        <label class="cursor-pointer text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors" title="Attach files">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <label class="cursor-pointer text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors" title="Attach files" aria-label="Attach files">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15a4 4 0 01-4 4H7a5 5 0 010-10h12a3 3 0 110 6H9" />
           </svg>
-          <%= form.file_field :files, multiple: true, class: "hidden", direct_upload: true, data: { upload_target: 'input', action: 'change->upload#change' } %>
+          <%= form.file_field :files, multiple: true, class: "hidden", direct_upload: true, "aria-label": "Choose files to attach", data: { upload_target: 'input', action: 'change->upload#change' } %>
         </label>
 
         <%= form.submit "Send", class: "inline-flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer", style: "min-height: 44px;" %>
@@ -137,10 +140,10 @@
   </div>
 
   <!-- Scroll to latest button -->
-  <button type="button" class="hidden md:inline-flex items-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm shadow-sm fixed bottom-24 right-6 z-20" data-message-list-target="scrollButton" data-action="click->message-list#scrollToBottom">
-    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <button type="button" class="hidden items-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm shadow-lg fixed bottom-24 right-4 sm:right-6 z-20" data-message-list-target="scrollButton" data-action="click->message-list#scrollToBottom" aria-label="Scroll to newest messages">
+    <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
     </svg>
-    Newest
+    <span class="hidden sm:inline">Newest</span>
   </button>
 </div>

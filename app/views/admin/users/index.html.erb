@@ -10,12 +10,12 @@
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50 text-xs uppercase text-gray-500">
           <tr>
-            <th class="px-5 py-3 text-left">Username</th>
-            <th class="px-5 py-3 text-left">Role</th>
-            <th class="px-5 py-3 text-left">Messages</th>
-            <th class="px-5 py-3 text-left">Channels</th>
-            <th class="px-5 py-3 text-left">Created</th>
-            <th class="px-5 py-3 text-right">Actions</th>
+            <th scope="col" class="px-5 py-3 text-left">Username</th>
+            <th scope="col" class="px-5 py-3 text-left">Role</th>
+            <th scope="col" class="px-5 py-3 text-left">Messages</th>
+            <th scope="col" class="px-5 py-3 text-left">Channels</th>
+            <th scope="col" class="px-5 py-3 text-left">Created</th>
+            <th scope="col" class="px-5 py-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 text-sm text-gray-700">
@@ -31,11 +31,12 @@
               <td class="px-5 py-3"><%= user.created_at.strftime('%Y-%m-%d %H:%M') %></td>
               <td class="px-5 py-3">
                 <%= form_with url: admin_user_path(user), method: :patch, local: true, class: "flex flex-wrap justify-end gap-2" do |f| %>
-                  <select name="user[role]" class="rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                  <label for="user_role_<%= user.id %>" class="sr-only">Role for <%= user.username %></label>
+                  <select id="user_role_<%= user.id %>" name="user[role]" aria-label="Role for <%= user.username %>" class="rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                     <option value="user" <%= 'selected' if user.role == 'user' %>>User</option>
                     <option value="admin" <%= 'selected' if user.role == 'admin' %>>Admin</option>
                   </select>
-                  <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Update</button>
+                  <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="Update role for <%= user.username %>">Update</button>
                 <% end %>
               </td>
             </tr>
