@@ -4,7 +4,11 @@ module Admin
     before_action :ensure_admin!
 
     def index
-      @users = User.order(:username)
+      @users = User.select(
+        'users.*',
+        '(SELECT COUNT(*) FROM messages WHERE messages.user_id = users.id) AS messages_count',
+        '(SELECT COUNT(*) FROM channel_memberships WHERE channel_memberships.user_id = users.id) AS channels_count'
+      ).order(:username)
       @admins_count = User.where(role: 'admin').count
     end
 

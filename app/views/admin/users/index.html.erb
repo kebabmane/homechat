@@ -26,8 +26,8 @@
                 <span class="status-dot <%= user.admin? ? 'status-dot--ok' : 'status-dot--warn' %> mr-2"></span>
                 <span><%= user.admin? ? 'Admin' : 'User' %></span>
               </td>
-              <td class="px-5 py-3"><%= user.messages.count %></td>
-              <td class="px-5 py-3"><%= user.channels.count %></td>
+              <td class="px-5 py-3"><%= user.messages_count %></td>
+              <td class="px-5 py-3"><%= user.channels_count %></td>
               <td class="px-5 py-3"><%= user.created_at.strftime('%Y-%m-%d %H:%M') %></td>
               <td class="px-5 py-3">
                 <%= form_with url: admin_user_path(user), method: :patch, local: true, class: "flex flex-wrap justify-end gap-2" do |f| %>

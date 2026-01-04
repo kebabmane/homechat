@@ -34,11 +34,11 @@ class ApplicationController < ActionController::Base
   end
   
   def set_sidebar_data
-    @sidebar_public_channels = Channel.public_channels.includes(:creator).limit(10)
+    @sidebar_public_channels = Channel.public_channels.limit(10)
     # Show only non-DM channels in the Channels section
-    @sidebar_my_channels = current_user.channels.where.not(channel_type: 'dm').includes(:creator).limit(10)
+    @sidebar_my_channels = current_user.channels.where.not(channel_type: 'dm').limit(10)
     # List DMs separately
-    @sidebar_dm_channels = current_user.channels.where(channel_type: 'dm').includes(:creator).limit(20)
+    @sidebar_dm_channels = current_user.channels.where(channel_type: 'dm').limit(20)
   end
 
   def mark_active
