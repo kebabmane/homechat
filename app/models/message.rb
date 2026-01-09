@@ -38,6 +38,22 @@ class Message < ApplicationRecord
   end
 
   def broadcast_to_chat_channel
+    # Serialize files for broadcast
+    file_data = if files.attached?
+      files.map do |file|
+        {
+          id: file.id,
+          filename: file.filename.to_s,
+          content_type: file.content_type,
+          byte_size: file.byte_size,
+          url: Rails.application.routes.url_helpers.rails_blob_url(file, only_path: true),
+          thumbnail_url: file.image? ? Rails.application.routes.url_helpers.rails_blob_url(file.variant(resize_to_limit: [400, 400]), only_path: true) : nil
+        }
+      end
+    else
+      []
+    end
+
     # Broadcast to mobile clients via ChatChannel
     ChatChannel.broadcast_to(channel, {
       type: 'new_message',
@@ -51,8 +67,8 @@ class Message < ApplicationRecord
         },
         channelId: channel.id,
         createdAt: created_at.iso8601,
-        messageType: 'chat',
-        files: []
+        messageType: message_type || 'chat',
+        files: file_data
       }
     })
   rescue => e

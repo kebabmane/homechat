@@ -64,4 +64,41 @@ class Api::V1::BaseController < ApplicationController
     end
     true
   end
+
+  # Serialize file attachments for API responses
+  def serialize_files(message)
+    return [] unless message.files.attached?
+
+    message.files.map do |file|
+      {
+        id: file.id,
+        filename: file.filename.to_s,
+        content_type: file.content_type,
+        byte_size: file.byte_size,
+        url: rails_blob_url(file, host: request.base_url),
+        thumbnail_url: file.image? ? rails_blob_url(file.variant(resize_to_limit: [400, 400]), host: request.base_url) : nil
+      }
+    end
+  rescue => e
+    Rails.logger.error "Error serializing files: #{e.message}"
+    []
+  end
+
+  # Helper to serialize a message for API response
+  def serialize_message(message)
+    {
+      id: message.id,
+      content: message.content,
+      user: {
+        id: message.user.id,
+        username: message.user.username,
+        role: message.user.role,
+        created_at: message.user.created_at&.iso8601
+      },
+      channel_id: message.channel_id,
+      created_at: message.created_at.iso8601,
+      message_type: message.message_type || 'chat',
+      files: serialize_files(message)
+    }
+  end
 end

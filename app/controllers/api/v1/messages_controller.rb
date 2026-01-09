@@ -105,22 +105,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
       messages = messages.first(limit)
 
       render json: {
-        messages: messages.map do |message|
-          {
-            id: message.id,
-            content: message.content,
-            user: {
-              id: message.user.id,
-              username: message.user.username,
-              role: message.user.role,
-              created_at: message.user.created_at&.iso8601
-            },
-            channel_id: message.channel_id,
-            created_at: message.created_at.iso8601,
-            message_type: message.message_type || 'chat',
-            files: [] # TODO: Implement file attachments
-          }
-        end,
+        messages: messages.map { |message| serialize_message(message) },
         has_more: has_more
       }
       
@@ -211,6 +196,22 @@ class Api::V1::MessagesController < Api::V1::BaseController
   end
   
   def broadcast_message(message, channel)
+    # Serialize files for broadcast
+    files = if message.files.attached?
+      message.files.map do |file|
+        {
+          id: file.id,
+          filename: file.filename.to_s,
+          content_type: file.content_type,
+          byte_size: file.byte_size,
+          url: Rails.application.routes.url_helpers.rails_blob_url(file, host: request.base_url),
+          thumbnail_url: file.image? ? Rails.application.routes.url_helpers.rails_blob_url(file.variant(resize_to_limit: [400, 400]), host: request.base_url) : nil
+        }
+      end
+    else
+      []
+    end
+
     # Broadcast to the channel using ActionCable
     ActionCable.server.broadcast(
       "channel_#{channel.id}",
@@ -227,7 +228,8 @@ class Api::V1::MessagesController < Api::V1::BaseController
             avatar_color_index: message.user.avatar_color_index
           },
           created_at: message.created_at.iso8601,
-          message_type: message.message_type
+          message_type: message.message_type,
+          files: files
         }
       }
     )
@@ -263,20 +265,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
       render json: {
         success: true,
-        message: {
-          id: message.id,
-          content: message.content,
-          user: {
-            id: message.user.id,
-            username: message.user.username,
-            role: message.user.role,
-            created_at: message.user.created_at&.iso8601
-          },
-          channel_id: channel.id,
-          created_at: message.created_at.iso8601,
-          message_type: message.message_type || 'chat',
-          files: []
-        }
+        message: serialize_message(message)
       }
     else
       render json: { success: false, error: message.errors.full_messages.join(', ') }, status: :unprocessable_entity
@@ -293,7 +282,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
     return unless ensure_channel_access(channel)
 
     user = current_api_user
-    message = channel.messages.build(user: user, content: params[:caption].presence || 'Attachment')
+    message = channel.messages.build(user: user, content: params[:caption].presence || 'Attachment', message_type: 'api')
 
     if params[:files].present?
       Array(params[:files]).each { |f| message.files.attach(f) }
@@ -301,7 +290,14 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
     if message.save
       broadcast_message(message, channel)
-      render_success({ id: message.id, channel_id: channel.id, files: message.files.map(&:filename) }, 'Media uploaded')
+
+      # Send push notifications
+      FcmNotificationService.send_message_notification(message, exclude_user: user)
+
+      render json: {
+        success: true,
+        message: serialize_message(message)
+      }
     else
       render_error(message.errors.full_messages.join(', '))
     end
