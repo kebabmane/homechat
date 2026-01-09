@@ -1,7 +1,7 @@
 # Start discovery service after Rails initialization
 Rails.application.config.after_initialize do
-    # Skip discovery service in Home Assistant add-on mode to avoid conflicts
-    if Rails.application.config.discovery.enabled && ENV['HOME_ASSISTANT_ADDON'] != 'true'
+    # Start discovery service for LAN discovery (works in both standalone and add-on mode)
+    if Rails.application.config.discovery.enabled
       discovery_service = DiscoveryService.new(
         server_name: Rails.application.config.discovery.server_name,
         port: Rails.application.config.discovery.port

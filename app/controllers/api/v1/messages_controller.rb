@@ -318,7 +318,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
     dm_channels = Channel.dm_channels
                         .joins(:channel_memberships)
                         .where(channel_memberships: { user: user })
-                        .includes(:members)
+                        .includes(channel_memberships: :user)
                         .order(Arel.sql('last_message_at DESC NULLS LAST'))
 
     render json: {
@@ -330,7 +330,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
           id: c.id,
           name: other_user&.username || "Unknown User", # Show as other person's name
           description: nil, # DMs don't need descriptions
-          type: 'directMessage', # Use camelCase for iOS
+          type: 'dm', # Must match iOS ChannelType.directMessage raw value
           member_count: c.member_count,
           online_member_count: c.members.where(is_online: true).count,
           last_message: last_message ? {
