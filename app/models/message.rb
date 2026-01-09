@@ -20,6 +20,7 @@ class Message < ApplicationRecord
   after_create_commit -> { broadcast_to_chat_channel }
   after_create_commit :schedule_ai_bot_responses
   after_create_commit :invite_mentioned_users
+  after_create_commit :send_push_notifications
   after_create_commit :update_channel_last_message_timestamp
 
   private
@@ -109,5 +110,43 @@ class Message < ApplicationRecord
     channel.update_column(:last_message_at, created_at)
   rescue => e
     Rails.logger.error("Failed to update channel last_message_at for message #{id}: #{e.class} #{e.message}")
+  end
+
+  def send_push_notifications
+    return unless FcmNotificationService.fcm_configured?
+
+    # Send regular channel notification (excluding sender)
+    if channel.dm?
+      # For DMs, notify the other user
+      other_user = channel.members.where.not(id: user_id).first
+      FcmNotificationService.send_direct_message_notification(self, other_user) if other_user
+    else
+      # For channels, notify all members except sender
+      FcmNotificationService.send_message_notification(self, exclude_user: user)
+    end
+
+    # Send mention-specific notifications
+    send_mention_notifications
+  rescue => e
+    Rails.logger.error("Failed to send push notifications for message #{id}: #{e.class} #{e.message}")
+  end
+
+  def send_mention_notifications
+    return if content.blank?
+
+    usernames = content.scan(MENTION_REGEX).map do |mention|
+      mention.is_a?(Array) ? mention.first.to_s.downcase : mention.to_s.downcase
+    end.uniq
+    return if usernames.empty?
+
+    mentioned_users = User.where('LOWER(username) IN (?)', usernames)
+                          .where.not(id: user_id)
+                          .where.not(fcm_token: [nil, ''])
+
+    mentioned_users.each do |mentioned_user|
+      FcmNotificationService.send_mention_notification(self, mentioned_user)
+    end
+  rescue => e
+    Rails.logger.error("Failed to send mention notifications for message #{id}: #{e.class} #{e.message}")
   end
 end

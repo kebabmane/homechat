@@ -220,15 +220,34 @@ grep "FCM:" log/production.log
 
 ---
 
+## Notification Types
+
+HomeChat sends the following types of push notifications:
+
+| Type | Trigger | Title | Body |
+|------|---------|-------|------|
+| `new_message` | New message in channel | Channel name | "username: message" |
+| `direct_message` | New DM | Sender username | Message content |
+| `mention` | User @mentioned | "username mentioned you" | "in #channel: message" |
+| `channel_invite` | Invited to channel | "Channel Invitation" | "username invited you to join channel" |
+
+All notifications include data payload with `channel_id`, `message_id`, and other context for deep linking.
+
+---
+
 ## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    HomeChat Server                       │
 │                                                          │
-│  Message Created                                         │
+│  Message Created (after_create_commit)                  │
 │       ↓                                                  │
-│  FcmNotificationService.send_message_notification()     │
+│  send_push_notifications()                               │
+│       ├── Channel/DM notifications                       │
+│       └── Mention notifications (if @username found)     │
+│       ↓                                                  │
+│  FcmNotificationService                                  │
 │       ↓                                                  │
 │  Authenticate with Service Account                       │
 │       ↓                                                  │

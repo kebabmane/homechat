@@ -77,6 +77,26 @@ class FcmNotificationService
       send_to_tokens([recipient.fcm_token], notification_data)
     end
 
+    def send_mention_notification(message, mentioned_user)
+      return unless fcm_configured?
+      return if mentioned_user.fcm_token.blank?
+
+      notification_data = {
+        title: "#{message.user.username} mentioned you",
+        body: "in ##{message.channel.name}: #{truncate_message(message.content)}",
+        data: {
+          type: 'mention',
+          channel_id: message.channel.id.to_s,
+          message_id: message.id.to_s,
+          username: message.user.username,
+          channel_name: message.channel.name,
+          content: message.content
+        }
+      }
+
+      send_to_tokens([mentioned_user.fcm_token], notification_data)
+    end
+
     def fcm_configured?
       project_id.present? && credentials_available?
     end

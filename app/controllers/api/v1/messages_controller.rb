@@ -49,11 +49,10 @@ class Api::V1::MessagesController < Api::V1::BaseController
       )
       
       if message.save
-        # Broadcast the message to the channel
+        # Broadcast the message to the channel (for Turbo Streams web clients)
         broadcast_message(message, channel)
 
-        # Send push notifications
-        FcmNotificationService.send_message_notification(message, exclude_user: user)
+        # Note: FCM push notifications are now sent via model callback (send_push_notifications)
 
         render_success({
           message: {
@@ -260,8 +259,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
     if message.save
       broadcast_message(message, channel)
 
-      # Send push notifications
-      FcmNotificationService.send_message_notification(message, exclude_user: user)
+      # Note: FCM push notifications are now sent via model callback (send_push_notifications)
 
       render json: {
         success: true,
@@ -291,8 +289,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
     if message.save
       broadcast_message(message, channel)
 
-      # Send push notifications
-      FcmNotificationService.send_message_notification(message, exclude_user: user)
+      # Note: FCM push notifications are now sent via model callback (send_push_notifications)
 
       render json: {
         success: true,
@@ -319,8 +316,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
     if message.save
       broadcast_message(message, channel)
 
-      # Send push notifications to DM recipient
-      FcmNotificationService.send_direct_message_notification(message, target)
+      # Note: FCM push notifications are now sent via model callback (send_push_notifications)
 
       render_success({ id: message.id, channel_id: channel.id }, 'DM sent')
     else
