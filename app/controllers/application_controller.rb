@@ -10,6 +10,7 @@ class ApplicationController < ActionController::Base
   before_action :set_sidebar_data, if: :logged_in?
   before_action :mark_active, if: :logged_in?
   before_action :check_session_timeout, if: :logged_in?
+  around_action :set_user_timezone, if: :logged_in?
   
   helper_method :current_user, :logged_in?
   
@@ -76,6 +77,11 @@ class ApplicationController < ActionController::Base
     current_user.touch
   rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.debug "Failed to touch user for activity tracking: #{e.class} #{e.message}"
+  end
+
+  def set_user_timezone(&block)
+    timezone = current_user&.timezone.presence || 'UTC'
+    Time.use_zone(timezone, &block)
   end
 
   def require_admin

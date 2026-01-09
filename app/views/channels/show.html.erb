@@ -73,8 +73,9 @@
   <div class="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6" data-message-list-target="container">
     <%= turbo_stream_from @channel %>
     <% if @messages.any? %>
-      <div class="space-y-4 sm:space-y-6 pt-6 pb-4" id="<%= dom_id(@channel, :messages) %>" aria-live="polite" aria-label="Chat messages">
+      <div class="pt-6 pb-4" id="<%= dom_id(@channel, :messages) %>" aria-live="polite" aria-label="Chat messages">
         <% divider_rendered = false %>
+        <% prev_message = nil %>
         <% @messages.reverse.each do |message| %>
           <% if !divider_rendered && @last_read_at && message.created_at > @last_read_at %>
             <div>
@@ -86,8 +87,13 @@
               </div>
             </div>
             <% divider_rendered = true %>
+            <% prev_message = nil %>
           <% end %>
-          <%= render "messages/message", message: message %>
+          <% grouped = prev_message &&
+                       prev_message.user_id == message.user_id &&
+                       (message.created_at - prev_message.created_at).abs < 5.minutes %>
+          <%= render "messages/message", message: message, grouped: grouped %>
+          <% prev_message = message %>
         <% end %>
       </div>
     <% else %>

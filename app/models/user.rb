@@ -9,6 +9,7 @@ class User < ApplicationRecord
 
   validates :username, presence: true, uniqueness: true, length: { minimum: 3, maximum: 50 }
   validates :role, inclusion: { in: %w[user admin] }
+  validates :timezone, inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }, allow_blank: true
 
   # Avatar validations
   validate :avatar_validation

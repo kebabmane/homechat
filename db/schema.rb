@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_04_100003) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_09_022508) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -161,6 +161,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_04_100003) do
     t.string "otp_secret"
     t.boolean "otp_required_for_login", default: false, null: false
     t.text "otp_backup_codes"
+    t.string "timezone", default: "UTC"
     t.index ["fcm_token"], name: "index_users_on_fcm_token"
     t.index ["is_online"], name: "index_users_on_is_online"
     t.index ["last_seen_at"], name: "index_users_on_last_seen_at"

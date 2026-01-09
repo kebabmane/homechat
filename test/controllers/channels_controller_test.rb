@@ -143,4 +143,50 @@ class ChannelsControllerTest < ActionDispatch::IntegrationTest
     # Might redirect to the channel itself or back to channels list
     assert_response :redirect
   end
+
+  # Message grouping tests
+  test "should group consecutive messages from same user within 5 minutes" do
+    sign_in_as(@user)
+
+    # Create consecutive messages from same user within 5 minutes
+    msg1 = Message.create!(content: "First message", user: @user, channel: @channel)
+    msg2 = Message.create!(content: "Second message", user: @user, channel: @channel, created_at: msg1.created_at + 2.minutes)
+
+    get channel_path(@channel)
+    assert_response :success
+
+    # First message should NOT be grouped
+    assert_select "[data-message-id='#{msg1.id}'][data-message-grouped='false']"
+    # Second message should be grouped (same user, within 5 minutes)
+    assert_select "[data-message-id='#{msg2.id}'][data-message-grouped='true']"
+  end
+
+  test "should not group messages from different users" do
+    other_user = create_user(username: "otheruser")
+    sign_in_as(@user)
+
+    msg1 = Message.create!(content: "Hello", user: @user, channel: @channel)
+    msg2 = Message.create!(content: "Hi there", user: other_user, channel: @channel, created_at: msg1.created_at + 1.minute)
+
+    get channel_path(@channel)
+    assert_response :success
+
+    # Both messages should NOT be grouped (different users)
+    assert_select "[data-message-id='#{msg1.id}'][data-message-grouped='false']"
+    assert_select "[data-message-id='#{msg2.id}'][data-message-grouped='false']"
+  end
+
+  test "should not group messages more than 5 minutes apart" do
+    sign_in_as(@user)
+
+    msg1 = Message.create!(content: "First", user: @user, channel: @channel)
+    msg2 = Message.create!(content: "Second", user: @user, channel: @channel, created_at: msg1.created_at + 6.minutes)
+
+    get channel_path(@channel)
+    assert_response :success
+
+    # Both messages should NOT be grouped (more than 5 minutes apart)
+    assert_select "[data-message-id='#{msg1.id}'][data-message-grouped='false']"
+    assert_select "[data-message-id='#{msg2.id}'][data-message-grouped='false']"
+  end
 end

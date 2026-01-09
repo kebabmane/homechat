@@ -53,14 +53,7 @@ Rails.application.routes.draw do
     resources :users, only: [:index, :update]
     resources :integrations, only: [:index] do
       collection do
-        post :create_token
-        patch :update_settings
         get :test_connection
-      end
-      member do
-        patch :regenerate_token
-        patch :deactivate_token
-        patch :activate_token
       end
     end
     resources :bots, only: [:index, :show, :new, :create, :edit, :update, :destroy] do

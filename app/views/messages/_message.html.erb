@@ -1,22 +1,31 @@
-<div class="group message-bubble flex items-end gap-2 px-2 py-1"
+<% grouped ||= false %>
+<div class="group message-bubble flex items-end gap-2 px-2 <%= grouped ? 'pt-0.5 pb-0.5' : 'pt-3 pb-1' %>"
+     data-message-id="<%= message.id %>"
      data-message-username="<%= message.user.username.downcase %>"
-     data-message-user-id="<%= message.user_id %>">
+     data-message-user-id="<%= message.user_id %>"
+     data-message-grouped="<%= grouped %>">
 
-  <div class="message-avatar flex-shrink-0 mb-1">
-    <%= avatar_for(message.user, size: 'h-6 w-6 sm:h-8 sm:w-8') %>
-  </div>
+  <% unless grouped %>
+    <div class="message-avatar flex-shrink-0 mb-1">
+      <%= avatar_for(message.user, size: 'h-6 w-6 sm:h-8 sm:w-8') %>
+    </div>
+  <% else %>
+    <div class="message-avatar-spacer w-6 sm:w-8 flex-shrink-0"></div>
+  <% end %>
 
   <div class="message-content flex flex-col items-start max-w-[85%] sm:max-w-[75%] min-w-0">
-    <div class="message-header flex items-center gap-2 mb-0.5 ml-1">
-      <span class="text-xs font-medium text-gray-600"><%= message.user.username %></span>
-    </div>
+    <% unless grouped %>
+      <div class="message-header flex items-center gap-2 mb-0.5 ml-1">
+        <span class="text-xs font-medium text-gray-600"><%= message.user.username %></span>
+      </div>
+    <% end %>
 
-    <div class="message-text bg-gray-100 text-gray-900 rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm text-[15px] leading-relaxed break-words">
+    <div class="message-text bg-gray-100 text-gray-900 rounded-2xl <%= grouped ? 'rounded-l-md' : 'rounded-bl-md' %> px-4 py-2.5 shadow-sm text-[15px] leading-relaxed break-words">
       <div class="message-body"><%= render_message_body(message.content).html_safe %></div>
     </div>
 
     <div class="message-time flex items-center gap-1 mt-0.5 ml-1">
-      <span class="text-[10px] text-gray-400 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" title="<%= message.created_at.strftime('%B %d, %Y at %I:%M %p') %>">
+      <span class="text-[10px] text-gray-400 <%= grouped ? 'opacity-0 group-hover:opacity-100' : 'sm:opacity-0 sm:group-hover:opacity-100' %> transition-opacity" title="<%= message.created_at.strftime('%B %d, %Y at %I:%M %p') %>">
         <%= message.created_at.strftime('%I:%M %p') %>
       </span>
     </div>

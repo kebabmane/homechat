@@ -68,14 +68,24 @@
     <section class="bg-white rounded-lg border border-gray-200 p-6" data-controller="preferences">
       <h2 class="text-lg font-semibold text-gray-900 mb-4">Preferences</h2>
 
-      <label class="flex items-start gap-3 cursor-pointer">
-        <input type="checkbox" id="pref_enter_to_send" data-preferences-target="enter" data-action="change->preferences#save"
-               class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600">
+      <div class="space-y-4">
         <div>
-          <span class="text-sm font-medium text-gray-900">Enter to send</span>
-          <p class="text-sm text-gray-500">Press Enter to send messages. Use Shift+Enter for new lines.</p>
+          <%= f.label :timezone, 'Timezone', class: "block text-sm font-medium text-gray-700 mb-2" %>
+          <%= f.time_zone_select :timezone, ActiveSupport::TimeZone.all,
+              { default: current_user.timezone || 'UTC' },
+              class: "block w-full rounded-lg border-gray-300 py-2 text-sm" %>
+          <p class="mt-1 text-xs text-gray-500">Message times will be displayed in your selected timezone.</p>
         </div>
-      </label>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" id="pref_enter_to_send" data-preferences-target="enter" data-action="change->preferences#save"
+                 class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600">
+          <div>
+            <span class="text-sm font-medium text-gray-900">Enter to send</span>
+            <p class="text-sm text-gray-500">Press Enter to send messages. Use Shift+Enter for new lines.</p>
+          </div>
+        </label>
+      </div>
     </section>
 
     <!-- Submit -->

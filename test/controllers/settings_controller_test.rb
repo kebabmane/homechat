@@ -274,4 +274,41 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     @user.reload
     assert_equal "user", @user.role # Role should remain user
   end
+
+  test "should update timezone" do
+    sign_in_as(@user)
+
+    patch settings_path, params: {
+      user: {
+        timezone: "Eastern Time (US & Canada)",
+        current_password: "secret"
+      }
+    }
+
+    assert_redirected_to edit_settings_path
+    @user.reload
+    assert_equal "Eastern Time (US & Canada)", @user.timezone
+  end
+
+  test "should reject invalid timezone" do
+    sign_in_as(@user)
+
+    patch settings_path, params: {
+      user: {
+        timezone: "Invalid/Timezone",
+        current_password: "secret"
+      }
+    }
+
+    assert_response :unprocessable_content
+    @user.reload
+    assert_equal "UTC", @user.timezone
+  end
+
+  test "should show timezone selector on settings page" do
+    sign_in_as(@user)
+    get edit_settings_path
+    assert_response :success
+    assert_select "select[name='user[timezone]']"
+  end
 end

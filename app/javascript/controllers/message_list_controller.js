@@ -538,6 +538,7 @@ export default class extends Controller {
 
     const messageUsername = bubble.dataset.messageUsername?.toLowerCase()
     const isOwn = messageUsername === this._currentUsername
+    const isGrouped = bubble.dataset.messageGrouped === 'true'
 
     if (isOwn) {
       // Own message: align right, blue bubble, hide avatar/name
@@ -545,6 +546,10 @@ export default class extends Controller {
 
       const avatar = bubble.querySelector('.message-avatar')
       if (avatar) avatar.classList.add('hidden')
+
+      // Also hide the spacer for grouped messages
+      const avatarSpacer = bubble.querySelector('.message-avatar-spacer')
+      if (avatarSpacer) avatarSpacer.classList.add('hidden')
 
       const header = bubble.querySelector('.message-header')
       if (header) header.classList.add('hidden')
@@ -557,8 +562,10 @@ export default class extends Controller {
 
       const text = bubble.querySelector('.message-text')
       if (text) {
-        text.classList.remove('bg-gray-100', 'text-gray-900', 'rounded-bl-md')
-        text.classList.add('bg-blue-500', 'text-white', 'rounded-br-md')
+        text.classList.remove('bg-gray-100', 'text-gray-900', 'rounded-bl-md', 'rounded-l-md')
+        text.classList.add('bg-blue-500', 'text-white')
+        // Apply appropriate corner rounding for own messages
+        text.classList.add(isGrouped ? 'rounded-r-md' : 'rounded-br-md')
         // Style links in own messages
         const body = text.querySelector('.message-body')
         if (body) {
