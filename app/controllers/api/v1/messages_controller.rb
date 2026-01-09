@@ -1,4 +1,31 @@
 class Api::V1::MessagesController < Api::V1::BaseController
+  # DELETE /api/v1/messages/:id
+  def destroy
+    message = Message.find(params[:id])
+    user = current_api_user
+
+    # Only allow users to delete their own messages (or admins)
+    if message.user == user || user.admin?
+      channel = message.channel
+
+      # Broadcast deletion to channel subscribers
+      ActionCable.server.broadcast(
+        "channel_#{channel.id}",
+        {
+          type: 'message_deleted',
+          message_id: message.id
+        }
+      )
+
+      message.destroy
+      render json: { success: true, message: 'Message deleted' }
+    else
+      render json: { success: false, error: 'You can only delete your own messages' }, status: :forbidden
+    end
+  rescue ActiveRecord::RecordNotFound
+    render json: { success: false, error: 'Message not found' }, status: :not_found
+  end
+
   def create
     begin
       message_params = params.require(:message)

@@ -97,12 +97,13 @@ Rails.application.routes.draw do
       # Message endpoints
       post :messages, to: 'messages#create'
       get :messages, to: 'messages#index'
+      delete 'messages/:id', to: 'messages#destroy', as: :delete_message
       # Search endpoint
       get :search, to: 'search#index'
       get 'users/search', to: 'search#search_users'
 
       # Channel-scoped API
-      resources :channels, only: [:index] do
+      resources :channels, only: [:index, :create] do
         member do
           post :messages, to: 'messages#create_for_channel'
           post :media, to: 'messages#create_media'

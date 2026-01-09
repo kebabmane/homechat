@@ -1,4 +1,40 @@
 class Api::V1::ChannelsController < Api::V1::BaseController
+  # POST /api/v1/channels
+  def create
+    user = current_api_user
+
+    channel = Channel.new(
+      name: params[:name],
+      description: params[:description],
+      channel_type: params[:channel_type] || 'public',
+      created_by: user
+    )
+
+    if channel.save
+      # Automatically add creator as member
+      channel.add_member(user)
+
+      render json: {
+        success: true,
+        channel: {
+          id: channel.id,
+          name: channel.name,
+          description: channel.description,
+          type: channel.channel_type,
+          member_count: channel.member_count,
+          online_member_count: 1,
+          is_member: true,
+          created_at: channel.created_at&.iso8601
+        }
+      }, status: :created
+    else
+      render json: {
+        success: false,
+        error: channel.errors.full_messages.join(', ')
+      }, status: :unprocessable_entity
+    end
+  end
+
   # GET /api/v1/channels
   def index
     user = current_api_user

@@ -55,6 +55,9 @@ gem "rqrcode"
 # Structured JSON logging for production
 gem "lograge"
 
+# Google authentication for FCM (Firebase Cloud Messaging)
+gem "googleauth"
+
 # API documentation with OpenAPI/Swagger
 gem "rswag-api"
 gem "rswag-ui"
