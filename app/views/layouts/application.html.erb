@@ -20,11 +20,6 @@
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
     <%= javascript_importmap_tags %>
     <meta name="theme-color" content="<%= Setting.fetch(:pwa_theme_color, '#2563eb') %>">
   </head>
@@ -47,15 +42,68 @@
     <% end %>
     <% if logged_in? %>
       <span data-current-username data-current-username="<%= current_user.username %>" class="hidden"></span>
+
+      <%# Command Palette - Cmd+K quick switcher %>
+      <% palette_channels = (@sidebar_my_channels || []).map { |c| { id: c.id, name: c.name, url: channel_path(c), type: c.channel_type } } +
+                            (@sidebar_dm_channels || []).map { |c| { id: c.id, name: c.other_user(current_user)&.username || c.name, url: channel_path(c), type: 'dm' } } %>
+      <div data-controller="command-palette" data-command-palette-channels-value="<%= palette_channels.to_json %>">
+        <!-- Backdrop -->
+        <div data-command-palette-target="backdrop" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50" data-action="click->command-palette#close"></div>
+
+        <!-- Modal -->
+        <div data-command-palette-target="modal" class="hidden fixed inset-0 z-50 items-start justify-center pt-[15vh] px-4">
+          <div class="w-full max-w-lg bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden" role="dialog" aria-modal="true" aria-label="Quick switcher">
+            <!-- Search Input -->
+            <div class="px-4 py-3 border-b border-gray-200">
+              <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input type="text"
+                       data-command-palette-target="input"
+                       data-action="input->command-palette#search keydown->command-palette#handleInputKeydown"
+                       class="flex-1 text-base text-gray-900 placeholder-gray-500 bg-transparent border-0 focus:outline-none focus:ring-0"
+                       placeholder="Search channels..."
+                       autocomplete="off"
+                       spellcheck="false">
+                <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-500 bg-gray-100 rounded">
+                  esc
+                </kbd>
+              </div>
+            </div>
+
+            <!-- Results -->
+            <div data-command-palette-target="results" class="max-h-[50vh] overflow-y-auto">
+              <!-- Results rendered dynamically -->
+            </div>
+
+            <!-- Footer hint -->
+            <div class="px-4 py-2 border-t border-gray-100 bg-gray-50 text-xs text-gray-500 flex items-center justify-between">
+              <span>
+                <kbd class="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-gray-600">↑↓</kbd>
+                navigate
+              </span>
+              <span>
+                <kbd class="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-gray-600">↵</kbd>
+                open
+              </span>
+              <span class="hidden sm:inline">
+                <kbd class="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-gray-600">esc</kbd>
+                close
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     <% end %>
     <%# Global flashes removed from full-width; shown inside main content below %>
 
     <div class="relative flex min-h-dvh md:h-dvh md:overflow-hidden bg-gray-100" data-controller="sidebar">
-      <!-- Backdrop (mobile) -->
-      <div class="fixed inset-0 bg-black/40 z-30 hidden md:hidden" data-sidebar-target="backdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
+      <!-- Backdrop (mobile) - with blur effect -->
+      <div class="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 hidden md:hidden transition-opacity duration-200" data-sidebar-target="backdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
 
-      <!-- Sidebar -->
-      <aside class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full transition-transform duration-200 ease-in-out bg-gray-50 border-r border-gray-200 text-gray-900 flex flex-col md:relative md:translate-x-0 md:transform-none md:flex-shrink-0 md:w-64 md:h-dvh md:overflow-y-auto" data-sidebar-target="panel" data-sidebar-panel aria-label="Primary">
+      <!-- Sidebar - with spring animation -->
+      <aside class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full transition-transform duration-300 ease-spring bg-gray-50 border-r border-gray-200 text-gray-900 flex flex-col shadow-xl md:relative md:translate-x-0 md:transform-none md:flex-shrink-0 md:w-64 md:h-dvh md:overflow-y-auto md:shadow-none" data-sidebar-target="panel" data-sidebar-panel aria-label="Primary">
         <%= render "shared/channels_sidebar" %>
       </aside>
 

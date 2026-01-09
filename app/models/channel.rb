@@ -75,4 +75,11 @@ class Channel < ApplicationRecord
 
     channel_memberships.exists?(user_id: user.id)
   end
+
+  # Count messages since a given timestamp (for unread indicators)
+  def unread_count(since:)
+    return 0 unless since
+
+    messages.where('created_at > ?', since).count
+  end
 end

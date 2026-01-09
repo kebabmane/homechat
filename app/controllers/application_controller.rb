@@ -39,6 +39,31 @@ class ApplicationController < ActionController::Base
     @sidebar_my_channels = current_user.channels.where.not(channel_type: 'dm').limit(10)
     # List DMs separately
     @sidebar_dm_channels = current_user.channels.where(channel_type: 'dm').limit(20)
+
+    # Calculate unread counts for sidebar channels
+    @sidebar_unread_counts = calculate_unread_counts
+  end
+
+  def calculate_unread_counts
+    return {} unless session[:last_read].present?
+
+    counts = {}
+    all_channels = @sidebar_my_channels + @sidebar_dm_channels
+
+    all_channels.each do |channel|
+      last_read_str = session[:last_read][channel.id.to_s]
+      next unless last_read_str
+
+      begin
+        last_read_at = Time.parse(last_read_str)
+        count = channel.unread_count(since: last_read_at)
+        counts[channel.id] = count if count > 0
+      rescue ArgumentError
+        # Invalid time format, skip
+      end
+    end
+
+    counts
   end
 
   def mark_active

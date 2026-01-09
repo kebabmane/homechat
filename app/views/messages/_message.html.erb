@@ -3,10 +3,10 @@
      data-message-user-id="<%= message.user_id %>">
 
   <div class="message-avatar flex-shrink-0 mb-1">
-    <%= avatar_for(message.user, size: 'h-8 w-8') %>
+    <%= avatar_for(message.user, size: 'h-6 w-6 sm:h-8 sm:w-8') %>
   </div>
 
-  <div class="message-content flex flex-col items-start max-w-[75%] min-w-0">
+  <div class="message-content flex flex-col items-start max-w-[85%] sm:max-w-[75%] min-w-0">
     <div class="message-header flex items-center gap-2 mb-0.5 ml-1">
       <span class="text-xs font-medium text-gray-600"><%= message.user.username %></span>
     </div>
@@ -16,7 +16,7 @@
     </div>
 
     <div class="message-time flex items-center gap-1 mt-0.5 ml-1">
-      <span class="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" title="<%= message.created_at.strftime('%B %d, %Y at %I:%M %p') %>">
+      <span class="text-[10px] text-gray-400 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" title="<%= message.created_at.strftime('%B %d, %Y at %I:%M %p') %>">
         <%= message.created_at.strftime('%I:%M %p') %>
       </span>
     </div>

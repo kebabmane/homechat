@@ -1,23 +1,44 @@
 import { Controller } from "@hotwired/stimulus"
 import { subscribeToTyping, broadcastTyping, unsubscribeTyping } from "channels/typing_channel"
 
-// Manages channel message area interactions: scroll, header shadow, textarea autosize.
+const MESSAGE_QUEUE_KEY = 'homechat_message_queue'
+
+// Manages channel message area interactions: scroll, header shadow, textarea autosize, offline queueing.
 export default class extends Controller {
-  static targets = ["container", "header", "textarea", "scrollButton", "typingIndicator"]
+  static targets = ["container", "header", "textarea", "scrollButton", "typingIndicator", "offlineIndicator", "sendButton", "composerArea"]
   static values = {
     autoscroll: { type: Boolean, default: true },
-    autofocus: { type: Boolean, default: false },
-    currentUser: String
+    autofocus: { type: Boolean, default: true },
+    currentUser: String,
+    channelId: String
   }
 
   connect() {
     this._typingTimers = new Map()
     this._typingContainerEl = this.hasTypingIndicatorTarget ? this.typingIndicatorTarget : null
     this._draftSaveTimer = null
+    this._isOnline = navigator.onLine
 
     // Get current username for message styling
     const currentUser = this.hasCurrentUserValue ? this.currentUserValue : (document.querySelector('[data-current-username]')?.dataset.currentUsername || null)
     this._currentUsername = currentUser ? currentUser.toLowerCase() : null
+
+    // Setup offline/online listeners
+    this._onOnline = () => this._handleOnline()
+    this._onOffline = () => this._handleOffline()
+    window.addEventListener('online', this._onOnline)
+    window.addEventListener('offline', this._onOffline)
+
+    // Listen for sync messages from service worker
+    this._onSwMessage = (event) => {
+      if (event.data?.type === 'SYNC_MESSAGES') {
+        this._syncQueuedMessages()
+      }
+    }
+    navigator.serviceWorker?.addEventListener('message', this._onSwMessage)
+
+    // Update offline indicator on connect
+    this._updateOfflineIndicator()
 
     // Style existing messages on page load
     this._styleAllMessages()
@@ -88,6 +109,101 @@ export default class extends Controller {
       }
       this.textareaTarget.addEventListener('blur', this._onTextareaBlur)
     }
+
+    // Mobile keyboard handling using visualViewport API
+    this._setupMobileKeyboardHandling()
+  }
+
+  // Mobile keyboard detection and layout adjustment
+  _setupMobileKeyboardHandling() {
+    // Only on mobile devices and if visualViewport is available
+    if (!window.visualViewport || this._isDesktop()) return
+
+    this._initialViewportHeight = window.visualViewport.height
+    this._keyboardVisible = false
+
+    this._onViewportResize = () => {
+      const currentHeight = window.visualViewport.height
+      const heightDiff = this._initialViewportHeight - currentHeight
+
+      // Keyboard is likely open if viewport shrunk by more than 150px
+      const keyboardOpen = heightDiff > 150
+
+      if (keyboardOpen && !this._keyboardVisible) {
+        this._onKeyboardShow(heightDiff)
+      } else if (!keyboardOpen && this._keyboardVisible) {
+        this._onKeyboardHide()
+      }
+    }
+
+    window.visualViewport.addEventListener('resize', this._onViewportResize)
+
+    // Also handle scroll events on visualViewport (iOS Safari)
+    this._onViewportScroll = () => {
+      if (this._keyboardVisible) {
+        this._adjustForKeyboard()
+      }
+    }
+    window.visualViewport.addEventListener('scroll', this._onViewportScroll)
+  }
+
+  _isDesktop() {
+    return window.matchMedia('(min-width: 768px)').matches
+  }
+
+  _onKeyboardShow(keyboardHeight) {
+    this._keyboardVisible = true
+    this._keyboardHeight = keyboardHeight
+
+    // Add class for CSS-based adjustments
+    this.element.classList.add('keyboard-visible')
+
+    // Adjust the layout
+    this._adjustForKeyboard()
+
+    // Scroll to bottom to keep messages visible
+    requestAnimationFrame(() => {
+      this._scrollToBottom(true)
+    })
+  }
+
+  _onKeyboardHide() {
+    this._keyboardVisible = false
+    this._keyboardHeight = 0
+
+    // Remove keyboard class
+    this.element.classList.remove('keyboard-visible')
+
+    // Reset any inline styles
+    if (this.hasComposerAreaTarget) {
+      this.composerAreaTarget.style.transform = ''
+      this.composerAreaTarget.style.position = ''
+    }
+
+    // Reset container padding
+    if (this.hasContainerTarget) {
+      this.containerTarget.style.paddingBottom = ''
+    }
+  }
+
+  _adjustForKeyboard() {
+    if (!this._keyboardVisible || !window.visualViewport) return
+
+    // On iOS Safari, the viewport can scroll behind fixed elements
+    // We need to adjust for this offset
+    const offsetTop = window.visualViewport.offsetTop
+
+    if (this.hasComposerAreaTarget && offsetTop > 0) {
+      // Translate the composer to stay visible
+      this.composerAreaTarget.style.transform = `translateY(${-offsetTop}px)`
+    }
+
+    // Ensure messages area accounts for keyboard
+    if (this.hasContainerTarget) {
+      // Add extra padding to keep content from being hidden behind composer
+      const extraPadding = this._keyboardHeight > 0 ? 60 : 0
+      this.containerTarget.style.paddingBottom = `${extraPadding}px`
+    }
   }
 
   disconnect() {
@@ -115,6 +231,22 @@ export default class extends Controller {
       this.textareaTarget.removeEventListener('blur', this._onTextareaBlur)
       this._onTextareaBlur = null
     }
+    // Remove offline/online listeners
+    window.removeEventListener('online', this._onOnline)
+    window.removeEventListener('offline', this._onOffline)
+    navigator.serviceWorker?.removeEventListener('message', this._onSwMessage)
+
+    // Remove visualViewport listeners
+    if (window.visualViewport) {
+      if (this._onViewportResize) {
+        window.visualViewport.removeEventListener('resize', this._onViewportResize)
+      }
+      if (this._onViewportScroll) {
+        window.visualViewport.removeEventListener('scroll', this._onViewportScroll)
+      }
+    }
+    this._keyboardVisible = false
+
     unsubscribeTyping()
     this._typingChannelId = null
     this._currentUsername = null
@@ -122,14 +254,21 @@ export default class extends Controller {
   }
 
   // Called on turbo:submit-end from the form
-  afterSubmit() {
+  afterSubmit(event) {
+    // Check if submission was successful (Turbo provides detail.success)
+    const success = event?.detail?.success !== false
+
     if (this.hasTextareaTarget) {
       this.textareaTarget.value = ""
       this.autoResize()
-      if (this.autofocusValue) {
-        this.textareaTarget.focus()
-      }
+      this.textareaTarget.focus()
     }
+
+    // Show send confirmation feedback
+    if (success) {
+      this._showSendConfirmation()
+    }
+
     // Clear draft after successful submit
     this._clearDraft()
     if (this._typingChannelId) {
@@ -139,6 +278,34 @@ export default class extends Controller {
       }
     }
     requestAnimationFrame(() => this._scrollToBottom(true))
+  }
+
+  // Show brief visual feedback after sending a message
+  _showSendConfirmation() {
+    if (!this.hasSendButtonTarget) return
+
+    const btn = this.sendButtonTarget
+    const originalText = btn.textContent
+    const originalClasses = btn.className
+
+    // Briefly show checkmark with success styling
+    btn.innerHTML = `
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+      </svg>
+    `
+    btn.classList.remove('bg-blue-600', 'hover:bg-blue-700')
+    btn.classList.add('bg-green-500', 'scale-105')
+
+    // Add subtle pulse animation
+    btn.style.transition = 'transform 150ms ease-out, background-color 150ms ease-out'
+
+    // Restore original state after brief delay
+    setTimeout(() => {
+      btn.textContent = originalText
+      btn.className = originalClasses
+      btn.style.transition = ''
+    }, 600)
   }
 
   submit(event) {
@@ -306,9 +473,9 @@ export default class extends Controller {
     headerDiv.appendChild(usernameSpan)
     headerDiv.appendChild(typingSpan)
 
-    // Typing indicator dots
+    // Typing indicator dots with staggered animation
     const dotsContainer = document.createElement('div')
-    dotsContainer.className = 'inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600 animate-pulse'
+    dotsContainer.className = 'inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-2 text-xs text-gray-600'
 
     const srSpan = document.createElement('span')
     srSpan.className = 'sr-only'
@@ -317,7 +484,7 @@ export default class extends Controller {
 
     for (let i = 0; i < 3; i++) {
       const dot = document.createElement('span')
-      dot.className = 'w-2 h-2 rounded-full bg-gray-400'
+      dot.className = 'typing-dot w-2 h-2 rounded-full bg-gray-400'
       dotsContainer.appendChild(dot)
     }
 
@@ -472,4 +639,175 @@ export default class extends Controller {
       this._draftSaveTimer = setTimeout(() => this._saveDraft(), 1000)
     }
   })()
+
+  // Offline handling methods
+  _handleOnline() {
+    this._isOnline = true
+    this._updateOfflineIndicator()
+    this._syncQueuedMessages()
+  }
+
+  _handleOffline() {
+    this._isOnline = false
+    this._updateOfflineIndicator()
+  }
+
+  _updateOfflineIndicator() {
+    if (this.hasOfflineIndicatorTarget) {
+      this.offlineIndicatorTarget.classList.toggle('hidden', this._isOnline)
+    }
+  }
+
+  // Queue a message for later sending when offline
+  _queueMessage(channelId, content) {
+    try {
+      const queue = JSON.parse(localStorage.getItem(MESSAGE_QUEUE_KEY) || '[]')
+      queue.push({
+        channelId,
+        content,
+        timestamp: Date.now(),
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      })
+      localStorage.setItem(MESSAGE_QUEUE_KEY, JSON.stringify(queue))
+
+      // Register for background sync if available
+      if ('serviceWorker' in navigator && 'SyncManager' in window) {
+        navigator.serviceWorker.ready.then(reg => {
+          reg.sync.register('sync-messages').catch(() => {})
+        })
+      }
+
+      return true
+    } catch (e) {
+      console.error('Failed to queue message:', e)
+      return false
+    }
+  }
+
+  // Get queued messages for the current channel
+  _getQueuedMessages(channelId) {
+    try {
+      const queue = JSON.parse(localStorage.getItem(MESSAGE_QUEUE_KEY) || '[]')
+      return channelId ? queue.filter(m => m.channelId === channelId) : queue
+    } catch (e) {
+      return []
+    }
+  }
+
+  // Sync all queued messages
+  async _syncQueuedMessages() {
+    if (!this._isOnline) return
+
+    try {
+      const queue = JSON.parse(localStorage.getItem(MESSAGE_QUEUE_KEY) || '[]')
+      if (queue.length === 0) return
+
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+      const successIds = []
+
+      for (const msg of queue) {
+        try {
+          const response = await fetch(`/channels/${msg.channelId}/messages`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': csrfToken,
+              'Accept': 'text/vnd.turbo-stream.html'
+            },
+            body: JSON.stringify({ message: { content: msg.content } })
+          })
+
+          if (response.ok) {
+            successIds.push(msg.id)
+          }
+        } catch (e) {
+          console.error('Failed to sync message:', e)
+        }
+      }
+
+      // Remove successfully sent messages from queue
+      if (successIds.length > 0) {
+        const remaining = queue.filter(m => !successIds.includes(m.id))
+        localStorage.setItem(MESSAGE_QUEUE_KEY, JSON.stringify(remaining))
+
+        // Notify user
+        if (remaining.length === 0) {
+          this._showSyncNotification(`${successIds.length} message(s) sent`)
+        } else {
+          this._showSyncNotification(`${successIds.length} sent, ${remaining.length} pending`)
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync messages:', e)
+    }
+  }
+
+  // Show a brief notification about sync status
+  _showSyncNotification(message) {
+    const notification = document.createElement('div')
+    notification.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg z-50 animate-pulse'
+    notification.textContent = message
+    document.body.appendChild(notification)
+    setTimeout(() => notification.remove(), 3000)
+  }
+
+  // Intercept form submission when offline
+  submitOffline(event) {
+    if (this._isOnline) return // Let normal submission proceed
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    const channelId = this.element?.dataset.channelId || this.channelIdValue
+    const content = this.hasTextareaTarget ? this.textareaTarget.value.trim() : ''
+
+    if (!content || !channelId) return
+
+    if (this._queueMessage(channelId, content)) {
+      // Show pending message in UI
+      this._showPendingMessage(content)
+
+      // Clear textarea
+      if (this.hasTextareaTarget) {
+        this.textareaTarget.value = ''
+        this.autoResize()
+      }
+      this._clearDraft()
+    }
+  }
+
+  // Show a pending message bubble in the chat
+  _showPendingMessage(content) {
+    if (!this.hasContainerTarget) return
+
+    const pendingHtml = `
+      <div class="group message-bubble flex items-end gap-2 px-2 py-1 flex-row-reverse opacity-70" data-pending="true">
+        <div class="message-content flex flex-col items-end max-w-[85%] sm:max-w-[75%] min-w-0">
+          <div class="message-text bg-blue-400 text-white rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm text-[15px] leading-relaxed break-words">
+            <div class="message-body">${this._escapeHtml(content)}</div>
+          </div>
+          <div class="message-time flex items-center gap-1 mt-0.5 mr-1">
+            <span class="text-[10px] text-gray-400 flex items-center gap-1">
+              <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              Sending...
+            </span>
+          </div>
+        </div>
+      </div>
+    `
+
+    const container = this._typingContainer(true) || this.containerTarget
+    container.insertAdjacentHTML('beforeend', pendingHtml)
+    this._scrollToBottom(true)
+  }
+
+  // Escape HTML for safe rendering
+  _escapeHtml(text) {
+    const div = document.createElement('div')
+    div.textContent = text
+    return div.innerHTML
+  }
 }

@@ -20,7 +20,21 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', ...defaultTheme.fontFamily.sans],
+        // System font stack - privacy-friendly, no external dependencies
+        // Falls back gracefully across all platforms
+        sans: [
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
+          'Apple Color Emoji',
+          'Segoe UI Emoji',
+        ],
       },
       colors: {
         // Custom semantic colors if needed
