@@ -72,7 +72,7 @@
                     <% if current_user.member_of?(channel) %>
                       <%= link_to "Enter", channel_path(channel), class: "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors" %>
                     <% else %>
-                      <%= link_to "Join", join_channel_path(channel), method: :post, class: "px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors" %>
+                      <%= link_to "Join", join_channel_path(channel), data: { turbo_method: :post }, class: "px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors" %>
                     <% end %>
                   </div>
                 </div>

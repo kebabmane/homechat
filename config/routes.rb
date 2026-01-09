@@ -19,6 +19,7 @@ Rails.application.routes.draw do
   # Channel routes
   resources :channels do
     member do
+      get :join
       post :join
       delete :leave
       post :invite

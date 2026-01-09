@@ -49,7 +49,7 @@
     <% end %>
 
     <div class="text-center">
-      <%= link_to "Cancel and sign out", signout_path, method: :delete, class: "text-sm text-gray-600 hover:text-gray-900" %>
+      <%= link_to "Cancel and sign out", signout_path, data: { turbo_method: :delete }, class: "text-sm text-gray-600 hover:text-gray-900" %>
     </div>
   </div>
 </div>

@@ -78,9 +78,8 @@
                         </button>
                         <%= link_to "Regenerate",
                                     regenerate_secret_admin_bot_path(@bot),
-                                    method: :post,
                                     class: "text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200",
-                                    data: { confirm: "This will invalidate the current webhook secret. Continue?" } %>
+                                    data: { turbo_method: :post, turbo_confirm: "This will invalidate the current webhook secret. Continue?" } %>
                       </div>
                     </div>
                   </div>
