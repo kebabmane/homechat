@@ -55,6 +55,10 @@ gem "rqrcode"
 # Structured JSON logging for production
 gem "lograge"
 
+# Log sanitization - filter sensitive data from logs
+gem "logstop"
+gem "ip_anonymizer"
+
 # Google authentication for FCM (Firebase Cloud Messaging)
 gem "googleauth"
 
