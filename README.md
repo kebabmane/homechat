@@ -1,171 +1,88 @@
 # HomeChat
 
-Self‑hosted chat application built on Rails 8, SQLite, Tailwind, and Hotwire. Perfect for households, teams, or anyone wanting private communication that works completely offline.
+[![Build Status](https://github.com/kebabmane/homechat/workflows/CI/badge.svg)](https://github.com/kebabmane/homechat/actions)
+[![Ruby](https://img.shields.io/badge/ruby-3.3+-red.svg)](https://www.ruby-lang.org/)
+[![Rails](https://img.shields.io/badge/rails-8.0-red.svg)](https://rubyonrails.org/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## 🏗️ Project Architecture
+> Self-hosted, offline-first chat for households and teams. Built with Rails 8, SQLite, and Hotwire.
 
-HomeChat is designed as **three complementary repositories** that work together:
+HomeChat is a private chat platform that works completely offline on your local network. No cloud dependencies, no subscriptions, no data leaving your home. Perfect for families, teams, or anyone wanting secure, private communication.
 
-### 🚀 **Core Application** (This Repository)
-**Standalone chat server** - Use HomeChat independently as a private chat platform:
-- Complete web-based chat interface
-- User management and channels
-- Real-time messaging with WebSockets
-- File sharing and rich media support
-- Prompt-driven AI bots powered by LiteLLM
-- Works completely offline on your local network
+## Features
 
-### 🏠 **Home Assistant Add-on** ([homechat-addon](https://github.com/kebabmane/homechat-addon))
-**Easy deployment** - Install HomeChat directly in Home Assistant:
-- One-click installation via Home Assistant Supervisor
-- Automatic configuration and API token generation
-- Integrated with Home Assistant's security and networking
-- Perfect for Home Assistant users who want zero-configuration setup
+| Feature | Description |
+|---------|-------------|
+| **Offline-First** | Works on LAN without internet. No external CDNs, fonts, or dependencies. |
+| **Real-Time** | Instant messaging via WebSockets (ActionCable with Solid Cable). |
+| **Mobile Ready** | Native iOS and Android apps with offline sync. PWA support for browsers. |
+| **AI Assistants** | LLM-powered bots via LiteLLM (supports Ollama, OpenAI, and more). |
+| **Smart Home** | Two-way Home Assistant integration for automation notifications. |
+| **File Sharing** | Image uploads, attachments, and rich media support. |
+| **Security** | 2FA, API tokens, rate limiting, audit logging, account lockout. |
 
-### 🔌 **Home Assistant Integration** ([homechat-integration](https://github.com/kebabmane/homechat-integration))
-**Smart home communication** - Connect your automations to HomeChat:
-- Send Home Assistant notifications to chat rooms
-- Create interactive bot commands from chat messages
-- Rich formatting for device alerts and status updates
-- Two-way communication between HA and HomeChat
+## Quick Start
 
-## 🎯 **Choose Your Deployment**
-
-| **Deployment Option** | **Best For** | **Setup Complexity** | **HA Integration** |
-|----------------------|--------------|---------------------|-------------------|
-| **Standalone Docker** | Local testing, development | Low | Optional |
-| **HA Add-on Only** | HA users wanting private chat | Easy | Optional |
-| **Cloud (Kamal)** | Production, teams, public access | Medium | Optional |
-| **HA Add-on + Integration** | Smart home automation | Easy | Full featured |
-
-> **💡 HomeChat works great standalone!** You don't need Home Assistant to use HomeChat as your private family/team chat platform.
-
-## Offline‑First (No Internet)
-
-HomeChat is designed to run on a LAN with zero Internet connectivity.
-
-- No external CDNs or fonts; JS is served via Importmap and the app assets.
-- Database‑backed ActionCable (Solid Cable) — no Redis required.
-- PWA enabled (manifest + service worker) to cache app shell assets for resiliency.
-- Optional outbound integrations (push, bots) can be enabled later; they are off by default.
-
-## Quick Start (Dev)
-
-1) Install Ruby 3.3 and Bundler, then:
-
-```
-bin/setup --skip-server
-bin/dev    # runs Rails + Tailwind watcher
-```
-
-Visit http://localhost:3000. First user to sign up is promoted to admin automatically.
-
-## Tests
-
-```
-bin/rails db:prepare
-bin/rails test       # unit + integration + system (JS)
-```
-
-## Configuration
-
-- **Server Settings** (Admin): `/admin/settings`
-  - Site name
-  - Allow sign-ups (disable to lock down)
-  - LiteLLM proxy host, API key, and default model for AI bots
-- **Integration Settings** (Admin): `/admin/integrations`
-  - API token management for Home Assistant
-  - Bot configuration and webhook URLs
-  - Connection testing and monitoring
-- **AI Bots** (Admin): `/admin/bots`
-  - Create LiteLLM-backed assistants with custom prompts
-  - Activate/deactivate bots and review webhook credentials
-  - Invite bots into channels or mention them with `@handle`
-- **User Settings**: `/settings`
-  - Username, password
-  - Enter‑to‑send (local device preference)
-
-## 🚀 Deployment Options
-
-### Option 1: Standalone Docker (Any User)
-Perfect for teams, families, or anyone wanting private chat without Home Assistant:
+### Option 1: Docker (Recommended)
 
 ```bash
-# Simple Docker run
 docker run -d \
   -p 3000:3000 \
   -v homechat_data:/data \
   -v homechat_storage:/app/storage \
   --name homechat \
   ghcr.io/kebabmane/homechat:latest
-
-# Or with Docker Compose
-curl -O https://raw.githubusercontent.com/kebabmane/homechat/main/docker-compose.yml
-docker-compose up -d
 ```
 
-Visit `http://localhost:3000` and sign up - first user becomes admin automatically.
+Visit `http://localhost:3000` — first user to sign up becomes admin.
 
-### Option 2: Home Assistant Add-on (HA Users)
-Install directly in Home Assistant for integrated deployment:
+### Option 2: Home Assistant Add-on
 
-1. **Add Repository**: Settings > Add-ons > ⋮ > Repositories > Add `https://github.com/kebabmane/homechat-addon`
-2. **Install Add-on**: Find "HomeChat" in the add-on store and install
-3. **Configure & Start**: Set your preferences and start the add-on
-4. **Access**: Available in Home Assistant sidebar or direct URL
+1. Add repository: `https://github.com/kebabmane/homechat-addon`
+2. Install "HomeChat" from the add-on store
+3. Start and access from the HA sidebar
 
-### Option 3: Cloud Deployment with Kamal (Production)
-Deploy to any cloud provider (AWS, GCP, DigitalOcean, Vultr, Hetzner) with zero-downtime deployments:
+See the [HomeChat Add-on](https://github.com/kebabmane/homechat-addon) repository for details.
+
+### Option 3: Development
 
 ```bash
-# Quick cloud deployment
 git clone https://github.com/kebabmane/homechat.git
 cd homechat
-
-# Configure your servers in config/deploy.yml
-bin/kamal setup    # Initial deployment
-bin/kamal deploy   # Deploy updates
+bin/setup --skip-server
+bin/dev
 ```
 
-**Features:**
-- ✅ **Zero-downtime deployments** with health checks
-- ✅ **Automatic SSL** certificates via Let's Encrypt  
-- ✅ **Multi-server scaling** for high availability
-- ✅ **Environment management** (staging/production)
-- ✅ **One-command deployments** and rollbacks
+Visit `http://localhost:3000`
 
-See [`KAMAL_DEPLOYMENT.md`](KAMAL_DEPLOYMENT.md) for detailed cloud deployment guide.
+## Deployment Options
 
-### Option 4: Full Smart Home Integration (HA + Automation)
-Add the Home Assistant integration for automation features:
+| Option | Best For | Complexity | Features |
+|--------|----------|------------|----------|
+| **Docker** | Local/dev use, small teams | Low | Full features |
+| **HA Add-on** | Home Assistant users | Easy | HA integration |
+| **Kamal** | Production, cloud hosting | Medium | SSL, scaling, zero-downtime |
 
-1. **Deploy HomeChat** (via add-on, Docker, or Kamal)
-2. **Install Integration**: Copy `homechat-integration` to `custom_components/homechat/`
-3. **Configure**: Settings > Integrations > Add "HomeChat" integration
-4. **Automate**: Use `notify.homechat` service in your automations
+See [Deployment Guide](docs/deployment/) for detailed instructions.
 
-See [`INTEGRATION_SETUP.md`](INTEGRATION_SETUP.md) for detailed setup instructions.
+## Documentation
 
-### 💾 Data & Backup
-- **Database**: SQLite stored in `/data/production.sqlite3`
-- **Uploads**: Files stored in `/data/storage/` 
-- **Backup**: Regular backups of data volume recommended
-- **Portability**: Entire application state in two directories
+| Section | Description |
+|---------|-------------|
+| [Getting Started](docs/getting-started/) | Installation, first steps, configuration |
+| [Architecture](docs/architecture/) | System design, database schema, data flow |
+| [API Reference](docs/api/) | REST API, WebSocket API, webhooks |
+| [Deployment](docs/deployment/) | Docker, Kamal, Home Assistant |
+| [Security](docs/security/) | Hardening guide, API tokens, 2FA |
+| [Development](docs/development/) | Local setup, testing, contributing |
+| [Operations](docs/operations/) | Backup, monitoring, troubleshooting |
 
-## 🤖 Home Assistant Integration (Optional)
+## Home Assistant Integration
 
-**Note**: HomeChat works perfectly as a standalone chat platform. The Home Assistant integration is completely optional and adds smart home automation features.
+HomeChat integrates with Home Assistant for smart home notifications:
 
-### Integration Features
-- **📱 Smart Notifications**: Send HA automation alerts to specific chat rooms
-- **🗣️ Interactive Commands**: Control HA devices from chat messages  
-- **🎨 Rich Formatting**: Priority levels, device context, timestamps
-- **🔄 Two-way Communication**: HomeChat ↔ Home Assistant event flow
-- **🎯 Room Targeting**: Route different alerts to appropriate channels
-
-### Integration Example
 ```yaml
-# Home Assistant Automation
+# Example automation
 automation:
   - alias: "Motion Alert"
     trigger:
@@ -175,34 +92,97 @@ automation:
     action:
       service: notify.homechat
       data:
-        message: "Front door motion detected"
-        title: "🚪 Security Alert"
+        message: "Motion detected at front door"
         target: "security"
-        data:
-          priority: "high"
 ```
 
-### Repository Links
-- **📦 HomeChat Add-on**: [kebabmane/homechat-addon](https://github.com/kebabmane/homechat-addon)
-- **🔌 HA Integration**: [kebabmane/homechat-integration](https://github.com/kebabmane/homechat-integration)
-- **📖 Setup Guide**: [INTEGRATION_SETUP.md](INTEGRATION_SETUP.md)
+**Repositories:**
+- [homechat-addon](https://github.com/kebabmane/homechat-addon) — Home Assistant add-on
+- [homechat-integration](https://github.com/kebabmane/homechat-integration) — HA custom component
 
-### ⚠️ Security Trade-offs (Current Implementation)
+See [Integration Setup](docs/deployment/home-assistant.md) for full guide.
 
-**Current API model prioritizes simplicity for home use:**
-- ✅ **Easy setup** - single API token for all functionality
-- ⚠️ **Broad access** - token can post to any channel/room
-- ⚠️ **System-level permissions** - no granular channel restrictions
+## Technology Stack
 
-**Appropriate for:** Home deployments on trusted networks where convenience > granular security.
+| Component | Technology |
+|-----------|------------|
+| Backend | Ruby 3.3, Rails 8.0 |
+| Database | SQLite 3 |
+| Real-time | ActionCable (Solid Cable) |
+| Frontend | Hotwire (Turbo + Stimulus), Tailwind CSS |
+| Assets | Propshaft, Importmap |
+| Deployment | Docker, Kamal |
+| Mobile | Swift (iOS), Kotlin (Android) |
 
-**Future enhancements planned:** Channel-scoped tokens, role-based permissions, audit logging.
+## Data & Storage
 
-## Roadmap
+```
+/data/
+├── production.sqlite3    # Database
+├── storage/              # File uploads
+└── secret_key_base       # Encryption key
+```
 
-- ✅ **Home Assistant Integration** - Two-way communication with HA
-- ✅ **Direct messages, media uploads, and bot APIs**  
-- ✅ **Rich text and mentions**
-- 🔄 **Enhanced security** - Channel-scoped API tokens, granular permissions
-- 📅 **Mobile push notifications** (optional; opt‑in with FCM/APNs keys)
-- 📅 **Advanced HA features** - entity control, state sync, voice commands
+- **Portable**: Entire app state in `/data`
+- **Backup**: Copy the data directory to back up everything
+- **No dependencies**: SQLite, no external database required
+
+## Configuration
+
+### Server Settings (Admin)
+
+Access `/admin/settings` to configure:
+- Site name and branding
+- User registration (open/closed)
+- LiteLLM proxy for AI bots
+
+### AI Bots (Admin)
+
+Access `/admin/bots` to:
+- Create LLM-powered assistants with custom prompts
+- Configure webhook integrations
+- Manage bot permissions and channels
+
+### User Settings
+
+Access `/settings` to configure:
+- Username and password
+- Two-factor authentication
+- Timezone and preferences
+
+## Security
+
+HomeChat includes enterprise-grade security features:
+
+- **Authentication**: bcrypt password hashing, optional 2FA (TOTP)
+- **API Tokens**: Secure, hashed tokens with prefix identification
+- **Rate Limiting**: Rack::Attack middleware protection
+- **Audit Logging**: Track user actions and API access
+- **Account Lockout**: Automatic lockout after failed attempts
+
+See [Security Hardening Guide](docs/security/hardening-guide.md) for production deployment.
+
+## Tests
+
+```bash
+bin/rails test           # Run all tests
+bin/rails test:system    # System tests with browser
+COVERAGE=true bin/rails test  # With coverage report
+```
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Related Projects
+
+| Repository | Description |
+|------------|-------------|
+| [homechat-addon](https://github.com/kebabmane/homechat-addon) | Home Assistant add-on |
+| [homechat-integration](https://github.com/kebabmane/homechat-integration) | HA custom component |
+| [homechat-android](https://github.com/kebabmane/homechat-android) | Android app |
+| [homechat-ios](https://github.com/kebabmane/homechat-ios) | iOS app |
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
