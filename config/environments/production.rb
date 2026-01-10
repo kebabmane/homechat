@@ -24,6 +24,11 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
+  # Use proxy mode for Active Storage to serve files directly without redirects.
+  # This fixes issues with mobile apps and CORS that occur with the default redirect mode.
+  # See: https://github.com/rails/rails/issues/33549
+  config.active_storage.resolve_model_to_route = :rails_storage_proxy
+
   # SSL Configuration based on environment
   # - RAILS_ASSUME_SSL=true: Assume behind SSL-terminating reverse proxy (HA Ingress, nginx, etc.)
   # - RAILS_FORCE_SSL=true: Force HTTPS redirects (for direct SSL termination)
