@@ -12,8 +12,11 @@ class ChatChannel < ApplicationCable::Channel
       return
     end
 
-    stream_for @channel
-    Rails.logger.info "User #{current_user.username} subscribed to chat channel #{@channel.name}"
+    # Use explicit stream name for mobile client compatibility
+    # (stream_for uses GlobalID which can cause routing issues)
+    stream_name = "chat_channel_#{@channel.id}"
+    stream_from stream_name
+    Rails.logger.info "User #{current_user.username} subscribed to stream: #{stream_name}"
   end
 
   def unsubscribed
@@ -35,8 +38,8 @@ class ChatChannel < ApplicationCable::Channel
     )
 
     if message.save
-      # Broadcast to all subscribers of this channel
-      ChatChannel.broadcast_to(@channel, {
+      # Broadcast to all subscribers of this channel using explicit stream name
+      ActionCable.server.broadcast("chat_channel_#{@channel.id}", {
         type: 'new_message',
         message: {
           id: message.id,

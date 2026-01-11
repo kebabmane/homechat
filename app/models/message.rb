@@ -55,8 +55,9 @@ class Message < ApplicationRecord
       []
     end
 
-    # Broadcast to mobile clients via ChatChannel
-    ChatChannel.broadcast_to(channel, {
+    # Broadcast to mobile clients via explicit stream name for compatibility
+    stream_name = "chat_channel_#{channel.id}"
+    payload = {
       type: 'new_message',
       message: {
         id: id,
@@ -71,9 +72,12 @@ class Message < ApplicationRecord
         messageType: message_type || 'chat',
         files: file_data
       }
-    })
+    }
+    Rails.logger.info "[ChatChannel] Broadcasting to #{stream_name}: #{payload[:message][:content][0..50]}"
+    ActionCable.server.broadcast(stream_name, payload)
   rescue => e
     Rails.logger.error "Failed to broadcast message to ChatChannel: #{e.message}"
+    Rails.logger.error e.backtrace.first(5).join("\n")
   end
 
   def schedule_ai_bot_responses

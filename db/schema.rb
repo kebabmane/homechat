@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_11_015716) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_11_075224) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -108,8 +108,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_11_015716) do
     t.datetime "joined_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "last_read_at"
     t.index ["channel_id"], name: "index_channel_memberships_on_channel_id"
     t.index ["user_id", "channel_id"], name: "index_channel_memberships_on_user_id_and_channel_id", unique: true
+    t.index ["user_id", "last_read_at"], name: "index_channel_memberships_on_user_id_and_last_read_at"
     t.index ["user_id"], name: "index_channel_memberships_on_user_id"
   end
 

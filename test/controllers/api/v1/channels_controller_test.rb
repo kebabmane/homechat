@@ -220,4 +220,115 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
   end
+
+  # Unread count tests
+  test "should include unread_count in channel response" do
+    get api_v1_channels_path,
+        headers: { "Authorization" => "Bearer #{@raw_token}" }
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    channel = json["channels"].find { |c| c["name"] == "public-test" }
+
+    assert channel.key?("unread_count")
+    assert_equal 0, channel["unread_count"]
+  end
+
+  test "should return correct unread count for messages after last_read_at" do
+    # Create a message from another user
+    Message.create!(content: "New message", user: @other_user, channel: @public_channel)
+
+    get api_v1_channels_path,
+        headers: { "Authorization" => "Bearer #{@raw_token}" }
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    channel = json["channels"].find { |c| c["name"] == "public-test" }
+
+    # Should have 1 unread message (from another user)
+    assert_equal 1, channel["unread_count"]
+  end
+
+  test "should not count own messages as unread" do
+    # Create a message from the current user
+    Message.create!(content: "My own message", user: @user, channel: @public_channel)
+
+    get api_v1_channels_path,
+        headers: { "Authorization" => "Bearer #{@raw_token}" }
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    channel = json["channels"].find { |c| c["name"] == "public-test" }
+
+    # Own messages should not count as unread
+    assert_equal 0, channel["unread_count"]
+  end
+
+  # Mark as read tests
+  test "should require authentication for mark_as_read" do
+    post mark_as_read_api_v1_channel_path(@public_channel)
+    assert_response :unauthorized
+  end
+
+  test "should mark channel as read" do
+    # Create an unread message
+    Message.create!(content: "Unread message", user: @other_user, channel: @public_channel)
+
+    # Mark as read
+    post mark_as_read_api_v1_channel_path(@public_channel),
+         headers: { "Authorization" => "Bearer #{@raw_token}" }
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    assert json["success"]
+    assert_equal 0, json["unread_count"]
+  end
+
+  test "should update last_read_at when marking as read" do
+    membership = @public_channel.channel_memberships.find_by(user: @user)
+    assert_nil membership.last_read_at
+
+    post mark_as_read_api_v1_channel_path(@public_channel),
+         headers: { "Authorization" => "Bearer #{@raw_token}" }
+
+    assert_response :success
+    membership.reload
+    assert_not_nil membership.last_read_at
+  end
+
+  test "should return error when marking non-member channel as read" do
+    new_channel = Channel.create!(name: "not-member-channel", channel_type: "public", creator: @other_user)
+
+    post mark_as_read_api_v1_channel_path(new_channel),
+         headers: { "Authorization" => "Bearer #{@raw_token}" }
+
+    assert_response :forbidden
+  end
+
+  test "should return 404 for non-existent channel mark_as_read" do
+    post mark_as_read_api_v1_channel_path(id: 999999),
+         headers: { "Authorization" => "Bearer #{@raw_token}" }
+
+    assert_response :not_found
+  end
+
+  test "should reset unread count after marking as read" do
+    # Create messages from another user
+    Message.create!(content: "Message 1", user: @other_user, channel: @public_channel)
+    Message.create!(content: "Message 2", user: @other_user, channel: @public_channel)
+
+    # Mark as read
+    post mark_as_read_api_v1_channel_path(@public_channel),
+         headers: { "Authorization" => "Bearer #{@raw_token}" }
+
+    assert_response :success
+
+    # Verify unread count is now 0
+    get api_v1_channels_path,
+        headers: { "Authorization" => "Bearer #{@raw_token}" }
+
+    json = JSON.parse(response.body)
+    channel = json["channels"].find { |c| c["name"] == "public-test" }
+    assert_equal 0, channel["unread_count"]
+  end
 end

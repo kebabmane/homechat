@@ -1,0 +1,649 @@
+<div class="docs-prose text-gray-700">
+  <!-- Getting Started -->
+  <section id="getting-started">
+    <h2>Getting Started</h2>
+    <p>Welcome to HomeChat! This guide will help you get up and running with your self-hosted chat server.</p>
+
+    <h3>What is HomeChat?</h3>
+    <p>HomeChat is a lightweight, self-hosted chat application designed for home networks. It provides real-time messaging, bot integrations, and seamless Home Assistant connectivity - all running on your own hardware.</p>
+
+    <h3>Creating an Account</h3>
+    <p>To create an account:</p>
+    <ol>
+      <li>Navigate to the HomeChat homepage</li>
+      <li>Click <strong>Sign up</strong></li>
+      <li>Enter your desired username and password</li>
+      <li>Click <strong>Create account</strong></li>
+    </ol>
+    <p>If your server requires admin approval, you'll see a message indicating your account is pending. An administrator will need to approve your account before you can access the chat.</p>
+
+    <h3>Logging In</h3>
+    <p>To sign in to your account:</p>
+    <ol>
+      <li>Go to the sign-in page</li>
+      <li>Enter your username and password</li>
+      <li>If you have two-factor authentication enabled, you'll be prompted to enter your verification code</li>
+    </ol>
+  </section>
+
+  <!-- User Guide: Channels -->
+  <section id="channels">
+    <h2>Channels</h2>
+    <p>Channels are shared spaces where you can communicate with other users. HomeChat supports different types of channels for various use cases.</p>
+
+    <h3>Channel Types</h3>
+    <ul>
+      <li><strong>Public Channels</strong> - Visible to all users. Anyone can join and participate in the conversation.</li>
+      <li><strong>Private Channels</strong> - Only visible to members. You must be invited to join a private channel.</li>
+    </ul>
+
+    <h3>Creating a Channel</h3>
+    <ol>
+      <li>Click the <strong>+</strong> button next to "Channels" in the sidebar</li>
+      <li>Enter a channel name (2-50 characters)</li>
+      <li>Optionally add a description</li>
+      <li>Choose whether the channel should be public or private</li>
+      <li>Click <strong>Create Channel</strong></li>
+    </ol>
+
+    <h3>Joining a Channel</h3>
+    <p>To join a public channel:</p>
+    <ol>
+      <li>Click <strong>Browse all channels</strong> in the sidebar</li>
+      <li>Find the channel you want to join</li>
+      <li>Click <strong>Join</strong></li>
+    </ol>
+
+    <h3>Leaving a Channel</h3>
+    <p>To leave a channel, open the channel and click the <strong>Leave</strong> option from the channel menu.</p>
+  </section>
+
+  <!-- User Guide: Direct Messages -->
+  <section id="direct-messages">
+    <h2>Direct Messages</h2>
+    <p>Direct messages (DMs) allow you to have private one-on-one conversations with other users.</p>
+
+    <h3>Starting a DM</h3>
+    <ol>
+      <li>Click the <strong>+</strong> button next to "Direct Messages" in the sidebar</li>
+      <li>Search for and select the user you want to message</li>
+      <li>Start typing your message</li>
+    </ol>
+    <p>You can also start a DM by clicking on a user's name anywhere in the app.</p>
+
+    <h3>DM Privacy</h3>
+    <p>Direct messages are private conversations between you and one other user. They are not visible to anyone else, including administrators.</p>
+  </section>
+
+  <!-- User Guide: Messages -->
+  <section id="messages">
+    <h2>Messages</h2>
+    <p>Learn about the various features available when sending and managing messages.</p>
+
+    <h3>Sending Messages</h3>
+    <p>Type your message in the text field at the bottom of the channel or DM, then press <kbd>Enter</kbd> or click the send button.</p>
+
+    <h3>Mentions</h3>
+    <p>To get someone's attention, mention them by typing <code>@</code> followed by their username. They'll receive a notification about your message.</p>
+
+    <h3>File Attachments</h3>
+    <p>You can attach files to your messages:</p>
+    <ol>
+      <li>Click the attachment icon in the message input</li>
+      <li>Select the file(s) you want to upload</li>
+      <li>Add an optional message</li>
+      <li>Send your message</li>
+    </ol>
+    <p>Supported file types include images (JPEG, PNG, GIF, WebP), documents, and other common formats.</p>
+
+    <h3>Search</h3>
+    <p>Use the search feature to find messages across all your channels and DMs. Press <kbd>Cmd</kbd>+<kbd>K</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd>K</kbd> (Windows/Linux) to open the command palette and search.</p>
+  </section>
+
+  <!-- User Guide: Profile Settings -->
+  <section id="profile-settings">
+    <h2>Profile & Settings</h2>
+    <p>Customize your profile and manage your account settings.</p>
+
+    <h3>Updating Your Profile</h3>
+    <p>To update your profile:</p>
+    <ol>
+      <li>Click on your avatar in the bottom-left corner</li>
+      <li>Select <strong>Settings</strong></li>
+      <li>Update your username, avatar, timezone, or status</li>
+      <li>Click <strong>Save Changes</strong></li>
+    </ol>
+
+    <h3>Changing Your Avatar</h3>
+    <p>You can upload a custom avatar image:</p>
+    <ul>
+      <li>Supported formats: JPEG, PNG, GIF, WebP</li>
+      <li>Maximum file size: 5MB</li>
+      <li>Recommended size: 200x200 pixels or larger</li>
+    </ul>
+    <p>If you don't upload an avatar, your initials will be displayed with a colored background.</p>
+
+    <h3>Changing Your Password</h3>
+    <ol>
+      <li>Go to Settings</li>
+      <li>Navigate to the Password section</li>
+      <li>Enter your current password</li>
+      <li>Enter and confirm your new password</li>
+      <li>Click <strong>Update Password</strong></li>
+    </ol>
+  </section>
+
+  <!-- User Guide: Two-Factor Auth -->
+  <section id="two-factor-auth">
+    <h2>Two-Factor Authentication</h2>
+    <p>Two-factor authentication (2FA) adds an extra layer of security to your account.</p>
+
+    <h3>Setting Up 2FA</h3>
+    <ol>
+      <li>Go to Settings > Security</li>
+      <li>Click <strong>Enable Two-Factor Authentication</strong></li>
+      <li>Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)</li>
+      <li>Enter the 6-digit code from your app to verify</li>
+      <li>Save your backup codes in a secure location</li>
+    </ol>
+
+    <h3>Backup Codes</h3>
+    <p>When you enable 2FA, you'll receive 10 backup codes. Each code can only be used once. Store these codes securely - you'll need them if you lose access to your authenticator app.</p>
+    <p>You can regenerate backup codes at any time from the Security settings, which will invalidate all previous codes.</p>
+
+    <h3>Disabling 2FA</h3>
+    <p>To disable two-factor authentication:</p>
+    <ol>
+      <li>Go to Settings > Security</li>
+      <li>Click <strong>Disable Two-Factor Authentication</strong></li>
+      <li>Confirm by entering a verification code or backup code</li>
+    </ol>
+  </section>
+
+  <!-- User Guide: Mobile Setup -->
+  <section id="mobile-setup">
+    <h2>Mobile App Setup</h2>
+    <p>Connect your mobile device to your HomeChat server using the iOS or Android app.</p>
+
+    <h3>Connecting Your Device</h3>
+    <ol>
+      <li>Install the HomeChat app on your mobile device</li>
+      <li>On the web interface, go to Settings > Mobile Setup</li>
+      <li>A QR code will be displayed</li>
+      <li>Open the mobile app and scan the QR code</li>
+      <li>Your device will automatically connect to the server</li>
+    </ol>
+
+    <h3>PWA Installation</h3>
+    <p>HomeChat can also be installed as a Progressive Web App (PWA) directly from your browser:</p>
+    <ul>
+      <li><strong>iOS Safari</strong>: Tap the Share button, then "Add to Home Screen"</li>
+      <li><strong>Android Chrome</strong>: Tap the menu, then "Install app" or "Add to Home Screen"</li>
+      <li><strong>Desktop Chrome/Edge</strong>: Click the install icon in the address bar</li>
+    </ul>
+  </section>
+
+  <!-- Admin Guide: Server Settings -->
+  <section id="server-settings">
+    <h2>Server Settings</h2>
+    <p>Configure your HomeChat server. These settings are only accessible to administrators.</p>
+
+    <h3>General Settings</h3>
+    <table>
+      <thead>
+        <tr><th>Setting</th><th>Description</th><th>Default</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Site Name</strong></td><td>Displayed in the header and browser title</td><td>HomeChat</td></tr>
+        <tr><td><strong>Allow Signups</strong></td><td>Enable/disable new user registration</td><td>Enabled</td></tr>
+        <tr><td><strong>Require Approval</strong></td><td>New users must be approved by an admin</td><td>Disabled</td></tr>
+      </tbody>
+    </table>
+
+    <h3>API Settings</h3>
+    <table>
+      <thead>
+        <tr><th>Setting</th><th>Description</th><th>Default</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Enable REST API</strong></td><td>Allow external integrations via the API</td><td>Enabled</td></tr>
+        <tr><td><strong>Enable Home Assistant</strong></td><td>Enable Home Assistant integration features</td><td>Enabled</td></tr>
+        <tr><td><strong>Webhook Base URL</strong></td><td>Base URL for webhook callbacks (auto-detected if blank)</td><td>Auto</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Admin Guide: User Management -->
+  <section id="user-management">
+    <h2>User Management</h2>
+    <p>Manage users, approve registrations, and assign roles.</p>
+
+    <h3>Approving Users</h3>
+    <p>If <strong>Require Approval</strong> is enabled, new registrations will appear in the Admin > Users section with a "Pending" status.</p>
+    <ol>
+      <li>Go to Admin > Users</li>
+      <li>Find users with "Pending approval" status</li>
+      <li>Click <strong>Approve</strong> to grant access or <strong>Reject</strong> to deny</li>
+    </ol>
+
+    <h3>User Roles</h3>
+    <ul>
+      <li><strong>User</strong> - Standard access to channels, DMs, and personal settings</li>
+      <li><strong>Admin</strong> - Full access including server settings, user management, and bot configuration</li>
+    </ul>
+
+    <h3>Account Lockout</h3>
+    <p>For security, accounts are automatically locked after 5 failed login attempts. The lockout lasts 15 minutes. Administrators can manually unlock accounts from the Users section.</p>
+  </section>
+
+  <!-- Admin Guide: PWA Configuration -->
+  <section id="pwa-configuration">
+    <h2>PWA Configuration</h2>
+    <p>Customize the Progressive Web App settings for your HomeChat installation.</p>
+
+    <h3>PWA Settings</h3>
+    <table>
+      <thead>
+        <tr><th>Setting</th><th>Description</th><th>Default</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Enable PWA</strong></td><td>Allow users to install HomeChat as an app</td><td>Enabled</td></tr>
+        <tr><td><strong>Short Name</strong></td><td>Name shown on home screens and launchers</td><td>HomeChat</td></tr>
+        <tr><td><strong>Theme Color</strong></td><td>Browser toolbar and title bar color</td><td>#2563eb</td></tr>
+        <tr><td><strong>Background Color</strong></td><td>Splash screen background color</td><td>#ffffff</td></tr>
+        <tr><td><strong>Display Mode</strong></td><td>How the app appears when launched</td><td>Standalone</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Custom Icons</h3>
+    <p>To customize the app icon, replace the files at:</p>
+    <ul>
+      <li><code>/icon.png</code> - PNG icon (recommended: 512x512)</li>
+      <li><code>/icon.svg</code> - SVG icon for high-resolution displays</li>
+    </ul>
+  </section>
+
+  <!-- Admin Guide: Push Notifications -->
+  <section id="push-notifications">
+    <h2>Push Notifications</h2>
+    <p>Configure Firebase Cloud Messaging (FCM) to enable push notifications on mobile devices.</p>
+
+    <h3>Setting Up FCM</h3>
+    <ol>
+      <li>Create a project in the <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a></li>
+      <li>Go to Project Settings > Service Accounts</li>
+      <li>Click "Generate new private key" to download your credentials</li>
+      <li>In HomeChat Admin > Settings > Notifications, enter:
+        <ul>
+          <li>Project ID</li>
+          <li>Client Email</li>
+          <li>Private Key</li>
+        </ul>
+      </li>
+      <li>Enable push notifications</li>
+    </ol>
+
+    <h3>Testing Notifications</h3>
+    <p>Once configured, notifications will be sent automatically when:</p>
+    <ul>
+      <li>A user receives a direct message</li>
+      <li>A user is mentioned in a channel</li>
+    </ul>
+  </section>
+
+  <!-- Admin Guide: AI Configuration -->
+  <section id="ai-configuration">
+    <h2>AI Configuration</h2>
+    <p>Configure LiteLLM to enable AI-powered bots in your HomeChat server.</p>
+
+    <h3>LiteLLM Setup</h3>
+    <p>HomeChat uses <a href="https://litellm.ai/" target="_blank">LiteLLM</a> as a proxy to connect to various AI model providers.</p>
+    <ol>
+      <li>Set up a LiteLLM server (self-hosted or cloud)</li>
+      <li>In Admin > Settings > AI, configure:
+        <ul>
+          <li><strong>LiteLLM Host</strong> - URL of your LiteLLM instance (e.g., <code>http://localhost:4000</code>)</li>
+          <li><strong>API Key</strong> - Your LiteLLM API key</li>
+          <li><strong>Default Model</strong> - Model to use when not specified per-bot</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h3>Available Models</h3>
+    <p>Once connected, HomeChat will fetch available models from your LiteLLM instance. You can select a default model and override it per-bot when creating AI bots.</p>
+  </section>
+
+  <!-- Automations: Bots Overview -->
+  <section id="bots-overview">
+    <h2>Bots Overview</h2>
+    <p>HomeChat supports different types of bots for automation and integration.</p>
+
+    <h3>Bot Types</h3>
+    <table>
+      <thead>
+        <tr><th>Type</th><th>Description</th><th>Use Case</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Webhook</strong></td><td>Receives HTTP webhooks from external services</td><td>Notifications from CI/CD, monitoring systems</td></tr>
+        <tr><td><strong>API</strong></td><td>Integrates via REST API with token auth</td><td>Custom integrations, scripts</td></tr>
+        <tr><td><strong>AI</strong></td><td>Autonomous chat bot using LLM</td><td>Assistant, Q&A, conversation</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Managing Bots</h3>
+    <p>All bot management is done through Admin > Automations:</p>
+    <ul>
+      <li>View all configured bots</li>
+      <li>Create new bots</li>
+      <li>Activate or deactivate bots</li>
+      <li>Delete bots</li>
+    </ul>
+  </section>
+
+  <!-- Automations: Webhook Bots -->
+  <section id="webhook-bots">
+    <h2>Webhook Bots</h2>
+    <p>Webhook bots receive HTTP POST requests from external services and post messages to HomeChat.</p>
+
+    <h3>Creating a Webhook Bot</h3>
+    <ol>
+      <li>Go to Admin > Automations</li>
+      <li>Click <strong>New Bot</strong></li>
+      <li>Select "Webhook" as the bot type</li>
+      <li>Enter a name and optional description</li>
+      <li>Save the bot</li>
+    </ol>
+
+    <h3>Webhook URL</h3>
+    <p>Each webhook bot has a unique URL:</p>
+    <pre class="docs-code">POST /api/v1/webhooks/{webhook_id}</pre>
+
+    <h3>Authentication</h3>
+    <p>Webhook requests are authenticated using HMAC-SHA256 signatures. Include the signature in the <code>X-Hub-Signature-256</code> header:</p>
+    <pre class="docs-code">X-Hub-Signature-256: sha256={signature}</pre>
+    <p>Calculate the signature by computing HMAC-SHA256 of the request body using the webhook secret.</p>
+
+    <h3>Payload Format</h3>
+    <pre class="docs-code">{
+  "action": "send_message",
+  "channel_id": 1,
+  "content": "Hello from webhook!"
+}</pre>
+  </section>
+
+  <!-- Automations: AI Bots -->
+  <section id="ai-bots">
+    <h2>AI Bots</h2>
+    <p>AI bots use large language models to participate in conversations autonomously.</p>
+
+    <h3>Creating an AI Bot</h3>
+    <ol>
+      <li>Ensure LiteLLM is configured in Settings > AI</li>
+      <li>Go to Admin > Automations</li>
+      <li>Click <strong>New AI Bot</strong></li>
+      <li>Configure the bot:
+        <ul>
+          <li><strong>Name</strong> - Bot's display name (3-50 characters)</li>
+          <li><strong>Description</strong> - Optional description</li>
+          <li><strong>Instructions</strong> - System prompt that defines the bot's personality and behavior</li>
+          <li><strong>Model</strong> - LLM model to use (or leave blank for default)</li>
+        </ul>
+      </li>
+      <li>Save and activate the bot</li>
+    </ol>
+
+    <h3>Bot Behavior</h3>
+    <p>AI bots automatically respond when:</p>
+    <ul>
+      <li>They are mentioned with <code>@botname</code></li>
+      <li>They receive a direct message</li>
+    </ul>
+
+    <h3>Writing Good Instructions</h3>
+    <p>The instructions field is the system prompt for the LLM. Good instructions should:</p>
+    <ul>
+      <li>Define the bot's role and personality</li>
+      <li>Specify any constraints or guidelines</li>
+      <li>Include relevant context about what the bot should know</li>
+    </ul>
+  </section>
+
+  <!-- Automations: API Tokens -->
+  <section id="api-tokens">
+    <h2>API Tokens</h2>
+    <p>API tokens authenticate external applications and integrations with your HomeChat server.</p>
+
+    <h3>Creating a Token</h3>
+    <ol>
+      <li>Go to Admin > Automations > API Tokens tab</li>
+      <li>Enter a descriptive name for the token</li>
+      <li>Click <strong>Create Token</strong></li>
+      <li>Copy the token immediately - it won't be shown again</li>
+    </ol>
+
+    <h3>Using Tokens</h3>
+    <p>Include the token in API requests using the Authorization header:</p>
+    <pre class="docs-code">Authorization: Bearer {your_token}</pre>
+
+    <h3>Token Security</h3>
+    <ul>
+      <li>Tokens are hashed and cannot be retrieved after creation</li>
+      <li>Create separate tokens for each integration</li>
+      <li>Deactivate or delete tokens that are no longer needed</li>
+      <li>Regenerate tokens if you suspect they've been compromised</li>
+    </ul>
+  </section>
+
+  <!-- API Reference: Authentication -->
+  <section id="api-authentication">
+    <h2>API Authentication</h2>
+    <p>HomeChat API supports multiple authentication methods.</p>
+
+    <h3>Token Authentication</h3>
+    <p>For external integrations, use API tokens:</p>
+    <pre class="docs-code">curl -X GET "https://your-server/api/v1/channels" \
+  -H "Authorization: Bearer {your_token}"</pre>
+
+    <h3>Session Authentication</h3>
+    <p>For user-facing applications, use session-based authentication:</p>
+    <pre class="docs-code"># Sign in
+POST /api/v1/signin
+{
+  "username": "your_username",
+  "password": "your_password"
+}
+
+# Response
+{
+  "user": { ... },
+  "token": "session_token"
+}</pre>
+
+    <h3>Two-Factor Authentication Flow</h3>
+    <p>If 2FA is enabled, the sign-in response will indicate verification is required:</p>
+    <pre class="docs-code"># Sign in response with 2FA
+{
+  "requires_2fa": true,
+  "temp_token": "temporary_token"
+}
+
+# Verify 2FA
+POST /api/v1/signin/verify_2fa
+{
+  "temp_token": "temporary_token",
+  "code": "123456"
+}</pre>
+  </section>
+
+  <!-- API Reference: Endpoints -->
+  <section id="api-endpoints">
+    <h2>API Endpoints</h2>
+    <p>Complete reference of available API endpoints.</p>
+
+    <h3>Health & Info</h3>
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/v1/health</code></td><td>Health check endpoint</td></tr>
+        <tr><td>GET</td><td><code>/api/v1/server_info</code></td><td>Server capabilities and info</td></tr>
+        <tr><td>GET</td><td><code>/api/v1/metrics</code></td><td>Server metrics</td></tr>
+      </tbody>
+    </table>
+
+    <h3>User Endpoints</h3>
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/v1/me</code></td><td>Get current user profile</td></tr>
+        <tr><td>PATCH</td><td><code>/api/v1/me</code></td><td>Update profile</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/me/change_password</code></td><td>Change password</td></tr>
+        <tr><td>DELETE</td><td><code>/api/v1/me/avatar</code></td><td>Remove avatar</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Channel Endpoints</h3>
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/v1/channels</code></td><td>List channels</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/channels</code></td><td>Create channel</td></tr>
+        <tr><td>GET</td><td><code>/api/v1/channels/:id/members</code></td><td>List channel members</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/channels/:id/join</code></td><td>Join channel</td></tr>
+        <tr><td>DELETE</td><td><code>/api/v1/channels/:id/leave</code></td><td>Leave channel</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Message Endpoints</h3>
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/v1/messages</code></td><td>List messages</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/messages</code></td><td>Send message</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/channels/:id/messages</code></td><td>Send to channel</td></tr>
+        <tr><td>DELETE</td><td><code>/api/v1/messages/:id</code></td><td>Delete message</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Bot Endpoints</h3>
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/v1/bots</code></td><td>List bots</td></tr>
+        <tr><td>GET</td><td><code>/api/v1/bots/:id</code></td><td>Get bot details</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/bots</code></td><td>Create bot</td></tr>
+        <tr><td>PATCH</td><td><code>/api/v1/bots/:id</code></td><td>Update bot</td></tr>
+        <tr><td>DELETE</td><td><code>/api/v1/bots/:id</code></td><td>Delete bot</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/bots/:id/activate</code></td><td>Activate bot</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/bots/:id/deactivate</code></td><td>Deactivate bot</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- API Reference: Webhooks -->
+  <section id="api-webhooks">
+    <h2>Webhooks</h2>
+    <p>Receive events from external services via webhook bots.</p>
+
+    <h3>Webhook Endpoint</h3>
+    <pre class="docs-code">POST /api/v1/webhooks/{webhook_id}</pre>
+
+    <h3>Request Headers</h3>
+    <table>
+      <thead>
+        <tr><th>Header</th><th>Required</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Content-Type</code></td><td>Yes</td><td><code>application/json</code></td></tr>
+        <tr><td><code>X-Hub-Signature-256</code></td><td>Yes</td><td>HMAC-SHA256 signature of the request body</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Signature Verification</h3>
+    <p>To verify a webhook request:</p>
+    <pre class="docs-code"># Ruby example
+expected = "sha256=" + OpenSSL::HMAC.hexdigest(
+  "SHA256",
+  webhook_secret,
+  request.raw_post
+)
+
+if expected == request.headers["X-Hub-Signature-256"]
+  # Request is authentic
+end</pre>
+
+    <h3>Supported Actions</h3>
+    <table>
+      <thead>
+        <tr><th>Action</th><th>Description</th><th>Required Fields</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>send_message</code></td><td>Post a message to a channel</td><td><code>channel_id</code>, <code>content</code></td></tr>
+        <tr><td><code>status_update</code></td><td>Update bot status</td><td><code>status</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- API Reference: Home Assistant -->
+  <section id="home-assistant">
+    <h2>Home Assistant Integration</h2>
+    <p>HomeChat integrates seamlessly with Home Assistant for smart home automation.</p>
+
+    <h3>Installation</h3>
+    <ol>
+      <li>Copy the <code>homechat</code> custom component to your Home Assistant config:
+        <pre class="docs-code">&lt;ha_config&gt;/custom_components/homechat/</pre>
+      </li>
+      <li>Create an API token in HomeChat Admin > Automations > API Tokens</li>
+      <li>Add the configuration to your <code>configuration.yaml</code>:
+        <pre class="docs-code">homechat:
+  host: your-homechat-server
+  port: 3000
+  ssl: false
+  token: your_api_token</pre>
+      </li>
+      <li>Restart Home Assistant</li>
+    </ol>
+
+    <h3>Server Discovery</h3>
+    <p>HomeChat advertises its capabilities via the server info endpoint:</p>
+    <pre class="docs-code">GET /api/v1/server_info
+
+{
+  "name": "HomeChat",
+  "version": "1.0.0",
+  "mode": "local",
+  "capabilities": ["chat", "api", "webhooks", "realtime"],
+  "push_enabled": true,
+  "registration_enabled": true
+}</pre>
+
+    <h3>Home Assistant Add-on Mode</h3>
+    <p>When running as a Home Assistant add-on, HomeChat automatically:</p>
+    <ul>
+      <li>Detects the HA environment</li>
+      <li>Configures ingress support</li>
+      <li>Integrates with Nabu Casa (if available)</li>
+    </ul>
+    <p>Set the <code>HOME_ASSISTANT_ADDON=true</code> environment variable to enable add-on mode.</p>
+
+    <h3>Real-time Updates</h3>
+    <p>HomeChat uses WebSocket for real-time communication:</p>
+    <pre class="docs-code">WebSocket URL: wss://your-server/cable</pre>
+    <p>Subscribe to channels to receive real-time message updates in your Home Assistant automations.</p>
+  </section>
+
+  <!-- Back to top -->
+  <div class="mt-16 pt-8 border-t border-gray-200 text-center">
+    <a href="#getting-started" class="text-blue-600 hover:text-blue-700">Back to top</a>
+  </div>
+</div>

@@ -82,4 +82,15 @@ class Channel < ApplicationRecord
 
     messages.where('created_at > ?', since).count
   end
+
+  # Count unread messages for a specific user based on their last_read_at timestamp
+  def unread_count_for(user)
+    return 0 unless user
+
+    membership = channel_memberships.find_by(user: user)
+    return 0 unless membership
+
+    since = membership.last_read_at || membership.joined_at || created_at
+    messages.where('created_at > ?', since).where.not(user: user).count
+  end
 end

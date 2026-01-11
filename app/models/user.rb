@@ -14,6 +14,10 @@ class User < ApplicationRecord
   # Avatar validations
   validate :avatar_validation
 
+  # Approval scopes
+  scope :pending_approval, -> { where(approved: false) }
+  scope :approved, -> { where(approved: true) }
+
   # Associations
   has_many :messages, dependent: :destroy
   has_many :created_channels, class_name: 'Channel', foreign_key: 'created_by_id', dependent: :destroy
@@ -30,7 +34,36 @@ class User < ApplicationRecord
   def user?
     role == 'user'
   end
-  
+
+  # Approval methods
+  def pending_approval?
+    !approved? && Setting.fetch(:require_signup_approval, false)
+  end
+
+  def approve!(admin_user)
+    update!(
+      approved: true,
+      approved_at: Time.current,
+      approved_by_id: admin_user.id
+    )
+
+    AuditLog.log(
+      action: 'user.approved',
+      user: admin_user,
+      resource: self,
+      metadata: { approved_by: admin_user.username }
+    )
+  end
+
+  def reject!
+    # Delete the user entirely when rejected
+    destroy!
+  end
+
+  def approved_by
+    User.find_by(id: approved_by_id) if approved_by_id
+  end
+
   def member_of?(channel)
     channel_memberships.exists?(channel: channel)
   end
@@ -107,6 +140,30 @@ class User < ApplicationRecord
 
   def avatar_color_index
     username&.hash&.abs&.% 8 || 0
+  end
+
+  # Password reset methods
+  def generate_password_reset_token!
+    raw_token = SecureRandom.urlsafe_base64(32)
+    update!(
+      password_reset_token_digest: BCrypt::Password.create(raw_token),
+      password_reset_sent_at: Time.current
+    )
+    raw_token
+  end
+
+  def password_reset_token_valid?(token)
+    return false if password_reset_token_digest.nil?
+    return false if password_reset_sent_at.nil? || password_reset_sent_at < 24.hours.ago
+    BCrypt::Password.new(password_reset_token_digest).is_password?(token)
+  end
+
+  def clear_password_reset_token!
+    update!(password_reset_token_digest: nil, password_reset_sent_at: nil)
+  end
+
+  def password_reset_pending?
+    password_reset_token_digest.present? && password_reset_sent_at.present? && password_reset_sent_at >= 24.hours.ago
   end
 
   private

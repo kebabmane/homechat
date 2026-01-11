@@ -6,8 +6,12 @@ class ChannelMembership < ApplicationRecord
   
   scope :for_user, ->(user) { where(user: user) }
   scope :for_channel, ->(channel) { where(channel: channel) }
-  
+
   before_create :set_joined_at
+
+  def mark_as_read!
+    update!(last_read_at: Time.current)
+  end
 
   after_commit :broadcast_member_count, on: [:create, :destroy]
   

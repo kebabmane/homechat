@@ -8,6 +8,8 @@ module Admin
 
     def index
       @bots = Bot.order(:name)
+      @tokens = ApiToken.order(created_at: :desc)
+      @new_token = ApiToken.new
     end
 
     def new

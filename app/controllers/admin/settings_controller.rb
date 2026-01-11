@@ -6,6 +6,7 @@ module Admin
     def edit
       @site_name = Setting.fetch(:site_name, "HomeChat")
       @allow_signups = ActiveModel::Type::Boolean.new.cast(Setting.fetch(:allow_signups, true))
+      @require_signup_approval = ActiveModel::Type::Boolean.new.cast(Setting.fetch(:require_signup_approval, false))
       @pwa_enabled = ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true))
       @pwa_short_name = Setting.fetch(:pwa_short_name, "HomeChat")
       @pwa_theme_color = Setting.fetch(:pwa_theme_color, "#2563eb")
@@ -43,6 +44,7 @@ module Admin
     def update
       Setting.set(:site_name, params[:site_name].presence || "HomeChat")
       Setting.set(:allow_signups, ActiveModel::Type::Boolean.new.cast(params[:allow_signups]))
+      Setting.set(:require_signup_approval, ActiveModel::Type::Boolean.new.cast(params[:require_signup_approval]))
       Setting.set(:pwa_enabled, ActiveModel::Type::Boolean.new.cast(params[:pwa_enabled]))
       Setting.set(:pwa_short_name, params[:pwa_short_name].presence || params[:site_name].presence || "HomeChat")
       Setting.set(:pwa_theme_color, params[:pwa_theme_color].presence || "#2563eb")

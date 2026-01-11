@@ -217,22 +217,23 @@ class Api::V1::WebhooksController < Api::V1::BaseController
   end
   
   def broadcast_message(message, channel)
-    ActionCable.server.broadcast(
-      "channel_#{channel.id}",
-      {
-        type: 'new_message',
-        message: {
-          id: message.id,
-          content: message.content,
-          user: {
-            id: message.user.id,
-            username: message.user.username
-          },
-          created_at: message.created_at.iso8601,
-          message_type: message.message_type || 'bot'
-        }
+    # Use explicit stream name for mobile client compatibility
+    ActionCable.server.broadcast("chat_channel_#{channel.id}", {
+      type: 'new_message',
+      message: {
+        id: message.id,
+        content: message.content,
+        user: {
+          id: message.user.id,
+          username: message.user.username,
+          avatar_url: message.user.avatar_url,
+          avatar_initials: message.user.avatar_initials,
+          avatar_color_index: message.user.avatar_color_index
+        },
+        createdAt: message.created_at.iso8601,
+        messageType: message.message_type || 'bot'
       }
-    )
+    })
   rescue => e
     Rails.logger.error "Failed to broadcast bot message: #{e.message}"
   end

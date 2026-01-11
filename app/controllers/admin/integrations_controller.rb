@@ -2,17 +2,13 @@ module Admin
   class IntegrationsController < ApplicationController
     before_action :require_admin
 
-    def index
-      # Just documentation page - no data loading needed
-    end
-
     def test_connection
       token = ApiToken.active.first&.token
 
       if token.blank?
         render json: {
           status: 'error',
-          message: 'No active API tokens found. Create one in Admin > Tokens.'
+          message: 'No active API tokens found. Create one in Automations > API Tokens.'
         }
         return
       end

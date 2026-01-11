@@ -15,14 +15,11 @@ class Api::V1::MessagesController < Api::V1::BaseController
     if message.user == user || user.admin?
       channel = message.channel
 
-      # Broadcast deletion to channel subscribers
-      ActionCable.server.broadcast(
-        "channel_#{channel.id}",
-        {
-          type: 'message_deleted',
-          message_id: message.id
-        }
-      )
+      # Broadcast deletion to channel subscribers using explicit stream name
+      ActionCable.server.broadcast("chat_channel_#{channel.id}", {
+        type: 'message_deleted',
+        message_id: message.id
+      })
 
       message.destroy
       render json: { success: true, message: 'Message deleted' }
@@ -93,14 +90,14 @@ class Api::V1::MessagesController < Api::V1::BaseController
         return unless ensure_channel_access(channel)
 
         channel.messages
-               .includes(:user)
+               .includes(:user, files_attachments: :blob)
                .order(created_at: :desc)
                .limit(limit + 1)
                .to_a
       else
         accessible_channels = Channel.accessible_by(current_api_user).select(:id)
 
-        Message.includes(:user, :channel)
+        Message.includes(:user, :channel, files_attachments: :blob)
                .where(channel_id: accessible_channels)
                .order(created_at: :desc)
                .limit(limit + 1)
@@ -218,27 +215,24 @@ class Api::V1::MessagesController < Api::V1::BaseController
       []
     end
 
-    # Broadcast to the channel using ActionCable
-    ActionCable.server.broadcast(
-      "channel_#{channel.id}",
-      {
-        type: 'new_message',
-        message: {
-          id: message.id,
-          content: message.content,
-          user: {
-            id: message.user.id,
-            username: message.user.username,
-            avatar_url: message.user.avatar_url,
-            avatar_initials: message.user.avatar_initials,
-            avatar_color_index: message.user.avatar_color_index
-          },
-          created_at: message.created_at.iso8601,
-          message_type: message.message_type,
-          files: files
-        }
+    # Broadcast to the channel using explicit stream name for mobile compatibility
+    ActionCable.server.broadcast("chat_channel_#{channel.id}", {
+      type: 'new_message',
+      message: {
+        id: message.id,
+        content: message.content,
+        user: {
+          id: message.user.id,
+          username: message.user.username,
+          avatar_url: message.user.avatar_url,
+          avatar_initials: message.user.avatar_initials,
+          avatar_color_index: message.user.avatar_color_index
+        },
+        createdAt: message.created_at.iso8601,
+        messageType: message.message_type,
+        files: files
       }
-    )
+    })
   rescue => e
     Rails.logger.error "Failed to broadcast message: #{e.message}"
   end
@@ -368,7 +362,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
               username: last_message.user.username
             }
           } : nil,
-          unread_count: 0, # TODO: Implement unread tracking
+          unread_count: c.unread_count_for(user),
           is_member: true, # Always true for DMs
           created_at: c.created_at&.iso8601
         }

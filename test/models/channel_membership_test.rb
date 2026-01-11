@@ -66,4 +66,32 @@ class ChannelMembershipTest < ActiveSupport::TestCase
     assert membership1.valid?
     assert membership2.valid?
   end
+
+  test "mark_as_read! should set last_read_at to current time" do
+    user = create_user
+    channel = Channel.create!(name: "test", channel_type: "public", creator: user)
+    membership = ChannelMembership.create!(user: user, channel: channel)
+
+    assert_nil membership.last_read_at
+
+    membership.mark_as_read!
+    membership.reload
+
+    assert_not_nil membership.last_read_at
+    assert_in_delta Time.current, membership.last_read_at, 2.seconds
+  end
+
+  test "mark_as_read! should update existing last_read_at" do
+    user = create_user
+    channel = Channel.create!(name: "test", channel_type: "public", creator: user)
+    membership = ChannelMembership.create!(user: user, channel: channel)
+
+    old_time = 1.hour.ago
+    membership.update!(last_read_at: old_time)
+
+    membership.mark_as_read!
+    membership.reload
+
+    assert membership.last_read_at > old_time
+  end
 end

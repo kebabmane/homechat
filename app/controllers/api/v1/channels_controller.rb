@@ -107,7 +107,7 @@ class Api::V1::ChannelsController < Api::V1::BaseController
               username: last_message.user.username
             }
           } : nil,
-          unread_count: 0, # TODO: Implement unread tracking
+          unread_count: channel.unread_count_for(user),
           is_member: membership_lookup.key?(channel.id),
           created_at: channel.created_at&.iso8601
         }
@@ -170,6 +170,23 @@ class Api::V1::ChannelsController < Api::V1::BaseController
         }
       end
     }
+  rescue ActiveRecord::RecordNotFound
+    render_error('Channel not found', :not_found)
+  end
+
+  # POST /api/v1/channels/:id/mark_as_read
+  def mark_as_read
+    channel = Channel.find(params[:id])
+    user = current_api_user
+
+    membership = channel.channel_memberships.find_by(user: user)
+
+    if membership
+      membership.mark_as_read!
+      render json: { success: true, unread_count: 0 }
+    else
+      render_error('Not a member of this channel', :forbidden)
+    end
   rescue ActiveRecord::RecordNotFound
     render_error('Channel not found', :not_found)
   end

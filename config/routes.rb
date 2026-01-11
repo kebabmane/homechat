@@ -142,6 +142,7 @@ Rails.application.routes.draw do
           post :join
           delete :leave
           get :members
+          post :mark_as_read
         end
       end
       # DM endpoints
@@ -162,4 +163,7 @@ Rails.application.routes.draw do
       post 'webhooks/:webhook_id', to: 'webhooks#receive', as: :webhook
     end
   end
+
+  # ActionCable WebSocket endpoint
+  mount ActionCable.server => '/cable'
 end

@@ -149,9 +149,10 @@ class ApiTokenTest < ActiveSupport::TestCase
   test "token channel assignments work" do
     user = create_user
     channel = Channel.create!(name: 'assigned-channel', channel_type: 'public', created_by: user)
-    token = ApiToken.create!(name: "Assignment Token", user: user, scopes: [])
+    # Use a scope that doesn't grant channel access to test assignments
+    token = ApiToken.create!(name: "Assignment Token", user: user, scopes: ['bot:post'])
 
-    # Without assignment, no access
+    # Without assignment, no access (has explicit scope but not for channels)
     assert_not token.can_access_channel?(channel, :read)
 
     # Add assignment

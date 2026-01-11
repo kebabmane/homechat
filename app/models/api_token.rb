@@ -107,10 +107,10 @@ class ApiToken < ApplicationRecord
     expires_at.present? && expires_at <= Time.current
   end
 
-  # Legacy tokens (nil scopes) get full access for backward compatibility
-  # Empty array [] means explicitly scoped (no legacy full access)
+  # Legacy tokens (nil scopes or empty array) get full access for backward compatibility
+  # Tokens with explicit scopes have restricted access
   def legacy_full_access?
-    scopes.nil?
+    scopes.nil? || scopes.empty?
   end
 
   # Check if token has a specific scope

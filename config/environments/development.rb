@@ -61,13 +61,10 @@ Rails.application.configure do
   # Annotate rendered view with file names.
   config.action_view.annotate_rendered_view_with_filenames = true
 
-  # Enable Action Cable for WebSocket connections with proper origin validation
-  config.action_cable.disable_request_forgery_protection = false
-  config.action_cable.allowed_request_origins = [
-    /http:\/\/localhost:*/,
-    /http:\/\/127\.0\.0\.1:*/,
-    /http:\/\/.*\.local:*/
-  ]
+  # Enable Action Cable for WebSocket connections
+  # Disable origin checking in development to allow mobile app connections
+  # Mobile apps don't send Origin headers, so they fail origin validation
+  config.action_cable.disable_request_forgery_protection = true
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true

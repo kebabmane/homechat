@@ -1,7 +1,20 @@
+# Discovery mode configuration
+# - local: mDNS/Bonjour discovery on local network (default)
+# - cloud: Manual URL configuration, mDNS disabled
+# - disabled: No discovery service
+DISCOVERY_MODE = ENV.fetch('DISCOVERY_MODE', 'local').freeze
+
 # Start discovery service after Rails initialization
 Rails.application.config.after_initialize do
-    # Start discovery service for LAN discovery (works in both standalone and add-on mode)
-    if Rails.application.config.discovery.enabled
+    # Store the discovery mode in app config for access elsewhere
+    Rails.application.config.discovery.mode = DISCOVERY_MODE
+
+    # Start discovery service for LAN discovery (only in 'local' mode)
+    # Cloud deployments (VPS, EC2, etc.) should set DISCOVERY_MODE=cloud
+    should_start_mdns = Rails.application.config.discovery.enabled &&
+                        DISCOVERY_MODE == 'local'
+
+    if should_start_mdns
       discovery_service = DiscoveryService.new(
         server_name: Rails.application.config.discovery.server_name,
         port: Rails.application.config.discovery.port
@@ -12,10 +25,13 @@ Rails.application.config.after_initialize do
 
       begin
         discovery_service.start
+        Rails.logger.info "Discovery mode: local (mDNS enabled)"
       rescue => e
         Rails.logger.warn "Could not start discovery service: #{e.message}"
         Rails.logger.warn "HomeChat will continue without LAN discovery"
       end
+    else
+      Rails.logger.info "Discovery mode: #{DISCOVERY_MODE} (mDNS disabled)"
     end
 end
 

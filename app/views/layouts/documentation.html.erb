@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Documentation - <%= Setting.fetch(:site_name, 'HomeChat') %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <%= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+    <meta name="theme-color" content="<%= Setting.fetch(:pwa_theme_color, '#2563eb') %>">
+
+    <style>
+      /* Scroll offset for sticky header */
+      [id] { scroll-margin-top: 5rem; }
+
+      /* Smooth scrolling */
+      html { scroll-behavior: smooth; }
+
+      /* Code block styling */
+      .docs-code {
+        background: #1f2937;
+        color: #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.875rem;
+        overflow-x: auto;
+      }
+
+      /* Prose styling for docs content */
+      .docs-prose h2 { font-size: 1.5rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e5e7eb; }
+      .docs-prose h3 { font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
+      .docs-prose h4 { font-size: 1rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+      .docs-prose p { margin-bottom: 1rem; line-height: 1.75; }
+      .docs-prose ul, .docs-prose ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+      .docs-prose li { margin-bottom: 0.5rem; line-height: 1.75; }
+      .docs-prose ul { list-style-type: disc; }
+      .docs-prose ol { list-style-type: decimal; }
+      .docs-prose code { background: #f3f4f6; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.875em; }
+      .docs-prose pre code { background: transparent; padding: 0; }
+      .docs-prose a { color: #2563eb; text-decoration: underline; }
+      .docs-prose a:hover { color: #1d4ed8; }
+      .docs-prose table { width: 100%; margin-bottom: 1rem; border-collapse: collapse; }
+      .docs-prose th, .docs-prose td { padding: 0.75rem; border: 1px solid #e5e7eb; text-align: left; }
+      .docs-prose th { background: #f9fafb; font-weight: 600; }
+    </style>
+  </head>
+
+  <body class="antialiased font-sans bg-white min-h-screen">
+    <% if flash[:notice] %>
+      <div data-controller="flash" data-flash-timeout-value="4000" class="fixed top-0 left-0 right-0 bg-green-500 text-white px-4 py-2 text-center z-50">
+        <span><%= flash[:notice] %></span>
+        <button type="button" aria-label="Dismiss" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/80 hover:text-white" data-action="click->flash#close">&times;</button>
+      </div>
+    <% end %>
+
+    <% if flash[:alert] %>
+      <div data-controller="flash" data-flash-timeout-value="5000" class="fixed top-0 left-0 right-0 bg-red-500 text-white px-4 py-2 text-center z-50">
+        <span><%= flash[:alert] %></span>
+        <button type="button" aria-label="Dismiss" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/80 hover:text-white" data-action="click->flash#close">&times;</button>
+      </div>
+    <% end %>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white border-b border-gray-200">
+      <div class="h-14 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <%= link_to root_path, class: "inline-flex items-center space-x-2" do %>
+            <%= image_tag 'logo.svg', alt: Setting.fetch(:site_name, 'HomeChat'), class: 'h-6 w-6' %>
+            <span class="font-semibold text-gray-900"><%= Setting.fetch(:site_name, 'HomeChat') %></span>
+          <% end %>
+          <span class="text-gray-300">|</span>
+          <span class="text-gray-600 font-medium">Documentation</span>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <!-- Mobile menu button -->
+          <button type="button"
+                  class="lg:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
+                  data-action="click->docs-nav#toggleMobile"
+                  aria-label="Toggle navigation">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+
+          <nav class="hidden sm:flex items-center space-x-4 text-sm">
+            <% if logged_in? %>
+              <%= link_to "Go to Chat", dashboard_path, class: "inline-flex items-center px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700" %>
+            <% else %>
+              <%= link_to "Sign in", signin_path, class: "text-gray-600 hover:text-gray-900" %>
+              <%= link_to "Sign up", signup_path, class: "inline-flex items-center px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700" %>
+            <% end %>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <div data-controller="docs-nav" class="flex min-h-[calc(100vh-3.5rem)]">
+      <!-- Sidebar Navigation -->
+      <aside data-docs-nav-target="sidebar"
+             class="hidden lg:block w-64 flex-shrink-0 border-r border-gray-200 bg-gray-50 fixed left-0 top-14 bottom-0 overflow-y-auto">
+        <nav class="p-4 space-y-1">
+          <!-- Getting Started -->
+          <div class="mb-4">
+            <a href="#getting-started"
+               data-docs-nav-target="link"
+               data-section="getting-started"
+               class="block px-3 py-2 text-sm font-semibold text-gray-900 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">
+              Getting Started
+            </a>
+          </div>
+
+          <!-- User Guide -->
+          <div class="mb-4">
+            <span class="block px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">User Guide</span>
+            <a href="#channels" data-docs-nav-target="link" data-section="channels" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Channels</a>
+            <a href="#direct-messages" data-docs-nav-target="link" data-section="direct-messages" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Direct Messages</a>
+            <a href="#messages" data-docs-nav-target="link" data-section="messages" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Messages</a>
+            <a href="#profile-settings" data-docs-nav-target="link" data-section="profile-settings" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Profile & Settings</a>
+            <a href="#two-factor-auth" data-docs-nav-target="link" data-section="two-factor-auth" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Two-Factor Auth</a>
+            <a href="#mobile-setup" data-docs-nav-target="link" data-section="mobile-setup" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Mobile App Setup</a>
+          </div>
+
+          <!-- Admin Guide -->
+          <div class="mb-4">
+            <span class="block px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin Guide</span>
+            <a href="#server-settings" data-docs-nav-target="link" data-section="server-settings" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Server Settings</a>
+            <a href="#user-management" data-docs-nav-target="link" data-section="user-management" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">User Management</a>
+            <a href="#pwa-configuration" data-docs-nav-target="link" data-section="pwa-configuration" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">PWA Configuration</a>
+            <a href="#push-notifications" data-docs-nav-target="link" data-section="push-notifications" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Push Notifications</a>
+            <a href="#ai-configuration" data-docs-nav-target="link" data-section="ai-configuration" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">AI Configuration</a>
+          </div>
+
+          <!-- Automations -->
+          <div class="mb-4">
+            <span class="block px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Automations</span>
+            <a href="#bots-overview" data-docs-nav-target="link" data-section="bots-overview" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Bots Overview</a>
+            <a href="#webhook-bots" data-docs-nav-target="link" data-section="webhook-bots" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Webhook Bots</a>
+            <a href="#ai-bots" data-docs-nav-target="link" data-section="ai-bots" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">AI Bots</a>
+            <a href="#api-tokens" data-docs-nav-target="link" data-section="api-tokens" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">API Tokens</a>
+          </div>
+
+          <!-- API Reference -->
+          <div class="mb-4">
+            <span class="block px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">API Reference</span>
+            <a href="#api-authentication" data-docs-nav-target="link" data-section="api-authentication" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Authentication</a>
+            <a href="#api-endpoints" data-docs-nav-target="link" data-section="api-endpoints" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Endpoints</a>
+            <a href="#api-webhooks" data-docs-nav-target="link" data-section="api-webhooks" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Webhooks</a>
+            <a href="#home-assistant" data-docs-nav-target="link" data-section="home-assistant" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100 border-l-2 border-transparent [&.active]:border-blue-600 [&.active]:text-blue-600 [&.active]:bg-blue-50">Home Assistant</a>
+          </div>
+        </nav>
+      </aside>
+
+      <!-- Mobile Sidebar Overlay -->
+      <div data-docs-nav-target="overlay"
+           data-action="click->docs-nav#closeMobile"
+           class="hidden fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
+
+      <!-- Mobile Sidebar -->
+      <aside data-docs-nav-target="mobileSidebar"
+             class="hidden fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-gray-200 z-50 overflow-y-auto lg:hidden">
+        <nav class="p-4 space-y-1">
+          <!-- Same content as desktop sidebar -->
+          <div class="mb-4">
+            <a href="#getting-started" data-action="click->docs-nav#closeMobile" class="block px-3 py-2 text-sm font-semibold text-gray-900 rounded-md hover:bg-gray-100">Getting Started</a>
+          </div>
+          <div class="mb-4">
+            <span class="block px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">User Guide</span>
+            <a href="#channels" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Channels</a>
+            <a href="#direct-messages" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Direct Messages</a>
+            <a href="#messages" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Messages</a>
+            <a href="#profile-settings" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Profile & Settings</a>
+            <a href="#two-factor-auth" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Two-Factor Auth</a>
+            <a href="#mobile-setup" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Mobile App Setup</a>
+          </div>
+          <div class="mb-4">
+            <span class="block px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin Guide</span>
+            <a href="#server-settings" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Server Settings</a>
+            <a href="#user-management" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">User Management</a>
+            <a href="#pwa-configuration" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">PWA Configuration</a>
+            <a href="#push-notifications" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Push Notifications</a>
+            <a href="#ai-configuration" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">AI Configuration</a>
+          </div>
+          <div class="mb-4">
+            <span class="block px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Automations</span>
+            <a href="#bots-overview" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Bots Overview</a>
+            <a href="#webhook-bots" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Webhook Bots</a>
+            <a href="#ai-bots" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">AI Bots</a>
+            <a href="#api-tokens" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">API Tokens</a>
+          </div>
+          <div class="mb-4">
+            <span class="block px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">API Reference</span>
+            <a href="#api-authentication" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Authentication</a>
+            <a href="#api-endpoints" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Endpoints</a>
+            <a href="#api-webhooks" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Webhooks</a>
+            <a href="#home-assistant" data-action="click->docs-nav#closeMobile" class="block px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100">Home Assistant</a>
+          </div>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="flex-1 lg:ml-64">
+        <div class="max-w-4xl mx-auto px-6 py-10">
+          <%= yield %>
+        </div>
+
+        <!-- Footer -->
+        <footer class="border-t border-gray-200 bg-gray-50 mt-16">
+          <div class="max-w-4xl mx-auto px-6 py-6 text-xs text-gray-500 flex items-center justify-between">
+            <span>&copy; <%= Time.current.year %> HomeChat</span>
+            <div class="space-x-4">
+              <%= link_to 'Home', root_path, class: 'hover:text-gray-700' %>
+              <%= link_to 'About', about_path, class: 'hover:text-gray-700' %>
+              <%= link_to 'Privacy', privacy_path, class: 'hover:text-gray-700' %>
+              <%= link_to 'Terms', terms_path, class: 'hover:text-gray-700' %>
+            </div>
+          </div>
+        </footer>
+      </main>
+    </div>
+  </body>
+</html>
