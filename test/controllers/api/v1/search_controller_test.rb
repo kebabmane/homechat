@@ -3,7 +3,7 @@ require "test_helper"
 class Api::V1::SearchControllerTest < ActionDispatch::IntegrationTest
   def setup
     @user = create_user(username: "searcher")
-    @token = ApiToken.create!(name: "Test Token", user: @user)
+    @token = ApiToken.create!(name: "Test Token", user: @user, scopes: nil)
     @raw_token = @token.token
 
     # Create searchable data

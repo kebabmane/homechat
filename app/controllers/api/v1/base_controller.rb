@@ -17,20 +17,69 @@ class Api::V1::BaseController < ApplicationController
     end
 
     # Try both Authorization header and X-API-Key header
-    token = auth_header&.gsub(/^Bearer /, '') || x_api_key
+    token_string = auth_header&.gsub(/^Bearer /, '') || x_api_key
 
-    authenticated_user = token ? ApiToken.valid_token?(token) : false
-    unless authenticated_user
-      Rails.logger.warn "API Authentication failed - Token: #{token ? 'present but invalid' : 'missing'}"
+    # valid_token? now returns the ApiToken record (not user) to support scope checking
+    @current_api_token = token_string ? ApiToken.valid_token?(token_string) : nil
+
+    unless @current_api_token
+      Rails.logger.warn "API Authentication failed - Token: #{token_string ? 'present but invalid' : 'missing'}"
       render json: { error: 'Unauthorized - Invalid or missing API token' }, status: :unauthorized
     else
-      @current_api_user = authenticated_user
-      Rails.logger.debug "API Authentication successful for user: #{@current_api_user.username}!" if Rails.env.development?
+      @current_api_user = @current_api_token.user
+      Rails.logger.debug "API Authentication successful for user: #{@current_api_user&.username}!" if Rails.env.development?
     end
+  end
+
+  def current_api_token
+    @current_api_token
   end
 
   def current_api_user
     @current_api_user
+  end
+
+  # Check if the current token has any of the specified scopes
+  # Returns true if scope check passes, renders 403 and returns false otherwise
+  def require_scope(*scopes)
+    return true if current_api_token.nil? # Let authenticate_api_request handle missing token
+
+    unless scopes.any? { |s| current_api_token.has_scope?(s) }
+      render json: { error: 'Forbidden - Insufficient scope' }, status: :forbidden
+      return false
+    end
+    true
+  end
+
+  # Check if the current token can access a channel with the specified action
+  # Combines token scope check with user-level access check
+  def require_channel_access(channel, action = :read)
+    return true if current_api_token.nil?
+
+    # First check token scope
+    unless current_api_token.can_access_channel?(channel, action)
+      render json: { error: 'Forbidden - Token does not have access to this channel' }, status: :forbidden
+      return false
+    end
+
+    # Then check user-level access
+    unless channel.accessible_by?(current_api_user)
+      render json: { error: 'Forbidden - User cannot access this channel' }, status: :forbidden
+      return false
+    end
+
+    true
+  end
+
+  # Block bot tokens from accessing user data endpoints
+  def require_non_bot_token
+    return true if current_api_token.nil?
+
+    if current_api_token.bot_token?
+      render json: { error: 'Forbidden - Bot tokens cannot access user data' }, status: :forbidden
+      return false
+    end
+    true
   end
   
   def create_system_user
@@ -57,12 +106,9 @@ class Api::V1::BaseController < ApplicationController
     render json: response
   end
 
+  # Legacy method - now uses scope-aware channel access check
   def ensure_channel_access(channel)
-    unless channel.accessible_by?(current_api_user)
-      render_error('Unauthorized - No access to this channel', :forbidden)
-      return false
-    end
-    true
+    require_channel_access(channel, :read)
   end
 
   # Serialize file attachments for API responses

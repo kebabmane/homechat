@@ -1,4 +1,11 @@
 class Api::V1::MessagesController < Api::V1::BaseController
+  # Scope checks for message operations
+  # Bot tokens can post via create action but cannot access DMs or delete
+  before_action :require_message_read_scope, only: [:index, :dm_channels]
+  before_action :require_message_write_scope, only: [:create, :create_for_channel, :create_media]
+  before_action :require_non_bot_for_dm, only: [:create_dm, :dm_channels, :start_dm_by_username]
+  before_action :require_non_bot_for_delete, only: [:destroy]
+
   # DELETE /api/v1/messages/:id
   def destroy
     message = Message.find(params[:id])
@@ -409,5 +416,24 @@ class Api::V1::MessagesController < Api::V1::BaseController
       ch.add_member(b)
       ch
     end
+  end
+
+  # Scope check helpers
+
+  def require_message_read_scope
+    require_scope('user:messages', 'channel:*:read')
+  end
+
+  def require_message_write_scope
+    # Allow user:messages, bot:post, or channel:*:write scopes
+    require_scope('user:messages', 'bot:post', 'channel:*:write')
+  end
+
+  def require_non_bot_for_dm
+    require_non_bot_token && require_scope('user:messages')
+  end
+
+  def require_non_bot_for_delete
+    require_non_bot_token && require_scope('user:messages')
   end
 end

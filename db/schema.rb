@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_09_022508) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_11_015716) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -58,10 +58,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_09_022508) do
     t.string "token_digest"
     t.integer "user_id", null: false
     t.string "token_prefix", limit: 8
+    t.json "scopes", default: []
+    t.datetime "expires_at"
+    t.string "token_type", default: "user"
     t.index ["active", "token_prefix"], name: "index_api_tokens_on_active_and_prefix"
+    t.index ["expires_at"], name: "index_api_tokens_on_expires_at"
     t.index ["name"], name: "index_api_tokens_on_name", unique: true
     t.index ["token_digest"], name: "index_api_tokens_on_token_digest", unique: true
     t.index ["token_prefix"], name: "index_api_tokens_on_token_prefix"
+    t.index ["token_type"], name: "index_api_tokens_on_token_type"
     t.index ["user_id"], name: "index_api_tokens_on_user_id"
   end
 
@@ -145,6 +150,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_09_022508) do
     t.index ["key"], name: "index_settings_on_key", unique: true
   end
 
+  create_table "token_channel_assignments", force: :cascade do |t|
+    t.integer "api_token_id", null: false
+    t.integer "channel_id", null: false
+    t.string "permission", default: "read", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["api_token_id", "channel_id"], name: "idx_token_channel_unique", unique: true
+    t.index ["api_token_id"], name: "index_token_channel_assignments_on_api_token_id"
+    t.index ["channel_id"], name: "index_token_channel_assignments_on_channel_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "username", null: false
     t.string "password_digest", null: false
@@ -162,10 +178,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_09_022508) do
     t.boolean "otp_required_for_login", default: false, null: false
     t.text "otp_backup_codes"
     t.string "timezone", default: "UTC"
+    t.boolean "approved", default: true, null: false
+    t.datetime "approved_at"
+    t.integer "approved_by_id"
+    t.string "password_reset_token_digest"
+    t.datetime "password_reset_sent_at"
+    t.index ["approved"], name: "index_users_on_approved"
+    t.index ["approved_by_id"], name: "index_users_on_approved_by_id"
     t.index ["fcm_token"], name: "index_users_on_fcm_token"
     t.index ["is_online"], name: "index_users_on_is_online"
     t.index ["last_seen_at"], name: "index_users_on_last_seen_at"
     t.index ["locked_until"], name: "index_users_on_locked_until"
+    t.index ["password_reset_token_digest"], name: "index_users_on_password_reset_token_digest", unique: true
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 
@@ -179,4 +203,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_09_022508) do
   add_foreign_key "channels", "users", column: "created_by_id"
   add_foreign_key "messages", "channels"
   add_foreign_key "messages", "users"
+  add_foreign_key "token_channel_assignments", "api_tokens"
+  add_foreign_key "token_channel_assignments", "channels"
 end

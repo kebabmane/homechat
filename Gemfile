@@ -107,6 +107,9 @@ group :test do
 
   # HTTP request stubbing for external API tests
   gem "webmock", require: false
+
+  # Minitest pinned to 5.x for Rails 8 compatibility
+  gem "minitest", "~> 5.25"
 end
 
 group :development do

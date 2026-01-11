@@ -26,7 +26,8 @@ module ApplicationCable
       return nil unless token.present?
 
       # Validate API token and return associated user
-      ApiToken.valid_token?(token)
+      token_record = ApiToken.valid_token?(token)
+      token_record&.user
     end
 
     def extract_bearer_token

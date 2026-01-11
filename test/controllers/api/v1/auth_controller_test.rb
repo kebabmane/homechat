@@ -184,7 +184,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
   # Signout tests
   test "should sign out successfully" do
-    token = ApiToken.create!(name: "Test Token", user: @existing_user)
+    token = ApiToken.create!(name: "Test Token", user: @existing_user, scopes: nil)
     raw_token = token.token
 
     delete api_v1_signout_path,

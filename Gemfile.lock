@@ -266,8 +266,7 @@ GEM
     mini_magick (5.3.1)
       logger
     mini_mime (1.1.5)
-    minitest (6.0.1)
-      prism (~> 1.5)
+    minitest (5.27.0)
     msgpack (1.8.0)
     multi_json (1.19.1)
     net-http (0.9.1)
@@ -569,6 +568,7 @@ DEPENDENCIES
   kamal
   lograge
   logstop
+  minitest (~> 5.25)
   propshaft
   puma (>= 5.0)
   rack-attack

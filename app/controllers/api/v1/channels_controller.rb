@@ -1,4 +1,8 @@
 class Api::V1::ChannelsController < Api::V1::BaseController
+  # Scope checks for channel operations
+  before_action -> { require_scope('user:channels') }
+  before_action :require_non_bot_token, only: [:create, :join, :leave]
+
   # POST /api/v1/channels
   def create
     user = current_api_user

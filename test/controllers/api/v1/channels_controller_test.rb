@@ -3,7 +3,7 @@ require "test_helper"
 class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
   def setup
     @user = create_user
-    @token = ApiToken.create!(name: "Test Token", user: @user)
+    @token = ApiToken.create!(name: "Test Token", user: @user, scopes: nil)
     @raw_token = @token.token
     @public_channel = Channel.create!(name: "public-test", channel_type: "public", creator: @user)
     @private_channel = Channel.create!(name: "private-test", channel_type: "private", creator: @user)

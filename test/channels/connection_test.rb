@@ -3,7 +3,7 @@ require "test_helper"
 class ApplicationCable::ConnectionTest < ActionCable::Connection::TestCase
   def setup
     @user = create_user(username: "cable_user")
-    @token = ApiToken.create!(name: "Cable Token", user: @user)
+    @token = ApiToken.create!(name: "Cable Token", user: @user, scopes: nil)
     @raw_token = @token.token
   end
 
@@ -48,7 +48,7 @@ class ApplicationCable::ConnectionTest < ActionCable::Connection::TestCase
 
   test "prefers session over token when both present" do
     other_user = create_user(username: "other_cable_user")
-    other_token = ApiToken.create!(name: "Other Token", user: other_user)
+    other_token = ApiToken.create!(name: "Other Token", user: other_user, scopes: nil)
 
     # Session should take precedence
     connect params: { token: other_token.token }, session: { user_id: @user.id }
