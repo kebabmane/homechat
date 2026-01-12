@@ -4,10 +4,21 @@
 # - disabled: No discovery service
 DISCOVERY_MODE = ENV.fetch('DISCOVERY_MODE', 'local').freeze
 
+# Home Assistant addon mode - mDNS cannot work due to Docker network isolation
+HA_ADDON_MODE = ENV['HOME_ASSISTANT_ADDON'] == 'true'
+
 # Start discovery service after Rails initialization
 Rails.application.config.after_initialize do
     # Store the discovery mode in app config for access elsewhere
     Rails.application.config.discovery.mode = DISCOVERY_MODE
+
+    # mDNS discovery cannot work in HA addon mode due to Docker network isolation
+    # The container's network is isolated from the host's physical network
+    if HA_ADDON_MODE
+      Rails.logger.info "Discovery: Disabled in Home Assistant addon mode (Docker network isolation)"
+      Rails.logger.info "iOS app setup: Use QR code or enter server URL manually"
+      next
+    end
 
     # Start discovery service for LAN discovery (only in 'local' mode)
     # Cloud deployments (VPS, EC2, etc.) should set DISCOVERY_MODE=cloud
