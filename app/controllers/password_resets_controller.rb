@@ -1,7 +1,7 @@
 class PasswordResetsController < ApplicationController
   layout 'authentication'
 
-  skip_before_action :require_login, only: [:edit, :update]
+  skip_before_action :require_login, only: [:edit, :update], raise: false
   skip_before_action :mark_active, only: [:edit, :update], raise: false
   skip_before_action :set_sidebar_data, only: [:edit, :update], raise: false
 
