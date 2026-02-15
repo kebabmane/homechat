@@ -21,7 +21,8 @@ module ApplicationCable
     end
 
     def find_user_by_token
-      token = request.params[:token] || extract_bearer_token
+      # Prefer Authorization header (secure) over query param (legacy/insecure)
+      token = extract_bearer_token || request.params[:token]
 
       return nil unless token.present?
 
