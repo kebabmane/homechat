@@ -14,7 +14,7 @@ class ServerConfiguration
   def initialize(attributes = {})
     super
     @mode ||= current_mode
-    @version ||= '1.0'
+    @version ||= '1.0.1'
     @capabilities ||= default_capabilities
     @websocket_path ||= '/cable'
   end
