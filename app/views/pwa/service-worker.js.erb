@@ -1,41 +1,145 @@
-// Basic offline cache for the app shell
-const CACHE_NAME = 'homechat-v2';
+// HomeChat Service Worker with offline support and background sync
+// Auto cache-busting: version changes with each deploy
+const CACHE_NAME = 'homechat-<%= Rails.application.config.assets.version || Time.now.to_i %>';
+const OFFLINE_PAGE = '/offline.html';
 const OFFLINE_URLS = [
   '/',
+  '/offline.html',
   '/icon.png',
   '/icon.svg'
 ];
 
+// Install: pre-cache essential assets
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(OFFLINE_URLS))
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(OFFLINE_URLS))
+      .then(() => self.skipWaiting())
   );
 });
 
+// Activate: clean up old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k.startsWith('homechat-') && k !== CACHE_NAME)
+            .map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
+// Fetch: smart caching strategy
 self.addEventListener('fetch', event => {
-  const req = event.request
-  const url = new URL(req.url)
+  const req = event.request;
+  const url = new URL(req.url);
 
-  // Only handle same-origin requests
-  if (url.origin !== location.origin) return
+  // Only handle same-origin GET requests
+  if (url.origin !== location.origin || req.method !== 'GET') return;
 
-  // Cache-first for static assets
-  if (['style', 'script', 'image', 'font'].includes(req.destination) || url.pathname.startsWith('/assets') || url.pathname.startsWith('/app/assets/builds')) {
-    event.respondWith(
-      caches.open(CACHE_NAME).then(cache => cache.match(req).then(hit => {
-        const fetchPromise = fetch(req).then(res => { cache.put(req, res.clone()); return res })
-        return hit || fetchPromise
-      }))
-    )
-    return
+  // Skip ActionCable WebSocket requests
+  if (url.pathname === '/cable') return;
+
+  // Cache-first for static assets (styles, scripts, images, fonts)
+  if (isStaticAsset(req, url)) {
+    event.respondWith(cacheFirst(req));
+    return;
   }
 
-  // Network-first for everything else
-  event.respondWith(fetch(req).catch(() => caches.match(req)))
-})
+  // Network-first for HTML pages with offline fallback
+  if (req.destination === 'document' || req.headers.get('Accept')?.includes('text/html')) {
+    event.respondWith(networkFirstWithOfflineFallback(req));
+    return;
+  }
+
+  // Network-first for API/dynamic content
+  event.respondWith(networkFirst(req));
+});
+
+// Background sync for queued messages
+self.addEventListener('sync', event => {
+  if (event.tag === 'sync-messages') {
+    event.waitUntil(syncQueuedMessages());
+  }
+});
+
+// Listen for messages from the main thread
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// Helper: check if request is for a static asset
+function isStaticAsset(req, url) {
+  const staticDestinations = ['style', 'script', 'image', 'font'];
+  const staticPaths = ['/assets/', '/app/assets/builds/', '/packs/'];
+
+  return staticDestinations.includes(req.destination) ||
+         staticPaths.some(path => url.pathname.startsWith(path));
+}
+
+// Strategy: cache-first with network update
+async function cacheFirst(req) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(req);
+
+  // Return cached version immediately, update in background
+  const fetchPromise = fetch(req)
+    .then(res => {
+      if (res.ok) cache.put(req, res.clone());
+      return res;
+    })
+    .catch(() => null);
+
+  return cached || fetchPromise;
+}
+
+// Strategy: network-first
+async function networkFirst(req) {
+  try {
+    const res = await fetch(req);
+    if (res.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(req, res.clone());
+    }
+    return res;
+  } catch (err) {
+    const cached = await caches.match(req);
+    return cached || new Response('Offline', { status: 503 });
+  }
+}
+
+// Strategy: network-first with offline page fallback for HTML
+async function networkFirstWithOfflineFallback(req) {
+  try {
+    const res = await fetch(req);
+    if (res.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(req, res.clone());
+    }
+    return res;
+  } catch (err) {
+    // Try to return cached version of the page
+    const cached = await caches.match(req);
+    if (cached) return cached;
+
+    // Fall back to offline page
+    const offlinePage = await caches.match(OFFLINE_PAGE);
+    return offlinePage || new Response('You are offline', {
+      status: 503,
+      headers: { 'Content-Type': 'text/html' }
+    });
+  }
+}
+
+// Background sync: send queued messages when back online
+async function syncQueuedMessages() {
+  // Get all clients to access localStorage via postMessage
+  const clients = await self.clients.matchAll();
+
+  for (const client of clients) {
+    client.postMessage({ type: 'SYNC_MESSAGES' });
+  }
+}

@@ -11,7 +11,9 @@
             class: "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors" %>
       </div>
       <div class="max-w-md">
+        <label for="channel-search" class="sr-only">Search channels</label>
         <input id="channel-search" name="q" type="search" placeholder="Search channels..." value="<%= params[:q] %>"
+               aria-label="Search channels"
                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                data-controller="channel-search <%= 'focus' if params[:focus] == 'search' %>"
                data-channel-search-target="input"
@@ -34,7 +36,7 @@
         <% if @public_channels.any? %>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6" data-channel-search-target="items">
             <% @public_channels.each do |channel| %>
-              <div class="border border-gray-200 rounded-lg p-5 hover:border-gray-300 hover:shadow-sm transition-all" data-channel-search-target="item" data-name="<%= channel.name %>">
+              <div class="hover-lift border border-gray-200 rounded-lg p-5 hover:border-blue-200 bg-white" data-channel-search-target="item" data-name="<%= channel.name %>">
                 <div class="flex items-start justify-between">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center space-x-2 mb-3">
@@ -70,7 +72,7 @@
                     <% if current_user.member_of?(channel) %>
                       <%= link_to "Enter", channel_path(channel), class: "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors" %>
                     <% else %>
-                      <%= link_to "Join", join_channel_path(channel), method: :post, class: "px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors" %>
+                      <%= link_to "Join", join_channel_path(channel), data: { turbo_method: :post }, class: "px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors" %>
                     <% end %>
                   </div>
                 </div>
@@ -79,10 +81,28 @@
           </div>
         <% else %>
           <div class="text-center py-12">
-            <div class="text-6xl mb-6">💬</div>
+            <div class="w-24 h-24 mx-auto mb-6" aria-hidden="true">
+              <!-- Channels/rooms illustration -->
+              <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+                <circle cx="60" cy="60" r="56" fill="#F0FDF4" stroke="#BBF7D0" stroke-width="2"/>
+                <!-- Door frame -->
+                <rect x="40" y="30" width="40" height="55" rx="4" fill="#22C55E" opacity="0.2"/>
+                <rect x="45" y="35" width="30" height="45" rx="2" fill="white" stroke="#22C55E" stroke-width="2"/>
+                <!-- Door handle -->
+                <circle cx="70" cy="57" r="3" fill="#22C55E"/>
+                <!-- Plus sign above door -->
+                <rect x="56" y="18" width="8" height="2" rx="1" fill="#22C55E"/>
+                <rect x="59" y="15" width="2" height="8" rx="1" fill="#22C55E"/>
+                <!-- Welcome mat -->
+                <rect x="42" y="82" width="36" height="6" rx="2" fill="#86EFAC"/>
+                <!-- Sparkles -->
+                <circle cx="28" cy="45" r="3" fill="#FCD34D"/>
+                <circle cx="95" cy="35" r="2" fill="#A5B4FC"/>
+              </svg>
+            </div>
             <h3 class="text-xl font-medium text-gray-900 mb-3">No public channels yet</h3>
-            <p class="text-gray-500 mb-6 max-w-sm mx-auto">Be the first to create a public channel for everyone to join and start building your community!</p>
-            <%= link_to "Create First Channel", new_channel_path, class: "inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors" %>
+            <p class="text-gray-500 mb-6 max-w-sm mx-auto">Be the first to create a public channel for everyone to join!</p>
+            <%= link_to "Create First Channel", new_channel_path, class: "btn-press inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors" %>
           </div>
         <% end %>
       </div>
@@ -103,7 +123,7 @@
         <% if @my_channels.any? %>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <% @my_channels.each do |channel| %>
-              <div class="border border-gray-200 rounded-lg p-5 hover:border-gray-300 hover:shadow-sm transition-all">
+              <div class="hover-lift border border-gray-200 rounded-lg p-5 hover:border-blue-200 bg-white">
                 <div class="flex items-start justify-between">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center space-x-2 mb-3">
@@ -169,12 +189,31 @@
           </div>
         <% else %>
           <div class="text-center py-12">
-            <div class="text-6xl mb-6">📝</div>
-            <h3 class="text-xl font-medium text-gray-900 mb-3">No channels joined yet</h3>
-            <p class="text-gray-500 mb-6 max-w-sm mx-auto">Join a public channel or create your own to start participating in conversations!</p>
-            <div class="space-x-3">
-              <%= link_to "Browse Public Channels", "#", class: "inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors", onclick: "document.getElementById('public-channels').scrollIntoView({behavior: 'smooth'}); return false;" %>
-              <%= link_to "Create Channel", new_channel_path, class: "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors" %>
+            <div class="w-24 h-24 mx-auto mb-6" aria-hidden="true">
+              <!-- Compass/explore illustration -->
+              <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+                <circle cx="60" cy="60" r="56" fill="#FEF3C7" stroke="#FDE68A" stroke-width="2"/>
+                <!-- Compass circle -->
+                <circle cx="60" cy="60" r="32" fill="white" stroke="#F59E0B" stroke-width="2"/>
+                <!-- Compass needle -->
+                <path d="M60 35L65 60H55L60 35Z" fill="#EF4444"/>
+                <path d="M60 85L55 60H65L60 85Z" fill="#3B82F6"/>
+                <!-- Direction markers -->
+                <circle cx="60" cy="32" r="2" fill="#F59E0B"/>
+                <circle cx="60" cy="88" r="2" fill="#F59E0B"/>
+                <circle cx="32" cy="60" r="2" fill="#F59E0B"/>
+                <circle cx="88" cy="60" r="2" fill="#F59E0B"/>
+                <!-- Center dot -->
+                <circle cx="60" cy="60" r="4" fill="#F59E0B"/>
+                <!-- Sparkles -->
+                <circle cx="25" cy="30" r="3" fill="#A5B4FC"/>
+                <circle cx="95" cy="85" r="2.5" fill="#86EFAC"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-medium text-gray-900 mb-3">Ready to explore?</h3>
+            <p class="text-gray-500 mb-6 max-w-sm mx-auto">Join a public channel or create your own to start chatting!</p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <%= link_to "Create Channel", new_channel_path, class: "btn-press inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors" %>
             </div>
           </div>
         <% end %>

@@ -34,7 +34,7 @@
     </div>
   </div>
 
-  <script>
+  <%= javascript_tag nonce: true do %>
     function copyToken() {
       const tokenValue = document.getElementById('tokenValue').textContent;
       navigator.clipboard.writeText(tokenValue).then(function() {
@@ -54,5 +54,5 @@
         alert('Failed to copy token. Please copy it manually.');
       });
     }
-  </script>
+  <% end %>
 <% end %>

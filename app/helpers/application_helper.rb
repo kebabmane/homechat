@@ -4,12 +4,13 @@ module ApplicationHelper
   def avatar_for(user, size: 'h-10 w-10')
     username = user.username.presence || 'Unknown'
     initial = username[0].upcase
+    alt_text = "#{username}'s avatar"
     if user.respond_to?(:avatar) && user.avatar&.attached?
-      image_tag user.avatar, alt: username, class: "#{size} rounded-full object-cover"
+      image_tag user.avatar, alt: alt_text, class: "#{size} rounded-full object-cover"
     else
       color = AVATAR_COLORS[username.hash % AVATAR_COLORS.length]
-      content_tag :div, class: "#{size} #{color} rounded-full flex items-center justify-center text-white" do
-        content_tag(:span, initial, class: 'font-medium')
+      content_tag :div, class: "#{size} #{color} rounded-full flex items-center justify-center text-white", role: 'img', 'aria-label': alt_text, title: username do
+        content_tag(:span, initial, class: 'font-medium', 'aria-hidden': 'true')
       end
     end
   end

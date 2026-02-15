@@ -1,12 +1,22 @@
 class User < ApplicationRecord
+  include AccountLockable
+  include TwoFactorAuthenticatable
+
+  PRESENCE_STALE_WINDOW = 30.seconds
+
   has_secure_password
   has_one_attached :avatar
 
   validates :username, presence: true, uniqueness: true, length: { minimum: 3, maximum: 50 }
   validates :role, inclusion: { in: %w[user admin] }
+  validates :timezone, inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }, allow_blank: true
 
   # Avatar validations
   validate :avatar_validation
+
+  # Approval scopes
+  scope :pending_approval, -> { where(approved: false) }
+  scope :approved, -> { where(approved: true) }
 
   # Associations
   has_many :messages, dependent: :destroy
@@ -24,7 +34,36 @@ class User < ApplicationRecord
   def user?
     role == 'user'
   end
-  
+
+  # Approval methods
+  def pending_approval?
+    !approved? && Setting.fetch(:require_signup_approval, false)
+  end
+
+  def approve!(admin_user)
+    update!(
+      approved: true,
+      approved_at: Time.current,
+      approved_by_id: admin_user.id
+    )
+
+    AuditLog.log(
+      action: 'user.approved',
+      user: admin_user,
+      resource: self,
+      metadata: { approved_by: admin_user.username }
+    )
+  end
+
+  def reject!
+    # Delete the user entirely when rejected
+    destroy!
+  end
+
+  def approved_by
+    User.find_by(id: approved_by_id) if approved_by_id
+  end
+
   def member_of?(channel)
     channel_memberships.exists?(channel: channel)
   end
@@ -45,18 +84,37 @@ class User < ApplicationRecord
   end
 
   def mark_online!
-    update!(is_online: true, last_seen_at: Time.current)
+    timestamp = Time.current
+    return if online? && last_seen_at && last_seen_at >= timestamp - PRESENCE_STALE_WINDOW
+
+    update!(is_online: true, last_seen_at: timestamp)
     broadcast_presence_change
   end
 
   def mark_offline!
-    update!(is_online: false, last_seen_at: Time.current)
+    timestamp = Time.current
+
+    changes = {}
+    changes[:is_online] = false if online?
+    changes[:last_seen_at] = timestamp if last_seen_at.nil? || last_seen_at < timestamp - PRESENCE_STALE_WINDOW
+
+    return if changes.empty?
+
+    update!(changes)
     broadcast_presence_change
   end
 
   def update_presence!
-    update!(last_seen_at: Time.current)
-    mark_online! unless online?
+    timestamp = Time.current
+
+    changes = {}
+    changes[:last_seen_at] = timestamp if last_seen_at.nil? || last_seen_at < timestamp - PRESENCE_STALE_WINDOW
+    changes[:is_online] = true unless online?
+
+    return if changes.empty?
+
+    update!(changes)
+    broadcast_presence_change
   end
 
   def set_status!(new_status)
@@ -82,6 +140,30 @@ class User < ApplicationRecord
 
   def avatar_color_index
     username&.hash&.abs&.% 8 || 0
+  end
+
+  # Password reset methods
+  def generate_password_reset_token!
+    raw_token = SecureRandom.urlsafe_base64(32)
+    update!(
+      password_reset_token_digest: BCrypt::Password.create(raw_token),
+      password_reset_sent_at: Time.current
+    )
+    raw_token
+  end
+
+  def password_reset_token_valid?(token)
+    return false if password_reset_token_digest.nil?
+    return false if password_reset_sent_at.nil? || password_reset_sent_at < 24.hours.ago
+    BCrypt::Password.new(password_reset_token_digest).is_password?(token)
+  end
+
+  def clear_password_reset_token!
+    update!(password_reset_token_digest: nil, password_reset_sent_at: nil)
+  end
+
+  def password_reset_pending?
+    password_reset_token_digest.present? && password_reset_sent_at.present? && password_reset_sent_at >= 24.hours.ago
   end
 
   private

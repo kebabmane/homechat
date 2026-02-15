@@ -22,3 +22,8 @@ class JsSystemTestCase < ApplicationSystemTestCase
   # Full browser for JS/Turbo/ActionCable interactions
   driven_by :selenium, using: :headless_chrome, screen_size: [1400, 1400]
 end
+
+class MobileSystemTestCase < ApplicationSystemTestCase
+  # Mobile viewport for responsive testing (iPhone SE size)
+  driven_by :selenium, using: :headless_chrome, screen_size: [375, 667]
+end

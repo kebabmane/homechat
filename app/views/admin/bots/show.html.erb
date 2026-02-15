@@ -68,21 +68,37 @@
                 <dd class="text-sm text-gray-900">
                   <div class="bg-gray-50 p-2 rounded border">
                     <div class="flex justify-between items-center">
-                      <code class="font-mono text-xs break-all" id="webhook-secret" style="display: none;"><%= @bot.webhook_secret %></code>
-                      <span class="text-gray-500" id="secret-hidden">••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••</span>
-                      <button type="button"
-                              onclick="toggleSecret()"
-                              class="ml-2 text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
-                              id="toggle-btn">
-                        Show
-                      </button>
+                      <span class="text-gray-500 font-mono text-xs">••••••••••••••••••••</span>
+                      <div class="flex gap-2">
+                        <button type="button"
+                                onclick="copyMaskedSecret()"
+                                class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                                title="Copy first 8 characters for verification">
+                          Copy Prefix
+                        </button>
+                        <%= link_to "Regenerate",
+                                    regenerate_secret_admin_bot_path(@bot),
+                                    class: "text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200",
+                                    data: { turbo_method: :post, turbo_confirm: "This will invalidate the current webhook secret. Continue?" } %>
+                      </div>
                     </div>
                   </div>
                   <p class="text-xs text-gray-500 mt-1">
-                    Use this secret to sign webhook payloads with HMAC-SHA256. Include the signature in the X-Hub-Signature-256 header as "sha256=&lt;signature&gt;".
+                    Secret is hidden for security. Use "Regenerate" to create a new secret if lost. Use this secret to sign webhook payloads with HMAC-SHA256. Include the signature in the X-Hub-Signature-256 header as "sha256=&lt;signature&gt;".
                   </p>
                 </dd>
               </div>
+              <%= javascript_tag nonce: true do %>
+                function copyMaskedSecret() {
+                  // Only show first 8 characters for verification purposes
+                  const prefix = '<%= @bot.webhook_secret[0..7] %>';
+                  navigator.clipboard.writeText(prefix).then(() => {
+                    alert('Secret prefix copied: ' + prefix + '... (first 8 characters only)');
+                  }).catch(err => {
+                    console.error('Failed to copy:', err);
+                  });
+                }
+              <% end %>
             <% end %>
           </dl>
 
@@ -98,10 +114,41 @@
             </div>
           </div>
         </div>
+      <% elsif @bot.ai_bot? %>
+        <div>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">AI Configuration</h3>
+          <dl class="space-y-3">
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Model</dt>
+              <dd class="text-sm text-gray-900 font-mono bg-purple-50 border border-purple-100 p-2 rounded">
+                <%= @bot.model.presence || "Server default (#{Setting.fetch(:litellm_default_model, 'not set')})" %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Identity</dt>
+              <dd class="text-sm text-gray-900">
+                Replies are posted as <code class="font-mono"><%= @bot.identity_user&.username || @bot.name %></code>.
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">System prompt</dt>
+              <dd>
+                <pre class="text-sm bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap leading-relaxed"><%= @bot.instructions %></pre>
+              </dd>
+            </div>
+          </dl>
+          <div class="mt-6 pt-4 border-t border-gray-200 text-xs text-gray-600 space-y-2">
+            <p class="font-semibold text-gray-900">How it responds</p>
+            <p>The latest channel messages are sent to LiteLLM with the prompt above. The bot joins channels automatically before replying.</p>
+          </div>
+        </div>
       <% end %>
     </div>
 
     <div class="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-3">
+      <% if @bot.ai_bot? %>
+        <%= link_to 'Edit', edit_admin_bot_path(@bot), class: 'px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50' %>
+      <% end %>
       <% if @bot.webhook? && @bot.webhook_secret.present? %>
         <%= button_to "Regenerate Secret", regenerate_secret_admin_bot_path(@bot),
                       method: :post,
@@ -127,20 +174,3 @@
   </div>
 </div>
 
-<script>
-function toggleSecret() {
-  const secret = document.getElementById('webhook-secret');
-  const hidden = document.getElementById('secret-hidden');
-  const btn = document.getElementById('toggle-btn');
-
-  if (secret.style.display === 'none') {
-    secret.style.display = 'block';
-    hidden.style.display = 'none';
-    btn.textContent = 'Hide';
-  } else {
-    secret.style.display = 'none';
-    hidden.style.display = 'block';
-    btn.textContent = 'Show';
-  }
-}
-</script>

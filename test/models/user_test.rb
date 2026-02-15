@@ -73,4 +73,29 @@ class UserTest < ActiveSupport::TestCase
       assert user.updated_at > original_time
     end
   end
+
+  test "should default to UTC timezone" do
+    user = create_user
+    assert_equal "UTC", user.timezone
+  end
+
+  test "should accept valid timezone" do
+    user = create_user
+    user.timezone = "Eastern Time (US & Canada)"
+    assert user.valid?
+    assert_equal "Eastern Time (US & Canada)", user.timezone
+  end
+
+  test "should reject invalid timezone" do
+    user = create_user
+    user.timezone = "Invalid/Timezone"
+    assert_not user.valid?
+    assert_includes user.errors[:timezone], "is not included in the list"
+  end
+
+  test "should allow blank timezone" do
+    user = create_user
+    user.timezone = ""
+    assert user.valid?
+  end
 end

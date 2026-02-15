@@ -12,15 +12,25 @@
   h3 {
     @apply text-lg;
   }
+
+  /* Ensure visible focus indicators for all interactive elements */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-blue-500;
+  }
+
+  /* Skip link for keyboard users */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:absolute focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-md focus:top-4 focus:left-4;
+  }
 }
 
 /* Lightweight prose styling for chat messages */
 @layer components {
   .message-body {
-    @apply text-[15px];
+    @apply text-[15px] leading-relaxed text-gray-900;
   }
   .message-body .hc-link {
-    @apply text-blue-600 hover:text-blue-700 underline;
+    @apply text-blue-600 hover:text-blue-700 underline font-medium;
   }
   .message-body .hc-mention-link {
     @apply px-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100;
@@ -64,10 +74,183 @@
   .sidebar-panel-hidden { display: none !important; }
 }
 
+/* Mobile keyboard handling */
+@layer components {
+  /* When keyboard is visible, ensure smooth transitions */
+  .keyboard-visible {
+    /* Prevent content from being pushed up unexpectedly */
+    position: relative;
+  }
+
+  /* Composer area should stay fixed at bottom when keyboard opens on iOS */
+  @supports (-webkit-touch-callout: none) {
+    /* iOS-specific: Use position sticky for better keyboard handling */
+    .keyboard-visible [data-message-list-target="composerArea"] {
+      position: sticky;
+      bottom: 0;
+      z-index: 20;
+    }
+  }
+}
+
 /* Dark mode polish for message content */
 @layer components {
   .dark .message-body .hc-link { @apply text-blue-400 hover:text-blue-300; }
   .dark .message-body .hc-mention-link { @apply bg-blue-900/30 text-blue-200 hover:bg-blue-900/50; }
   .dark .message-body pre.hc-code { @apply bg-gray-800 border-gray-700 text-gray-100; }
   .dark .message-body code.hc-code-inline { @apply bg-gray-800 text-gray-100; }
+}
+
+/* ============================================
+   MICRO-INTERACTIONS & ANIMATIONS
+   ============================================ */
+
+/* Message entrance animation */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-bubble {
+  animation: messageSlideIn 0.2s ease-out;
+}
+
+/* Disable animation for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .message-bubble {
+    animation: none;
+  }
+}
+
+/* Typing indicator dots with staggered animation */
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+}
+
+.typing-dot {
+  animation: typingBounce 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 200ms;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 400ms;
+}
+
+/* Interactive card hover effects */
+@layer components {
+  .hover-lift {
+    @apply transition-all duration-200;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    @apply shadow-md;
+  }
+
+  .hover-lift:active {
+    transform: translateY(0);
+    @apply shadow-sm;
+  }
+}
+
+/* Button press effect */
+@layer components {
+  .btn-press {
+    @apply transition-transform duration-100;
+  }
+
+  .btn-press:active {
+    transform: scale(0.97);
+  }
+}
+
+/* Smooth focus ring animation */
+@keyframes focusRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  }
+}
+
+/* Pulse animation for online status */
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.status-online {
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+/* Send button success animation */
+@keyframes sendSuccess {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.send-success {
+  animation: sendSuccess 0.3s ease-out;
+}
+
+/* Sidebar spring animation (for mobile) */
+@layer utilities {
+  .ease-spring {
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+}
+
+/* Unread badge animation */
+@keyframes badgePop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.unread-badge {
+  animation: badgePop 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unread-badge {
+    animation: none;
+  }
 }

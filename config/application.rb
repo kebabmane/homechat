@@ -83,6 +83,12 @@ module Homechat
       config.action_dispatch.trusted_proxies = trusted_ranges.flatten
     end
 
+    # Anonymize IP addresses in request.remote_ip
+    # Masks last octet for IPv4 (e.g., 192.168.1.100 -> 192.168.1.0)
+    # Preserves rough geolocation while protecting user privacy
+    # See: https://github.com/ankane/ip_anonymizer
+    config.middleware.insert_after ActionDispatch::RemoteIp, IpAnonymizer::MaskIp
+
     # Session configuration
     config.session_store :cookie_store,
       key: '_homechat_session',

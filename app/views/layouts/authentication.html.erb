@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <title><%= content_for(:title) || Setting.fetch(:site_name, 'HomeChat') %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -34,9 +34,9 @@
       </div>
     <% end %>
     <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
-      <script>
+      <%= javascript_tag nonce: true do %>
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('<%= pwa_service_worker_path %>') }
-      </script>
+      <% end %>
     <% end %>
     <% if flash[:notice] %>
       <div data-controller="flash" data-flash-timeout-value="4000" class="fixed top-0 left-0 right-0 bg-green-500 text-white px-4 py-2 text-center z-50">
@@ -60,9 +60,8 @@
           <span class="font-semibold text-gray-900"><%= Setting.fetch(:site_name, 'HomeChat') %></span>
         <% end %>
         <nav class="flex items-center space-x-4 text-sm">
-          <%= link_to "Features", "#features", class: "text-gray-600 hover:text-gray-900 hidden md:inline" %>
-          <%= link_to "How it works", "#how-it-works", class: "text-gray-600 hover:text-gray-900 hidden md:inline" %>
           <%= link_to "About", about_path, class: "text-gray-600 hover:text-gray-900 hidden md:inline" %>
+          <%= link_to "Docs", docs_path, class: "text-gray-600 hover:text-gray-900 hidden md:inline" %>
           <% if logged_in? %>
             <%= link_to "Go to Chat", dashboard_path, class: "inline-flex items-center px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700" %>
           <% else %>
@@ -79,12 +78,12 @@
 
     <!-- Main -->
     <main class="flex-1">
-      <% if controller.controller_name == 'home' && action_name == 'index' %>
-        <%= yield %>
-      <% else %>
+      <% if %w[sessions users password_resets two_factor_sessions].include?(controller.controller_name) %>
         <div class="max-w-md w-full mx-auto p-8">
           <%= yield %>
         </div>
+      <% else %>
+        <%= yield %>
       <% end %>
     </main>
 
@@ -93,9 +92,8 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-xs text-gray-500 flex items-center justify-between">
         <span>© <%= Time.current.year %> HomeChat</span>
         <div class="space-x-4">
-          <a href="#features" class="hover:text-gray-700">Features</a>
-          <a href="#how-it-works" class="hover:text-gray-700">How it works</a>
           <%= link_to 'About', about_path, class: 'hover:text-gray-700' %>
+          <%= link_to 'Docs', docs_path, class: 'hover:text-gray-700' %>
           <%= link_to 'Privacy', privacy_path, class: 'hover:text-gray-700' %>
           <%= link_to 'Terms', terms_path, class: 'hover:text-gray-700' %>
         </div>

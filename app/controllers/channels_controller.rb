@@ -4,9 +4,9 @@ class ChannelsController < ApplicationController
   before_action :set_channel_for_member_actions, only: [:invite]
 
   def index
-    @public_channels = Channel.where(channel_type: 'public').includes(:creator, :channel_memberships)
+    @public_channels = Channel.where(channel_type: 'public').includes(:creator)
     # Show only channels (public/private) you belong to; exclude DMs from this list
-    @my_channels = current_user.channels.where.not(channel_type: 'dm').includes(:creator, :channel_memberships)
+    @my_channels = current_user.channels.where.not(channel_type: 'dm').includes(:creator)
   end
 
   def show
@@ -15,7 +15,10 @@ class ChannelsController < ApplicationController
       return
     end
     
-    @messages = @channel.messages.includes(:user).recent.limit(50)
+    @messages = @channel.messages
+      .includes(:files_attachments, user: :avatar_attachment)
+      .recent
+      .limit(50)
     # Unread divider: track last-read per channel in session
     session[:last_read] ||= {}
     @last_read_at = session[:last_read][@channel.id.to_s] && Time.parse(session[:last_read][@channel.id.to_s]) rescue nil
@@ -103,7 +106,7 @@ class ChannelsController < ApplicationController
       redirect_to edit_channel_path(@channel), alert: 'User not found.' and return
     end
 
-    if @channel.members.include?(user)
+    if @channel.member?(user)
       redirect_to @channel, notice: 'User is already a member.' and return
     end
 

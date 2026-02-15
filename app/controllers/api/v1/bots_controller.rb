@@ -36,6 +36,24 @@ class Api::V1::BotsController < Api::V1::BaseController
   def create
     Rails.logger.info "Bot creation params: #{params.inspect}"
 
+    name = bot_params[:name] || params[:name]
+
+    # Check if bot with this name already exists (idempotent create)
+    existing_bot = Bot.find_by(name: name)
+    if existing_bot
+      Rails.logger.info "Bot already exists with name: #{name}, returning existing bot"
+      return render_success({
+        bot: {
+          id: existing_bot.id,
+          name: existing_bot.name,
+          description: existing_bot.description,
+          active: existing_bot.active,
+          bot_type: existing_bot.bot_type,
+          webhook_id: existing_bot.webhook_id
+        }
+      }, 'Bot already exists')
+    end
+
     bot = Bot.new(bot_params)
     bot.webhook_id = params[:webhook_id] || bot_params[:webhook_id]
     bot.bot_type = params[:type] || bot_params[:bot_type] || 'webhook'

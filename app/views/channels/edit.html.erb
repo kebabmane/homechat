@@ -8,8 +8,8 @@
 
     <%= form_with model: @channel, local: true, class: "p-6" do |form| %>
       <% if @channel.errors.any? %>
-        <div class="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-          <h4 class="font-medium">Please fix the following errors:</h4>
+        <div class="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded" role="alert" aria-live="assertive">
+          <p class="font-medium">Please fix the following errors:</p>
           <ul class="mt-2 list-disc list-inside text-sm">
             <% @channel.errors.full_messages.each do |message| %>
               <li><%= message %></li>

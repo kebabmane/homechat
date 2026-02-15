@@ -46,8 +46,9 @@ class ActiveSupport::TestCase
 
   def sign_in_as(user, password: "secret")
     post "/signin", params: { username: user.username, password: password }
-    assert_response :redirect
+    assert_response :redirect, "Expected redirect after signin, got #{response.status}: #{response.body}"
     follow_redirect!
+    # May redirect to dashboard or 2FA page
     assert_response :success
   end
 

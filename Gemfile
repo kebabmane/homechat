@@ -23,7 +23,7 @@ gem "jbuilder"
 gem "bcrypt", "~> 3.1.7"
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
-gem "tzinfo-data", platforms: %i[ windows jruby ]
+gem "tzinfo-data", platforms: %i[ mingw mswin x64_mingw jruby ]
 
 # Use the database-backed adapters for Rails.cache, Active Job, and Action Cable
 gem "solid_cache"
@@ -40,14 +40,41 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-# gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 1.2"
 
 # mDNS service discovery
 gem "dnssd"
 
+# Rack middleware for rate limiting and blocking
+gem "rack-attack"
+
+# TOTP-based two-factor authentication
+gem "rotp"
+gem "rqrcode"
+
+# Structured JSON logging for production
+gem "lograge"
+
+# Log sanitization - filter sensitive data from logs
+gem "logstop"
+gem "ip_anonymizer"
+
+# Google authentication for FCM (Firebase Cloud Messaging)
+gem "googleauth"
+
+# API documentation with OpenAPI/Swagger
+gem "rswag-api"
+gem "rswag-ui"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
-  gem "debug", platforms: %i[ mri windows ], require: false
+  gem "debug", platforms: %i[ mri mingw mswin x64_mingw ], require: false
+
+  # N+1 query detection [https://github.com/flyerhzm/bullet]
+  gem "bullet"
+
+  # API documentation specs
+  gem "rswag-specs"
 
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false
@@ -77,6 +104,12 @@ end
 group :test do
   gem "capybara", require: false
   gem "selenium-webdriver", require: false
+
+  # HTTP request stubbing for external API tests
+  gem "webmock", require: false
+
+  # Minitest pinned to 5.x for Rails 8 compatibility
+  gem "minitest", "~> 5.25"
 end
 
 group :development do

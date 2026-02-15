@@ -1,0 +1,74 @@
+<%= form_with model: [:admin, @bot], local: true, class: "space-y-6" do |f| %>
+  <% if @bot.errors.any? %>
+    <div class="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+      <p class="font-semibold">We could not save this bot:</p>
+      <ul class="mt-2 list-disc list-inside space-y-1">
+        <% @bot.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="grid gap-6 sm:grid-cols-2">
+    <div class="space-y-4">
+      <div>
+        <%= f.label :name, 'Bot handle', class: 'block text-sm font-medium text-gray-900' %>
+        <%= f.text_field :name, class: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500', placeholder: 'helper_bot' %>
+        <p class="mt-1 text-xs text-gray-500">This becomes the @mention and DM username. Letters, numbers, underscores only.</p>
+      </div>
+
+      <div>
+        <%= f.label :description, class: 'block text-sm font-medium text-gray-900' %>
+        <%= f.text_area :description, rows: 3, class: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500', placeholder: 'Short summary that appears in bot listings.' %>
+      </div>
+
+      <div>
+        <%= f.label :instructions, 'System prompt', class: 'block text-sm font-medium text-gray-900' %>
+        <%= f.text_area :instructions, rows: 8, class: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 font-mono text-sm', placeholder: "You are HomeChat's helpful assistant..." %>
+        <p class="mt-1 text-xs text-gray-500">Provide the persona or instructions that are always prepended to conversations.</p>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <%= f.hidden_field :bot_type, value: (@bot.bot_type.presence || 'ai') %>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-900">Model</label>
+        <% if @available_models.present? %>
+          <%= f.select :model,
+            options_for_select(@available_models.map { |m| [m, m] }, @bot.model.presence || Setting.fetch(:litellm_default_model, '')),
+            { include_blank: 'Use server default' },
+            class: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500' %>
+          <p class="mt-1 text-xs text-gray-500">Leave blank to fall back to the server default (<%= Setting.fetch(:litellm_default_model, 'not set') || 'not set' %>).</p>
+        <% else %>
+          <%= f.text_field :model, class: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500', placeholder: 'gpt-4o-mini' %>
+          <p class="mt-1 text-xs text-gray-500">No models fetched from LiteLLM. Enter one manually or configure the host in Server Settings.</p>
+          <% if @models_error.present? %>
+            <p class="mt-1 text-xs text-rose-600"><%= @models_error %></p>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="rounded-lg border border-purple-100 bg-white px-4 py-3">
+        <label class="flex items-start gap-3">
+          <%= f.check_box :active, {}, true, false %>
+          <span>
+            <span class="text-sm font-medium text-gray-900">Active</span>
+            <p class="text-xs text-gray-500">Inactive bots keep their configuration but will not reply to messages.</p>
+          </span>
+        </label>
+      </div>
+
+      <div class="rounded-lg border border-gray-200 bg-white px-4 py-3 text-xs text-gray-600 space-y-2">
+        <p class="font-semibold text-gray-900">How responses are generated</p>
+        <p>The conversation context includes the latest channel messages and the bot's system prompt. Replies are sent through LiteLLM using the Chat Completions API.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
+    <%= link_to 'Cancel', @bot.persisted? ? admin_bot_path(@bot) : admin_bots_path, class: 'inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50' %>
+    <%= f.submit (@bot.persisted? ? 'Update bot' : 'Create bot'), class: 'inline-flex items-center rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700' %>
+  </div>
+<% end %>

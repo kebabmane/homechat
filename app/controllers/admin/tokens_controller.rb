@@ -1,24 +1,34 @@
 module Admin
   class TokensController < ApplicationController
     before_action :require_admin
-    before_action :set_token, only: [:activate, :deactivate, :regenerate, :destroy]
+    before_action :set_token, only: [:edit, :update, :activate, :deactivate, :regenerate, :destroy]
 
     def index
-      @tokens = ApiToken.order(:name)
-      @new_token = ApiToken.new
+      redirect_to admin_bots_path(tab: 'tokens')
     end
 
     def create
       @token = ApiToken.new(token_params.merge(active: true))
 
       if @token.save
-        # Return the modal content with the token
+        create_channel_assignments(@token)
         render :show_token
       else
-        @tokens = ApiToken.order(:name)
-        @new_token = @token
-        flash.now[:alert] = @token.errors.full_messages.to_sentence
-        render :index
+        redirect_to admin_bots_path(tab: 'tokens'), alert: @token.errors.full_messages.to_sentence
+      end
+    end
+
+    def edit
+      @channels = Channel.where.not(channel_type: 'dm').order(:name)
+    end
+
+    def update
+      if @token.update(token_params)
+        update_channel_assignments(@token)
+        redirect_to admin_bots_path(tab: 'tokens'), notice: 'Token updated.'
+      else
+        @channels = Channel.where.not(channel_type: 'dm').order(:name)
+        render :edit, status: :unprocessable_entity
       end
     end
 
@@ -29,18 +39,18 @@ module Admin
 
     def activate
       @token.update!(active: true)
-      redirect_to admin_tokens_path, notice: 'Token activated.'
+      redirect_to admin_bots_path(tab: 'tokens'), notice: 'Token activated.'
     end
 
     def deactivate
       @token.update!(active: false)
-      redirect_to admin_tokens_path, notice: 'Token deactivated.'
+      redirect_to admin_bots_path(tab: 'tokens'), notice: 'Token deactivated.'
     end
 
     def destroy
       name = @token.name
       @token.destroy
-      redirect_to admin_tokens_path, notice: "Token '#{name}' deleted."
+      redirect_to admin_bots_path(tab: 'tokens'), notice: "Token '#{name}' deleted."
     end
 
     private
@@ -52,7 +62,25 @@ module Admin
     end
 
     def token_params
-      params.require(:api_token).permit(:name)
+      params.require(:api_token).permit(:name, :token_type, :expires_at, scopes: [])
+    end
+
+    def create_channel_assignments(token)
+      return unless params[:channel_ids].present?
+
+      params[:channel_ids].each do |channel_id|
+        next if channel_id.blank?
+        permission = params.dig(:channel_permissions, channel_id) || 'read'
+        token.token_channel_assignments.create!(
+          channel_id: channel_id,
+          permission: permission
+        )
+      end
+    end
+
+    def update_channel_assignments(token)
+      token.token_channel_assignments.destroy_all
+      create_channel_assignments(token)
     end
   end
 end

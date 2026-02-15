@@ -10,7 +10,10 @@ class UsersController < ApplicationController
       return
     end
 
-    users = User.where('LOWER(username) LIKE LOWER(?)', "%#{query}%")
+    # Sanitize query by escaping SQL wildcards
+    sanitized_query = query.gsub(/[%_]/, '\\\\\0')
+
+    users = User.where('LOWER(username) LIKE LOWER(?)', "%#{sanitized_query}%")
                 .where.not(id: current_user.id)
                 .limit(10)
                 .map do |user|

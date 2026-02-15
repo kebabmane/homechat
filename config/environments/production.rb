@@ -24,11 +24,23 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
-  # Assume all access to the app is happening through a SSL-terminating reverse proxy.
-  config.assume_ssl = ENV['HOME_ASSISTANT_ADDON'] == 'true'
+  # Use proxy mode for Active Storage to serve files directly without redirects.
+  # This fixes issues with mobile apps and CORS that occur with the default redirect mode.
+  # See: https://github.com/rails/rails/issues/33549
+  config.active_storage.resolve_model_to_route = :rails_storage_proxy
 
-  # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  config.force_ssl = false
+  # SSL Configuration based on environment
+  # - RAILS_ASSUME_SSL=true: Assume behind SSL-terminating reverse proxy (HA Ingress, nginx, etc.)
+  # - RAILS_FORCE_SSL=true: Force HTTPS redirects (for direct SSL termination)
+  # Note: HOME_ASSISTANT_ADDON sets RAILS_ASSUME_SSL based on access_mode in the run script
+  config.assume_ssl = ENV['RAILS_ASSUME_SSL'] == 'true'
+
+  # Force SSL only when explicitly enabled and not using reverse proxy
+  config.force_ssl = ENV['RAILS_FORCE_SSL'] == 'true'
+
+  # ActionCable configuration - respect protocol from X-Forwarded-Proto header
+  # This ensures WebSocket connections use the correct protocol (ws/wss)
+  config.action_cable.allowed_request_origins = [/.*/]  # Allow all origins in production (HA Ingress uses various origins)
 
   # Skip http-to-https redirect for the default health check endpoint.
   # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }

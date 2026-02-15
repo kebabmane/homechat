@@ -1,4 +1,35 @@
 class Api::V1::MessagesController < Api::V1::BaseController
+  # Scope checks for message operations
+  # Bot tokens can post via create action but cannot access DMs or delete
+  before_action :require_message_read_scope, only: [:index, :dm_channels]
+  before_action :require_message_write_scope, only: [:create, :create_for_channel, :create_media]
+  before_action :require_non_bot_for_dm, only: [:create_dm, :dm_channels, :start_dm_by_username]
+  before_action :require_non_bot_for_delete, only: [:destroy]
+
+  # DELETE /api/v1/messages/:id
+  def destroy
+    message = Message.find(params[:id])
+    user = current_api_user
+
+    # Only allow users to delete their own messages (or admins)
+    if message.user == user || user.admin?
+      channel = message.channel
+
+      # Broadcast deletion to channel subscribers using explicit stream name
+      ActionCable.server.broadcast("chat_channel_#{channel.id}", {
+        type: 'message_deleted',
+        message_id: message.id
+      })
+
+      message.destroy
+      render json: { success: true, message: 'Message deleted' }
+    else
+      render json: { success: false, error: 'You can only delete your own messages' }, status: :forbidden
+    end
+  rescue ActiveRecord::RecordNotFound
+    render json: { success: false, error: 'Message not found' }, status: :not_found
+  end
+
   def create
     begin
       message_params = params.require(:message)
@@ -22,11 +53,10 @@ class Api::V1::MessagesController < Api::V1::BaseController
       )
       
       if message.save
-        # Broadcast the message to the channel
+        # Broadcast the message to the channel (for Turbo Streams web clients)
         broadcast_message(message, channel)
 
-        # Send push notifications
-        FcmNotificationService.send_message_notification(message, exclude_user: user)
+        # Note: FCM push notifications are now sent via model callback (send_push_notifications)
 
         render_success({
           message: {
@@ -55,38 +85,31 @@ class Api::V1::MessagesController < Api::V1::BaseController
     limit = [params[:limit]&.to_i || 50, 100].min
 
     begin
-      if channel_id
+      messages = if channel_id
         channel = Channel.find(channel_id)
         return unless ensure_channel_access(channel)
-        messages = channel.messages.includes(:user).order(created_at: :desc).limit(limit)
+
+        channel.messages
+               .includes(:user, files_attachments: :blob)
+               .order(created_at: :desc)
+               .limit(limit + 1)
+               .to_a
       else
-        # Only show messages from channels the user has access to
-        accessible_channels = Channel.accessible_by(current_api_user)
-        messages = Message.includes(:user, :channel)
-                         .joins(:channel)
-                         .where(channel: accessible_channels)
-                         .order(created_at: :desc)
-                         .limit(limit)
+        accessible_channels = Channel.accessible_by(current_api_user).select(:id)
+
+        Message.includes(:user, :channel, files_attachments: :blob)
+               .where(channel_id: accessible_channels)
+               .order(created_at: :desc)
+               .limit(limit + 1)
+               .to_a
       end
-      
+
+      has_more = messages.length > limit
+      messages = messages.first(limit)
+
       render json: {
-        messages: messages.map do |message|
-          {
-            id: message.id,
-            content: message.content,
-            user: {
-              id: message.user.id,
-              username: message.user.username,
-              role: message.user.role,
-              created_at: message.user.created_at&.iso8601
-            },
-            channel_id: message.channel.id,
-            created_at: message.created_at.iso8601,
-            message_type: message.message_type || 'chat',
-            files: [] # TODO: Implement file attachments
-          }
-        end,
-        has_more: messages.count == limit
+        messages: messages.map { |message| serialize_message(message) },
+        has_more: has_more
       }
       
     rescue ActiveRecord::RecordNotFound
@@ -176,26 +199,40 @@ class Api::V1::MessagesController < Api::V1::BaseController
   end
   
   def broadcast_message(message, channel)
-    # Broadcast to the channel using ActionCable
-    ActionCable.server.broadcast(
-      "channel_#{channel.id}",
-      {
-        type: 'new_message',
-        message: {
-          id: message.id,
-          content: message.content,
-          user: {
-            id: message.user.id,
-            username: message.user.username,
-            avatar_url: message.user.avatar_url,
-            avatar_initials: message.user.avatar_initials,
-            avatar_color_index: message.user.avatar_color_index
-          },
-          created_at: message.created_at.iso8601,
-          message_type: message.message_type
+    # Serialize files for broadcast
+    files = if message.files.attached?
+      message.files.map do |file|
+        {
+          id: file.id,
+          filename: file.filename.to_s,
+          content_type: file.content_type,
+          byte_size: file.byte_size,
+          url: Rails.application.routes.url_helpers.rails_blob_url(file, host: request.base_url),
+          thumbnail_url: file.image? ? Rails.application.routes.url_helpers.rails_blob_url(file.variant(resize_to_limit: [400, 400]), host: request.base_url) : nil
         }
+      end
+    else
+      []
+    end
+
+    # Broadcast to the channel using explicit stream name for mobile compatibility
+    ActionCable.server.broadcast("chat_channel_#{channel.id}", {
+      type: 'new_message',
+      message: {
+        id: message.id,
+        content: message.content,
+        user: {
+          id: message.user.id,
+          username: message.user.username,
+          avatar_url: message.user.avatar_url,
+          avatar_initials: message.user.avatar_initials,
+          avatar_color_index: message.user.avatar_color_index
+        },
+        createdAt: message.created_at.iso8601,
+        messageType: message.message_type,
+        files: files
       }
-    )
+    })
   rescue => e
     Rails.logger.error "Failed to broadcast message: #{e.message}"
   end
@@ -223,25 +260,11 @@ class Api::V1::MessagesController < Api::V1::BaseController
     if message.save
       broadcast_message(message, channel)
 
-      # Send push notifications
-      FcmNotificationService.send_message_notification(message, exclude_user: user)
+      # Note: FCM push notifications are now sent via model callback (send_push_notifications)
 
       render json: {
         success: true,
-        message: {
-          id: message.id,
-          content: message.content,
-          user: {
-            id: message.user.id,
-            username: message.user.username,
-            role: message.user.role,
-            created_at: message.user.created_at&.iso8601
-          },
-          channel_id: channel.id,
-          created_at: message.created_at.iso8601,
-          message_type: message.message_type || 'chat',
-          files: []
-        }
+        message: serialize_message(message)
       }
     else
       render json: { success: false, error: message.errors.full_messages.join(', ') }, status: :unprocessable_entity
@@ -258,7 +281,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
     return unless ensure_channel_access(channel)
 
     user = current_api_user
-    message = channel.messages.build(user: user, content: params[:caption].presence || 'Attachment')
+    message = channel.messages.build(user: user, content: params[:caption].presence || 'Attachment', message_type: 'api')
 
     if params[:files].present?
       Array(params[:files]).each { |f| message.files.attach(f) }
@@ -266,7 +289,13 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
     if message.save
       broadcast_message(message, channel)
-      render_success({ id: message.id, channel_id: channel.id, files: message.files.map(&:filename) }, 'Media uploaded')
+
+      # Note: FCM push notifications are now sent via model callback (send_push_notifications)
+
+      render json: {
+        success: true,
+        message: serialize_message(message)
+      }
     else
       render_error(message.errors.full_messages.join(', '))
     end
@@ -288,8 +317,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
     if message.save
       broadcast_message(message, channel)
 
-      # Send push notifications to DM recipient
-      FcmNotificationService.send_direct_message_notification(message, target)
+      # Note: FCM push notifications are now sent via model callback (send_push_notifications)
 
       render_success({ id: message.id, channel_id: channel.id }, 'DM sent')
     else
@@ -299,6 +327,47 @@ class Api::V1::MessagesController < Api::V1::BaseController
     render_error('User not found', :not_found)
   rescue ActionController::ParameterMissing => e
     render_error("Missing required parameter: #{e.param}")
+  end
+
+  # GET /api/v1/dm/channels
+  def dm_channels
+    user = current_api_user
+
+    # Get all DM channels where user is a member
+    # Use last_message_at column for efficient sorting instead of subquery
+    dm_channels = Channel.dm_channels
+                        .joins(:channel_memberships)
+                        .where(channel_memberships: { user: user })
+                        .includes(channel_memberships: :user)
+                        .order(Arel.sql('last_message_at DESC NULLS LAST'))
+
+    render json: {
+      channels: dm_channels.map do |c|
+        other_user = c.other_user(user)
+        last_message = c.messages.order(:created_at).last
+
+        {
+          id: c.id,
+          name: other_user&.username || "Unknown User", # Show as other person's name
+          description: nil, # DMs don't need descriptions
+          type: 'dm', # Must match iOS ChannelType.directMessage raw value
+          member_count: c.member_count,
+          online_member_count: c.members.where(is_online: true).count,
+          last_message: last_message ? {
+            id: last_message.id,
+            content: last_message.content,
+            created_at: last_message.created_at.iso8601,
+            user: {
+              id: last_message.user.id,
+              username: last_message.user.username
+            }
+          } : nil,
+          unread_count: c.unread_count_for(user),
+          is_member: true, # Always true for DMs
+          created_at: c.created_at&.iso8601
+        }
+      end
+    }
   end
 
   # POST /api/v1/dm/start
@@ -341,5 +410,24 @@ class Api::V1::MessagesController < Api::V1::BaseController
       ch.add_member(b)
       ch
     end
+  end
+
+  # Scope check helpers
+
+  def require_message_read_scope
+    require_scope('user:messages', 'channel:*:read')
+  end
+
+  def require_message_write_scope
+    # Allow user:messages, bot:post, or channel:*:write scopes
+    require_scope('user:messages', 'bot:post', 'channel:*:write')
+  end
+
+  def require_non_bot_for_dm
+    require_non_bot_token && require_scope('user:messages')
+  end
+
+  def require_non_bot_for_delete
+    require_non_bot_token && require_scope('user:messages')
   end
 end

@@ -69,7 +69,7 @@
     <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold text-gray-900">System checklist</h2>
-        <%= link_to 'View integrations', admin_integrations_path, class: 'text-sm text-blue-600 hover:text-blue-700' %>
+        <%= link_to 'API Settings', edit_admin_settings_path(anchor: 'api'), class: 'text-sm text-blue-600 hover:text-blue-700' %>
       </div>
       <ul class="space-y-3 text-sm text-gray-700">
         <li class="flex items-start gap-3">
@@ -92,7 +92,7 @@
             <div>
               <p class="font-medium">Default admin credentials detected</p>
               <p class="text-xs text-gray-500">Rotate the bootstrap password and delete the credentials file for security.</p>
-              <%= link_to 'View credentials file', admin_admin_credentials_path, class: 'mt-2 inline-flex text-sm text-blue-600 hover:text-blue-700' %>
+              <%= link_to 'View credentials file', admin_credentials_path, class: 'mt-2 inline-flex text-sm text-blue-600 hover:text-blue-700' %>
             </div>
           </li>
         <% else %>
@@ -110,12 +110,12 @@
     <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick actions</h2>
       <div class="space-y-3 text-sm">
-        <%= link_to admin_tokens_path(anchor: 'create-token'), class: 'quick-action-link' do %>
+        <%= link_to admin_bots_path(tab: 'tokens'), class: 'quick-action-link' do %>
           <span>Generate API token</span>
           <span class="quick-action-icon">→</span>
         <% end %>
         <%= link_to admin_bots_path, class: 'quick-action-link' do %>
-          <span>Review automation bots</span>
+          <span>Manage automations</span>
           <span class="quick-action-icon">→</span>
         <% end %>
         <%= link_to admin_users_path, class: 'quick-action-link' do %>
@@ -134,10 +134,8 @@
     <h2 class="text-lg font-semibold text-gray-900 mb-4">Helpful links</h2>
     <div class="flex flex-wrap gap-3 text-sm text-gray-600">
       <%= link_to 'User directory', admin_users_path, class: 'chip-link' %>
-      <%= link_to 'Bots & automations', admin_bots_path, class: 'chip-link' %>
-      <%= link_to 'Integrations', admin_integrations_path, class: 'chip-link' %>
+      <%= link_to 'Automations', admin_bots_path, class: 'chip-link' %>
       <%= link_to 'Server settings', edit_admin_settings_path, class: 'chip-link' %>
-      <%= link_to 'API tokens', admin_tokens_path, class: 'chip-link' %>
     </div>
   </div>
 </div>

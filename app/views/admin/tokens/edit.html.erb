@@ -1,0 +1,128 @@
+<%= render 'admin/header' %>
+
+<div class="w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pb-24">
+  <div class="mb-6">
+    <%= link_to admin_bots_path(tab: 'tokens'), class: "inline-flex items-center text-sm text-gray-500 hover:text-gray-700" do %>
+      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Back to tokens
+    <% end %>
+  </div>
+
+  <section class="rounded-xl border border-gray-200 bg-white shadow-sm p-6">
+    <h1 class="text-xl font-semibold text-gray-900 mb-6">Edit Token: <%= @token.name %></h1>
+
+    <%= form_with model: @token, url: admin_token_path(@token), method: :patch, class: "space-y-6" do |f| %>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- Token name -->
+        <div>
+          <%= f.label :name, 'Token name', class: "block text-sm font-medium text-gray-700" %>
+          <%= f.text_field :name, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
+        </div>
+
+        <!-- Token type -->
+        <div>
+          <%= f.label :token_type, 'Token type', class: "block text-sm font-medium text-gray-700" %>
+          <%= f.select :token_type, [['Standard', 'user'], ['Admin', 'admin'], ['Bot/Integration', 'bot']], {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" %>
+        </div>
+
+        <!-- Expiration -->
+        <div>
+          <%= f.label :expires_at, 'Expires (optional)', class: "block text-sm font-medium text-gray-700" %>
+          <%= f.datetime_local_field :expires_at, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" %>
+        </div>
+      </div>
+
+      <!-- Scope selection -->
+      <fieldset class="border border-gray-200 rounded-lg p-4">
+        <legend class="text-sm font-medium text-gray-700 px-2">Permissions (leave empty for full access)</legend>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 mt-2">
+          <!-- User scopes -->
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">User Access</p>
+            <label class="flex items-center gap-2 text-sm">
+              <%= check_box_tag 'api_token[scopes][]', 'user:profile', @token.scopes&.include?('user:profile'), class: "rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+              Profile access
+            </label>
+            <label class="flex items-center gap-2 text-sm mt-1">
+              <%= check_box_tag 'api_token[scopes][]', 'user:channels', @token.scopes&.include?('user:channels'), class: "rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+              Channel list
+            </label>
+            <label class="flex items-center gap-2 text-sm mt-1">
+              <%= check_box_tag 'api_token[scopes][]', 'user:messages', @token.scopes&.include?('user:messages'), class: "rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+              Read/write messages
+            </label>
+          </div>
+
+          <!-- Channel scopes -->
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Channel Access</p>
+            <label class="flex items-center gap-2 text-sm">
+              <%= check_box_tag 'api_token[scopes][]', 'channel:*:read', @token.scopes&.include?('channel:*:read'), class: "rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+              Read all channels
+            </label>
+            <label class="flex items-center gap-2 text-sm mt-1">
+              <%= check_box_tag 'api_token[scopes][]', 'channel:*:write', @token.scopes&.include?('channel:*:write'), class: "rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+              Write to all channels
+            </label>
+            <label class="flex items-center gap-2 text-sm mt-1">
+              <%= check_box_tag 'api_token[scopes][]', 'bot:post', @token.scopes&.include?('bot:post'), class: "rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+              Bot: post only
+            </label>
+          </div>
+
+          <!-- Admin scopes -->
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Admin Access</p>
+            <label class="flex items-center gap-2 text-sm">
+              <%= check_box_tag 'api_token[scopes][]', 'admin:*', @token.scopes&.include?('admin:*'), class: "rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+              Full admin
+            </label>
+            <label class="flex items-center gap-2 text-sm mt-1">
+              <%= check_box_tag 'api_token[scopes][]', 'admin:users', @token.scopes&.include?('admin:users'), class: "rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+              Manage users
+            </label>
+            <label class="flex items-center gap-2 text-sm mt-1">
+              <%= check_box_tag 'api_token[scopes][]', 'admin:tokens', @token.scopes&.include?('admin:tokens'), class: "rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+              Manage tokens
+            </label>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Channel-specific access -->
+      <% if @channels.any? %>
+        <fieldset class="border border-gray-200 rounded-lg p-4">
+          <legend class="text-sm font-medium text-gray-700 px-2">Channel-specific access (optional)</legend>
+          <p class="text-xs text-gray-500 mb-3">Restrict this token to specific channels. Leave unchecked for access based on scopes above.</p>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <% @channels.each do |channel| %>
+              <% assignment = @token.token_channel_assignments.find_by(channel: channel) %>
+              <div class="flex items-center gap-2 p-2 rounded border border-gray-100 bg-gray-50">
+                <%= check_box_tag 'channel_ids[]', channel.id, assignment.present?, class: "rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
+                <span class="text-sm font-medium text-gray-700">#<%= channel.name %></span>
+                <%= select_tag "channel_permissions[#{channel.id}]",
+                    options_for_select([['Read', 'read'], ['Write', 'write'], ['Manage', 'manage']], assignment&.permission || 'read'),
+                    class: "ml-auto text-xs rounded border-gray-300 focus:border-blue-500 focus:ring-blue-500" %>
+              </div>
+            <% end %>
+          </div>
+        </fieldset>
+      <% end %>
+
+      <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+        <div class="text-sm text-gray-500">
+          Created: <%= @token.created_at.strftime('%Y-%m-%d %H:%M') %>
+          <% if @token.last_used_at %>
+            | Last used: <%= @token.last_used_at.strftime('%Y-%m-%d %H:%M') %>
+          <% end %>
+        </div>
+        <div class="flex gap-3">
+          <%= link_to "Cancel", admin_bots_path(tab: 'tokens'), class: "inline-flex items-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200" %>
+          <%= f.submit "Save changes", class: "inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 cursor-pointer" %>
+        </div>
+      </div>
+    <% end %>
+  </section>
+</div>

@@ -3,7 +3,7 @@
     <h3 class="text-sm font-semibold text-gray-900">Members (<%= channel.member_count %>)</h3>
   </div>
   <ul class="divide-y divide-gray-100 text-sm">
-    <% channel.members.order(:username).each do |member| %>
+    <% channel.members.includes(:avatar_attachment).order(:username).each do |member| %>
       <li class="flex items-center gap-3 px-4 py-2">
         <%= avatar_for(member, size: 'h-8 w-8') %>
         <div class="flex-1 min-w-0">

@@ -21,13 +21,11 @@ class PresenceChannel < ApplicationCable::Channel
     channel_id = data['channel_id']
     return unless channel_id.present? && current_user
 
-    # Broadcast typing event to specific channel
-    ActionCable.server.broadcast("channel_#{channel_id}", {
+    # Broadcast typing event to TypingChannel stream (typing:#{channel_id})
+    ActionCable.server.broadcast("typing:#{channel_id}", {
       type: 'typing',
-      user: {
-        id: current_user.id,
-        username: current_user.username
-      },
+      username: current_user.username,
+      typing: true,
       timestamp: Time.current.iso8601
     })
   end
@@ -36,13 +34,11 @@ class PresenceChannel < ApplicationCable::Channel
     channel_id = data['channel_id']
     return unless channel_id.present? && current_user
 
-    # Broadcast stop typing event to specific channel
-    ActionCable.server.broadcast("channel_#{channel_id}", {
+    # Broadcast stop typing event to TypingChannel stream (typing:#{channel_id})
+    ActionCable.server.broadcast("typing:#{channel_id}", {
       type: 'stop_typing',
-      user: {
-        id: current_user.id,
-        username: current_user.username
-      },
+      username: current_user.username,
+      typing: false,
       timestamp: Time.current.iso8601
     })
   end

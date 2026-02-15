@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <title><%= content_for(:title) || Setting.fetch(:site_name, 'HomeChat') %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,6 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <%= action_cable_meta_tag %>
 
     <%= yield :head %>
 
@@ -35,21 +36,74 @@
       </div>
     <% end %>
     <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
-      <script>
+      <%= javascript_tag nonce: true do %>
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('<%= pwa_service_worker_path %>') }
-      </script>
+      <% end %>
     <% end %>
     <% if logged_in? %>
       <span data-current-username data-current-username="<%= current_user.username %>" class="hidden"></span>
+
+      <%# Command Palette - Cmd+K quick switcher %>
+      <% palette_channels = (@sidebar_my_channels || []).map { |c| { id: c.id, name: c.name, url: channel_path(c), type: c.channel_type } } +
+                            (@sidebar_dm_channels || []).map { |c| { id: c.id, name: c.other_user(current_user)&.username || c.name, url: channel_path(c), type: 'dm' } } %>
+      <div data-controller="command-palette" data-command-palette-channels-value="<%= palette_channels.to_json %>">
+        <!-- Backdrop -->
+        <div data-command-palette-target="backdrop" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50" data-action="click->command-palette#close"></div>
+
+        <!-- Modal -->
+        <div data-command-palette-target="modal" class="hidden fixed inset-0 z-50 items-start justify-center pt-[15vh] px-4">
+          <div class="w-full max-w-lg bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden" role="dialog" aria-modal="true" aria-label="Quick switcher">
+            <!-- Search Input -->
+            <div class="px-4 py-3 border-b border-gray-200">
+              <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input type="text"
+                       data-command-palette-target="input"
+                       data-action="input->command-palette#search keydown->command-palette#handleInputKeydown"
+                       class="flex-1 text-base text-gray-900 placeholder-gray-500 bg-transparent border-0 focus:outline-none focus:ring-0"
+                       placeholder="Search channels..."
+                       autocomplete="off"
+                       spellcheck="false">
+                <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-500 bg-gray-100 rounded">
+                  esc
+                </kbd>
+              </div>
+            </div>
+
+            <!-- Results -->
+            <div data-command-palette-target="results" class="max-h-[50vh] overflow-y-auto">
+              <!-- Results rendered dynamically -->
+            </div>
+
+            <!-- Footer hint -->
+            <div class="px-4 py-2 border-t border-gray-100 bg-gray-50 text-xs text-gray-500 flex items-center justify-between">
+              <span>
+                <kbd class="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-gray-600">↑↓</kbd>
+                navigate
+              </span>
+              <span>
+                <kbd class="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-gray-600">↵</kbd>
+                open
+              </span>
+              <span class="hidden sm:inline">
+                <kbd class="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-gray-600">esc</kbd>
+                close
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     <% end %>
     <%# Global flashes removed from full-width; shown inside main content below %>
 
     <div class="relative flex min-h-dvh md:h-dvh md:overflow-hidden bg-gray-100" data-controller="sidebar">
-      <!-- Backdrop (mobile) -->
-      <div class="fixed inset-0 bg-black/40 z-30 hidden md:hidden" data-sidebar-target="backdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
+      <!-- Backdrop (mobile) - with blur effect -->
+      <div class="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 hidden md:hidden transition-opacity duration-200" data-sidebar-target="backdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
 
-      <!-- Sidebar -->
-      <aside class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full transition-transform duration-200 ease-in-out bg-gray-900 text-white flex flex-col md:relative md:translate-x-0 md:transform-none md:flex-shrink-0 md:w-64 md:h-dvh md:overflow-y-auto" data-sidebar-target="panel" data-sidebar-panel aria-label="Primary">
+      <!-- Sidebar - with spring animation -->
+      <aside class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full transition-transform duration-300 ease-spring bg-gray-50 border-r border-gray-200 text-gray-900 flex flex-col shadow-xl md:relative md:translate-x-0 md:transform-none md:flex-shrink-0 md:w-64 md:h-dvh md:overflow-y-auto md:shadow-none" data-sidebar-target="panel" data-sidebar-panel aria-label="Primary">
         <%= render "shared/channels_sidebar" %>
       </aside>
 
@@ -60,7 +114,7 @@
         <% scroll_padding = content_for?(:scroll_padding) ? " #{content_for(:scroll_padding).strip}" : '' %>
         <main id="main-content" class="flex-1 flex flex-col min-h-0 bg-white<%= scroll_class %><%= top_pad %><%= scroll_padding %>" tabindex="-1">
           <% if flash[:notice] %>
-            <div data-controller="flash" data-flash-timeout-value="4000" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-green-200 bg-green-50 dark:bg-green-800 opacity-100">
+            <div role="status" aria-live="polite" data-controller="flash" data-flash-timeout-value="4000" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-green-200 bg-green-50 dark:bg-green-800 opacity-100">
               <div class="flex items-center mx-auto">
                 <p class="flex items-center text-sm font-normal text-green-800 dark:text-green-300">
                   <span class="inline-flex p-1 me-3 bg-green-200 rounded-full w-6 h-6 dark:bg-green-600">
@@ -79,7 +133,7 @@
             </div>
           <% end %>
           <% if flash[:alert] %>
-            <div data-controller="flash" data-flash-timeout-value="5000" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-red-200 bg-red-50 dark:bg-red-800 opacity-100">
+            <div role="alert" aria-live="assertive" data-controller="flash" data-flash-timeout-value="5000" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-red-200 bg-red-50 dark:bg-red-800 opacity-100">
               <div class="flex items-center mx-auto">
                 <p class="flex items-center text-sm font-normal text-red-800 dark:text-red-300">
                   <span class="inline-flex p-1 me-3 bg-red-200 rounded-full w-6 h-6 dark:bg-red-600">

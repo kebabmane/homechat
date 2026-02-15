@@ -220,4 +220,33 @@ class BotTest < ActiveSupport::TestCase
 
     assert_not bot.verify_webhook_signature(payload, signature_header)
   end
+
+  test "ai bots require instructions" do
+    Setting.set(:litellm_default_model, 'gpt-test')
+    bot = Bot.new(name: 'helper_bot', bot_type: 'ai')
+
+    assert_not bot.valid?
+    assert_includes bot.errors[:instructions], "can't be blank"
+  ensure
+    Setting.where(key: 'litellm_default_model').delete_all
+  end
+
+  test "ai bots use server default model when none provided" do
+    Setting.set(:litellm_default_model, 'gpt-test')
+    bot = Bot.create!(name: 'helper_bot', bot_type: 'ai', instructions: 'Be helpful.')
+
+    assert_equal 'gpt-test', bot.model
+  ensure
+    Setting.where(key: 'litellm_default_model').delete_all
+  end
+
+  test "ai bots create identity user with matching handle" do
+    Setting.set(:litellm_default_model, 'gpt-test')
+    bot = Bot.create!(name: 'helper_bot', bot_type: 'ai', instructions: 'Assist the household.')
+
+    assert_not_nil bot.identity_user
+    assert_equal 'helper_bot', bot.identity_user.username
+  ensure
+    Setting.where(key: 'litellm_default_model').delete_all
+  end
 end
