@@ -1,6 +1,14 @@
 <% content_for :no_top_padding, true %>
 <% content_for :lock_main_scroll, true %>
-<div class="flex flex-col h-full min-h-0" data-controller="message-list" data-channel-id="<%= @channel.id %>" data-message-list-autoscroll-value="true" data-message-list-current-user-value="<%= current_user.username %>">
+<div class="flex flex-col h-full min-h-0"
+     data-controller="message-list e2ee"
+     data-channel-id="<%= @channel.id %>"
+     data-message-list-autoscroll-value="true"
+     data-message-list-current-user-value="<%= current_user.username %>"
+     data-message-list-channel-type-value="<%= @channel.channel_type %>"
+     data-e2ee-channel-id-value="<%= @channel.id %>"
+     data-e2ee-channel-type-value="<%= @channel.channel_type %>"
+     data-e2ee-current-user-id-value="<%= current_user.id %>">
   <!-- Channel Header -->
   <div class="sticky top-0 z-20 px-4 sm:px-6 py-3 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm transition-all" data-message-list-target="header" role="region" aria-label="Channel header">
     <div class="flex flex-wrap items-center justify-between gap-4">
@@ -139,7 +147,7 @@
         <% end %>
       </div>
     <% end %>
-    <%= form_with model: [ @channel, Message.new ], local: true, class: "px-4 sm:px-6", data: { controller: "mentions upload", mentions_users_value: @channel.members.order(:username).pluck(:username).to_json, action: "turbo:submit-end->message-list#afterSubmit" } do |form| %>
+    <%= form_with model: [ @channel, Message.new ], local: true, class: "px-4 sm:px-6", data: { controller: "mentions upload", mentions_users_value: @channel.members.order(:username).pluck(:username).to_json, action: "submit->e2ee#beforeSubmit turbo:submit-end->message-list#afterSubmit" } do |form| %>
       <div class="relative flex flex-wrap items-end gap-2 sm:flex-nowrap sm:gap-3">
         <% message_placeholder = @channel.dm? ? "Message @#{@channel.members.where.not(id: current_user.id).first&.username || 'user'}" : "Message ##{@channel.name}" %>
         <%= form.text_area :content,
@@ -150,12 +158,21 @@
             style: "min-height: 44px;",
             data: { message_list_target: "textarea", mentions_target: "textarea", upload_target: "textarea", action: "input->message-list#autoResize input->mentions#onInput keydown.enter->mentions#maybeAccept keydown.enter->message-list#submit" } %>
 
-        <label class="cursor-pointer text-gray-500 hover:text-gray-700 p-3 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors focus-within:ring-2 focus-within:ring-blue-500" title="Attach files" aria-label="Attach files" style="min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center;">
-          <svg class="w-6 h-6 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15a4 4 0 01-4 4H7a5 5 0 010-10h12a3 3 0 110 6H9" />
-          </svg>
-          <%= form.file_field :files, multiple: true, class: "hidden", direct_upload: true, "aria-label": "Choose files to attach", data: { upload_target: 'input', action: 'change->upload#change' } %>
-        </label>
+        <% unless @channel.private? || @channel.dm? %>
+          <label class="cursor-pointer text-gray-500 hover:text-gray-700 p-3 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors focus-within:ring-2 focus-within:ring-blue-500" title="Attach files" aria-label="Attach files" style="min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center;">
+            <svg class="w-6 h-6 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15a4 4 0 01-4 4H7a5 5 0 010-10h12a3 3 0 110 6H9" />
+            </svg>
+            <%= form.file_field :files, multiple: true, class: "hidden", direct_upload: true, "aria-label": "Choose files to attach", data: { upload_target: 'input', action: 'change->upload#change' } %>
+          </label>
+        <% end %>
+
+        <%= form.hidden_field :content_encoding, value: '', data: { e2ee_target: 'contentEncoding' } %>
+        <%= form.hidden_field :encrypted_content, value: '', data: { e2ee_target: 'encryptedContent' } %>
+        <%= form.hidden_field :content_hmac, value: '', data: { e2ee_target: 'contentHmac' } %>
+        <%= form.hidden_field :sender_device_id, value: '', data: { e2ee_target: 'deviceId' } %>
+        <%= form.hidden_field :e2ee_version, value: '', data: { e2ee_target: 'version' } %>
+        <%= form.hidden_field :sender_key_fingerprint, value: '', data: { e2ee_target: 'senderKeyFingerprint' } %>
 
         <%= form.submit "Send", class: "btn-press inline-flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all cursor-pointer", style: "min-height: 44px;", data: { message_list_target: "sendButton" } %>
       </div>

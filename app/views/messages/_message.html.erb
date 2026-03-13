@@ -3,6 +3,12 @@
      data-message-id="<%= message.id %>"
      data-message-username="<%= message.user.username.downcase %>"
      data-message-user-id="<%= message.user_id %>"
+     data-message-content-encoding="<%= message.content_encoding || 'plaintext' %>"
+     data-message-encrypted-content="<%= message.encrypted_content.to_s %>"
+     data-message-content-hmac="<%= message.content_hmac.to_s %>"
+     data-message-sender-device-id="<%= message.try(:sender_device_id).to_s %>"
+     data-message-sender-key-fingerprint="<%= message.try(:sender_key_fingerprint).to_s %>"
+     data-message-e2ee-version="<%= message.try(:e2ee_version).to_s %>"
      data-message-grouped="<%= grouped %>">
 
   <% unless grouped %>
@@ -21,7 +27,11 @@
     <% end %>
 
     <div class="message-text bg-gray-100 text-gray-900 rounded-2xl <%= grouped ? 'rounded-l-md' : 'rounded-bl-md' %> px-4 py-2.5 shadow-sm text-[15px] leading-relaxed break-words">
-      <div class="message-body"><%= render_message_body(message.content).html_safe %></div>
+      <% if message.e2ee? %>
+        <div class="message-body" data-e2ee-body="true">Encrypted message</div>
+      <% else %>
+        <div class="message-body"><%= render_message_body(message.content).html_safe %></div>
+      <% end %>
     </div>
 
     <div class="message-time flex items-center gap-1 mt-0.5 ml-1">
@@ -30,7 +40,7 @@
       </span>
     </div>
 
-    <% if message.files.attached? || message.content.match?(URI::DEFAULT_PARSER.make_regexp) %>
+    <% if !message.e2ee? && (message.files.attached? || message.content.match?(URI::DEFAULT_PARSER.make_regexp)) %>
       <div class="message-attachments mt-1.5 pl-1">
         <%= render_link_previews(message) %>
         <% if message.files.attached? %>

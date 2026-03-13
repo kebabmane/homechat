@@ -10,7 +10,8 @@ export default class extends Controller {
     autoscroll: { type: Boolean, default: true },
     autofocus: { type: Boolean, default: true },
     currentUser: String,
-    channelId: String
+    channelId: String,
+    channelType: String
   }
 
   connect() {
@@ -762,6 +763,11 @@ export default class extends Controller {
   submitOffline(event) {
     if (this._isOnline) return // Let normal submission proceed
 
+    if (this._e2eeRequiredChannel()) {
+      this._showSyncNotification('Offline queue is disabled for encrypted channels')
+      return
+    }
+
     event.preventDefault()
     event.stopPropagation()
 
@@ -816,5 +822,10 @@ export default class extends Controller {
     const div = document.createElement('div')
     div.textContent = text
     return div.innerHTML
+  }
+
+  _e2eeRequiredChannel() {
+    const type = this.hasChannelTypeValue ? this.channelTypeValue : this.element?.dataset?.channelType
+    return type === 'private' || type === 'dm'
   }
 }
