@@ -29,17 +29,37 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @channel, message.channel
   end
 
-  test "should create message in private channel for member" do
+  test "should create e2ee message in private channel for member" do
     sign_in_as(@user)
 
     assert_difference("Message.count") do
-      post channel_messages_path(@private_channel), params: { message: { content: "Private message" } }
+      post channel_messages_path(@private_channel), params: {
+        message: {
+          content: "ignored",
+          content_encoding: "e2ee",
+          encrypted_content: "{\"v\":\"1\",\"iv\":\"abc\",\"ciphertext\":\"def\"}",
+          content_hmac: "hmac-private",
+          e2ee_version: "1",
+          sender_device_id: "device-web-test"
+        }
+      }
     end
 
     assert_redirected_to channel_path(@private_channel)
     message = Message.last
-    assert_equal "Private message", message.content
+    assert_equal E2eePolicy::PLACEHOLDER_CONTENT, message.content
+    assert_equal "e2ee", message.content_encoding
     assert_equal @private_channel, message.channel
+  end
+
+  test "should reject plaintext message in private channel for member" do
+    sign_in_as(@user)
+
+    assert_no_difference("Message.count") do
+      post channel_messages_path(@private_channel), params: { message: { content: "Private plaintext" } }
+    end
+
+    assert_response :upgrade_required
   end
 
   test "should not create message in private channel for non-member" do
@@ -185,6 +205,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     end
 
     message = Message.last
-    assert_equal xss_content, message.content
+    # HTML tags are stripped; inner text content is preserved
+    assert_equal "alert('XSS')", message.content
   end
 end

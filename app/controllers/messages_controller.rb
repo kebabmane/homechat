@@ -15,6 +15,15 @@ class MessagesController < ApplicationController
     end
 
     begin
+      payload = message_params.to_h.with_indifferent_access
+      if (error = E2eePolicy.validate_enforced_write(channel: @channel, payload:, request:, allow_files: false))
+        respond_to do |format|
+          format.html { redirect_to @channel, alert: error[:message], status: error[:status] }
+          format.json { render json: { success: false, error: error[:message], code: error[:code] }, status: error[:status] }
+        end
+        return
+      end
+
       @message = @channel.messages.build(message_params)
       @message.user = current_user
 
@@ -42,6 +51,16 @@ class MessagesController < ApplicationController
   end
 
   def message_params
-    params.require(:message).permit(:content, :rich_content, files: [])
+    params.require(:message).permit(
+      :content,
+      :rich_content,
+      :content_encoding,
+      :encrypted_content,
+      :content_hmac,
+      :sender_key_fingerprint,
+      :sender_device_id,
+      :e2ee_version,
+      files: []
+    )
   end
 end

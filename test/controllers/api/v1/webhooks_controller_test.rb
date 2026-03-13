@@ -94,6 +94,23 @@ class Api::V1::WebhooksControllerTest < ActionDispatch::IntegrationTest
     assert channel.messages.where("content LIKE ?", "%Hello from webhook test%").exists?
   end
 
+  test "should block webhook bot posting into private e2ee-enforced channels" do
+    private_channel = Channel.create!(name: 'private-bot-block', channel_type: 'private', creator: create_user(username: "owner_#{SecureRandom.hex(2)}"))
+
+    payload = {
+      action: 'send_message',
+      message: 'Should be blocked',
+      room_id: private_channel.name
+    }.to_json
+
+    signature = generate_signature(payload, @bot.webhook_secret)
+    post_raw_json(@webhook_url, payload, signature)
+
+    assert_response :forbidden
+    response_data = JSON.parse(response.body)
+    assert_equal E2eePolicy::BOT_FORBIDDEN_CODE, response_data['code']
+  end
+
   test "should handle status_update action with valid signature" do
     payload = {
       action: 'status_update',

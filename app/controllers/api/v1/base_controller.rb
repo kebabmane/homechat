@@ -1,8 +1,10 @@
 class Api::V1::BaseController < ApplicationController
+  include ApiResponse
+
   protect_from_forgery with: :null_session
   skip_before_action :verify_authenticity_token
   before_action :authenticate_api_request
-  
+
   private
 
   def authenticate_api_request
@@ -22,6 +24,14 @@ class Api::V1::BaseController < ApplicationController
     # valid_token? now returns the ApiToken record (not user) to support scope checking
     @current_api_token = token_string ? ApiToken.valid_token?(token_string) : nil
 
+    if @current_api_token.nil? && allow_session_api_auth?
+      session_user = current_user
+      if session_user
+        @current_api_user = session_user
+        return
+      end
+    end
+
     unless @current_api_token
       Rails.logger.warn "API Authentication failed - Token: #{token_string ? 'present but invalid' : 'missing'}"
       render json: { error: 'Unauthorized - Invalid or missing API token' }, status: :unauthorized
@@ -37,6 +47,10 @@ class Api::V1::BaseController < ApplicationController
 
   def current_api_user
     @current_api_user
+  end
+
+  def allow_session_api_auth?
+    false
   end
 
   # Check if the current token has any of the specified scopes
@@ -95,15 +109,24 @@ class Api::V1::BaseController < ApplicationController
     User.find_by(username: 'system')
   end
   
+  # Legacy helper - delegates to ApiResponse concern
+  # Kept for backward compatibility with existing code
   def render_error(message, status = :bad_request)
-    render json: { error: message }, status: status
+    render_api_error(message, status: status)
   end
-  
+
+  # Legacy helper - delegates to ApiResponse concern
+  # Kept for backward compatibility with existing code
   def render_success(data = {}, message = nil)
-    response = { success: true }
-    response[:message] = message if message
-    response[:data] = data unless data.empty?
-    render json: response
+    if message.present? && data.empty?
+      render_success_message(message)
+    elsif message.present?
+      render_success_message(message, data: data)
+    elsif data.empty?
+      render json: { success: true }
+    else
+      render_data(data)
+    end
   end
 
   # Legacy method - now uses scope-aware channel access check
@@ -132,9 +155,10 @@ class Api::V1::BaseController < ApplicationController
 
   # Helper to serialize a message for API response
   def serialize_message(message)
+    receipts = message.message_receipts
     {
       id: message.id,
-      content: message.content,
+      content: message.transport_content,
       user: {
         id: message.user.id,
         username: message.user.username,
@@ -144,7 +168,17 @@ class Api::V1::BaseController < ApplicationController
       channel_id: message.channel_id,
       created_at: message.created_at.iso8601,
       message_type: message.message_type || 'chat',
-      files: serialize_files(message)
+      files: serialize_files(message),
+      content_hmac: message.content_hmac,
+      content_encoding: message.content_encoding || 'plaintext',
+      encrypted_content: message.encrypted_content,
+      sender_device_id: message.respond_to?(:sender_device_id) ? message.sender_device_id : nil,
+      sender_key_fingerprint: message.respond_to?(:sender_key_fingerprint) ? message.sender_key_fingerprint : nil,
+      e2ee_version: message.respond_to?(:e2ee_version) ? message.e2ee_version : nil,
+      receipts: {
+        delivered_count: receipts.where(status: MessageReceipt.statuses[:delivered]).count,
+        read_count: receipts.where(status: MessageReceipt.statuses[:read]).count
+      }
     }
   end
 end

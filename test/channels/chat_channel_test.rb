@@ -14,7 +14,7 @@ class ChatChannelTest < ActionCable::Channel::TestCase
     subscribe channel_id: @channel.id
 
     assert subscription.confirmed?
-    assert_has_stream_for @channel
+    assert_has_stream "chat_channel_#{@channel.id}"
   end
 
   test "subscribes to private channel as member" do
@@ -24,7 +24,7 @@ class ChatChannelTest < ActionCable::Channel::TestCase
     subscribe channel_id: private_channel.id
 
     assert subscription.confirmed?
-    assert_has_stream_for private_channel
+    assert_has_stream "chat_channel_#{private_channel.id}"
   end
 
   test "rejects subscription to private channel without membership" do
@@ -65,7 +65,7 @@ class ChatChannelTest < ActionCable::Channel::TestCase
     subscribe channel_id: @channel.id
 
     # Verify broadcasts are made (may broadcast from both channel and model)
-    assert_changes -> { broadcasts(ChatChannel.broadcasting_for(@channel)).size }, from: 0 do
+    assert_changes -> { broadcasts("chat_channel_#{@channel.id}").size }, from: 0 do
       perform :speak, message: "Broadcast test"
     end
   end
@@ -93,6 +93,41 @@ class ChatChannelTest < ActionCable::Channel::TestCase
     # This should be rejected at subscription level
     subscribe channel_id: private_channel.id
     assert subscription.rejected?
+  end
+
+  test "speak rejects plaintext in private channels" do
+    private_channel = Channel.create!(name: "private-e2ee-#{SecureRandom.hex(2)}", channel_type: "private", creator: @user)
+    private_channel.add_member(@user)
+
+    subscribe channel_id: private_channel.id
+    assert subscription.confirmed?
+
+    assert_no_difference("Message.count") do
+      perform :speak, message: "private plaintext"
+    end
+  end
+
+  test "speak accepts e2ee payload in private channels" do
+    private_channel = Channel.create!(name: "private-e2ee-ok-#{SecureRandom.hex(2)}", channel_type: "private", creator: @user)
+    private_channel.add_member(@user)
+
+    subscribe channel_id: private_channel.id
+    assert subscription.confirmed?
+
+    assert_difference("Message.count") do
+      perform :speak,
+              message: "ignored",
+              content_encoding: "e2ee",
+              encrypted_content: "{\"v\":\"1\",\"iv\":\"abc\",\"ciphertext\":\"def\"}",
+              content_hmac: "hmac",
+              device_id: "device-chat-test",
+              e2ee_version: "1",
+              sender_key_fingerprint: "fingerprint-1"
+    end
+
+    message = Message.last
+    assert_equal "e2ee", message.content_encoding
+    assert_equal E2eePolicy::PLACEHOLDER_CONTENT, message.content
   end
 
   test "unsubscribes cleanly" do

@@ -29,13 +29,38 @@ class ChatChannel < ApplicationCable::Channel
     return unless @channel
     return unless channel_accessible?
 
-    content = data['message']
-    return if content.blank?
+    if E2eePolicy.required_for_channel?(@channel)
+      unless E2eePolicy.valid_e2ee_headers?(params: data)
+        transmit({ type: 'error', code: E2eePolicy::LEGACY_UPGRADE_ERROR_CODE, message: E2eePolicy.e2ee_required_error[:message] })
+        return
+      end
 
-    message = @channel.messages.build(
-      content: content,
+      unless E2eePolicy.valid_e2ee_payload?(data)
+        transmit({ type: 'error', code: E2eePolicy::LEGACY_UPGRADE_ERROR_CODE, message: E2eePolicy.e2ee_required_error[:message] })
+        return
+      end
+    end
+
+    content = data['message']
+    return if content.blank? && !E2eePolicy.required_for_channel?(@channel)
+
+    message_attributes = {
+      content: content.to_s,
       user: current_user
-    )
+    }
+
+    if E2eePolicy.required_for_channel?(@channel)
+      message_attributes.merge!(
+        content_encoding: E2eePolicy::REQUIRED_ENCODING,
+        encrypted_content: data['encrypted_content'],
+        content_hmac: data['content_hmac'],
+        sender_device_id: E2eePolicy.device_id_from(params: data),
+        sender_key_fingerprint: data['sender_key_fingerprint'],
+        e2ee_version: E2eePolicy.e2ee_version_from(params: data)
+      )
+    end
+
+    message = @channel.messages.build(message_attributes)
 
     if message.save
       # Broadcast to all subscribers of this channel using explicit stream name
@@ -43,19 +68,53 @@ class ChatChannel < ApplicationCable::Channel
         type: 'new_message',
         message: {
           id: message.id,
-          content: message.content,
+          content: message.transport_content,
+          content_encoding: message.content_encoding || 'plaintext',
+          encrypted_content: message.encrypted_content,
+          content_hmac: message.content_hmac,
+          sender_device_id: message.respond_to?(:sender_device_id) ? message.sender_device_id : nil,
+          sender_key_fingerprint: message.respond_to?(:sender_key_fingerprint) ? message.sender_key_fingerprint : nil,
+          e2ee_version: message.respond_to?(:e2ee_version) ? message.e2ee_version : nil,
           user: {
             id: message.user.id,
             username: message.user.username,
             role: message.user.role
           },
-          channelId: message.channel.id,
-          createdAt: message.created_at.iso8601,
-          messageType: 'chat',
+          channel_id: message.channel.id,
+          created_at: message.created_at.iso8601,
+          message_type: 'chat',
           files: []
         }
       })
     end
+  end
+
+  def receipt(data)
+    return unless @channel
+    return unless channel_accessible?
+
+    message_id = data['message_id']&.to_i
+    status     = data['status']
+    return unless message_id.present? && %w[delivered read].include?(status)
+
+    message = Message.find_by(id: message_id)
+    return unless message&.channel_id == @channel.id
+
+    receipt = MessageReceipt.find_or_initialize_by(message_id: message_id, user: current_user)
+    # Only upgrade status: delivered → read
+    if receipt.new_record? || MessageReceipt.statuses[status] > MessageReceipt.statuses[receipt.status]
+      receipt.status = status
+      receipt.save!
+    end
+
+    ActionCable.server.broadcast("chat_channel_#{@channel.id}", {
+      type: 'receipt',
+      message_id: message_id,
+      user_id: current_user.id,
+      status: status
+    })
+  rescue => e
+    Rails.logger.error "ChatChannel#receipt error: #{e.message}"
   end
 
   private

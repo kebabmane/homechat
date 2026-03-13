@@ -1,4 +1,6 @@
 class Api::V1::WebhooksController < Api::V1::BaseController
+  class E2eeBotPostingForbidden < StandardError; end
+
   skip_before_action :authenticate_api_request, only: [:receive]
   before_action :authenticate_webhook, only: [:receive]
   
@@ -8,7 +10,7 @@ class Api::V1::WebhooksController < Api::V1::BaseController
     webhook_data = JSON.parse(request.body.read).with_indifferent_access
     webhook_id = params[:webhook_id]
     
-    Rails.logger.info "Received webhook #{webhook_id}: #{webhook_data}"
+    Rails.logger.info "Received webhook #{webhook_id} (action=#{webhook_data[:action]})"
     
     # Find the bot associated with this webhook
     bot = Bot.find_by(webhook_id: webhook_id, active: true)
@@ -34,8 +36,13 @@ class Api::V1::WebhooksController < Api::V1::BaseController
       render json: { status: 'ok', message: 'Webhook processed successfully' }
       
     rescue StandardError => e
+      if e.is_a?(E2eeBotPostingForbidden)
+        render_api_error(e.message, status: :forbidden, code: E2eePolicy::BOT_FORBIDDEN_CODE)
+        return
+      end
+
       Rails.logger.error "Webhook processing error: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
+      Rails.logger.error e.backtrace.join("\n") if Rails.env.development?
       render_error('Failed to process webhook', :internal_server_error)
     end
   end
@@ -104,6 +111,7 @@ class Api::V1::WebhooksController < Api::V1::BaseController
     
     # Find or create channel
     channel = find_or_create_channel(room_id)
+    ensure_bot_post_allowed!(channel)
     
     # Create message from bot
     message = channel.messages.build(
@@ -129,6 +137,7 @@ class Api::V1::WebhooksController < Api::V1::BaseController
     # Optionally send status to a dedicated channel
     if status.present?
       channel = find_or_create_channel('bot-status')
+      ensure_bot_post_allowed!(channel)
       message = channel.messages.build(
         user: bot_user(bot),
         content: "🤖 **Bot Status Update**: #{status}",
@@ -151,7 +160,7 @@ class Api::V1::WebhooksController < Api::V1::BaseController
     when 'status'
       respond_to_bot(bot, "Bot #{bot.name} is active", data[:room_id])
     when 'echo'
-      message = args.join(' ')
+      message = args.map { |a| a.to_s.gsub(/[\r\n]/, ' ') }.join(' ').truncate(500)
       respond_to_bot(bot, message, data[:room_id]) if message.present?
     else
       respond_to_bot(bot, "Unknown command: #{command}", data[:room_id])
@@ -166,6 +175,7 @@ class Api::V1::WebhooksController < Api::V1::BaseController
   
   def respond_to_bot(bot, message, room_id = nil)
     channel = find_or_create_channel(room_id || 'home-assistant')
+    ensure_bot_post_allowed!(channel)
     
     response_message = channel.messages.build(
       user: bot_user(bot),
@@ -222,7 +232,10 @@ class Api::V1::WebhooksController < Api::V1::BaseController
       type: 'new_message',
       message: {
         id: message.id,
-        content: message.content,
+        content: message.transport_content,
+        content_encoding: message.content_encoding || 'plaintext',
+        encrypted_content: message.encrypted_content,
+        content_hmac: message.content_hmac,
         user: {
           id: message.user.id,
           username: message.user.username,
@@ -233,8 +246,14 @@ class Api::V1::WebhooksController < Api::V1::BaseController
         createdAt: message.created_at.iso8601,
         messageType: message.message_type || 'bot'
       }
-    })
+      })
   rescue => e
     Rails.logger.error "Failed to broadcast bot message: #{e.message}"
+  end
+
+  def ensure_bot_post_allowed!(channel)
+    return unless E2eePolicy.required_for_channel?(channel)
+
+    raise E2eeBotPostingForbidden, E2eePolicy.bot_forbidden_error[:message]
   end
 end

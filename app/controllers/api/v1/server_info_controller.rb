@@ -17,6 +17,14 @@ class Api::V1::ServerInfoController < Api::V1::BaseController
       ha_ingress: config.home_assistant_mode?,
       nabu_casa_url: config.nabu_casa_url,
       push_enabled: Setting.fcm_configured?,
+      e2ee_enabled: true,
+      e2ee_required_private_dm: true,
+      min_e2ee_version: E2eePolicy::REQUIRED_VERSION,
+      e2ee_capabilities: {
+        channel_scope: E2eePolicy::ENFORCED_CHANNEL_TYPES,
+        legacy_write_blocked: true,
+        bot_posting_blocked: true
+      },
       registration_enabled: registration_enabled?,
       timestamp: Time.current.iso8601
     }.compact
