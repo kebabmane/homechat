@@ -29,18 +29,14 @@ class Bots::DispatcherTest < ActiveSupport::TestCase
     assert_equal [@bot.id, message.id, 'mention'], job[:args]
   end
 
-  test "dispatches responder job for direct messages with bot" do
+  test "does not dispatch responder job for direct messages with bot in e2ee channels" do
     dm_channel = Channel.create!(name: 'dm-alice-helper_bot', channel_type: 'dm', created_by: @user)
     dm_channel.add_member(@user)
     dm_channel.add_member(@bot.identity_user)
 
-    message = nil
-    assert_enqueued_jobs 1, only: Bots::ResponderJob do
-      message = dm_channel.messages.create!(user: @user, content: 'Hello there', message_type: 'chat')
+    assert_no_enqueued_jobs only: Bots::ResponderJob do
+      dm_channel.messages.create!(user: @user, content: 'Hello there', message_type: 'chat')
     end
-
-    job = enqueued_jobs.last
-    assert_equal [@bot.id, message.id, 'direct_message'], job[:args]
   end
 
   test "does not enqueue when no ai bots active" do

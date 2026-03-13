@@ -26,13 +26,12 @@ class FcmNotificationService
 
       notification_data = {
         title: message.channel.name,
-        body: "#{message.user.username}: #{truncate_message(message.content)}",
+        body: "New message in #{message.channel.name}",
         data: {
           type: 'new_message',
           channel_id: message.channel.id.to_s,
           message_id: message.id.to_s,
           username: message.user.username,
-          content: message.content,
           channel_name: message.channel.name
         }
       }
@@ -64,13 +63,12 @@ class FcmNotificationService
 
       notification_data = {
         title: message.user.username,
-        body: truncate_message(message.content),
+        body: "New direct message",
         data: {
           type: 'direct_message',
           channel_id: message.channel.id.to_s,
           message_id: message.id.to_s,
-          username: message.user.username,
-          content: message.content
+          username: message.user.username
         }
       }
 
@@ -83,14 +81,13 @@ class FcmNotificationService
 
       notification_data = {
         title: "#{message.user.username} mentioned you",
-        body: "in ##{message.channel.name}: #{truncate_message(message.content)}",
+        body: "You were mentioned in ##{message.channel.name}",
         data: {
           type: 'mention',
           channel_id: message.channel.id.to_s,
           message_id: message.id.to_s,
           username: message.user.username,
-          channel_name: message.channel.name,
-          content: message.content
+          channel_name: message.channel.name
         }
       }
 
@@ -117,6 +114,7 @@ class FcmNotificationService
       uri = URI(format(FCM_API_URL, project_id))
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
+      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
       http.open_timeout = 10
       http.read_timeout = 10
 
