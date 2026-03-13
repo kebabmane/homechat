@@ -18,24 +18,9 @@ class Api::V1::ChannelsController < Api::V1::BaseController
       # Automatically add creator as member
       channel.add_member(user)
 
-      render json: {
-        success: true,
-        channel: {
-          id: channel.id,
-          name: channel.name,
-          description: channel.description,
-          type: channel.channel_type,
-          member_count: channel.member_count,
-          online_member_count: 1,
-          is_member: true,
-          created_at: channel.created_at&.iso8601
-        }
-      }, status: :created
+      render_resource(:channel, serialize_channel(channel, user, is_member: true, online_count: 1), status: :created)
     else
-      render json: {
-        success: false,
-        error: channel.errors.full_messages.join(', ')
-      }, status: :unprocessable_entity
+      render_model_errors(channel)
     end
   end
 
@@ -87,32 +72,17 @@ class Api::V1::ChannelsController < Api::V1::BaseController
         .group_by(&:channel_id)
     end
 
-    render json: {
-      channels: channels.map do |channel|
-        last_message = last_messages.fetch(channel.id, []).first
+    serialized_channels = channels.map do |channel|
+      last_message = last_messages.fetch(channel.id, []).first
+      serialize_channel(
+        channel, user,
+        is_member: membership_lookup.key?(channel.id),
+        online_count: online_counts[channel.id] || 0,
+        last_message: last_message
+      )
+    end
 
-        {
-          id: channel.id,
-          name: channel.name,
-          description: channel.description,
-          type: channel.channel_type,
-          member_count: channel.member_count,
-          online_member_count: online_counts[channel.id] || 0,
-          last_message: last_message ? {
-            id: last_message.id,
-            content: last_message.content,
-            created_at: last_message.created_at.iso8601,
-            user: {
-              id: last_message.user.id,
-              username: last_message.user.username
-            }
-          } : nil,
-          unread_count: channel.unread_count_for(user),
-          is_member: membership_lookup.key?(channel.id),
-          created_at: channel.created_at&.iso8601
-        }
-      end
-    }
+    render_collection(:channels, serialized_channels)
   end
 
   # POST /api/v1/channels/:id/join
@@ -122,15 +92,15 @@ class Api::V1::ChannelsController < Api::V1::BaseController
 
     if channel.accessible_by?(user)
       if channel.add_member(user)
-        render_success({ message: 'Successfully joined channel' })
+        render_success_message('Successfully joined channel')
       else
-        render_error('Already a member of this channel')
+        render_api_error('Already a member of this channel')
       end
     else
-      render_error('Channel not accessible', :forbidden)
+      render_forbidden('Channel not accessible')
     end
   rescue ActiveRecord::RecordNotFound
-    render_error('Channel not found', :not_found)
+    render_not_found('Channel')
   end
 
   # DELETE /api/v1/channels/:id/leave
@@ -140,12 +110,12 @@ class Api::V1::ChannelsController < Api::V1::BaseController
 
     if channel.member?(user)
       channel.remove_member(user)
-      render_success({ message: 'Successfully left channel' })
+      render_success_message('Successfully left channel')
     else
-      render_error('Not a member of this channel')
+      render_api_error('Not a member of this channel')
     end
   rescue ActiveRecord::RecordNotFound
-    render_error('Channel not found', :not_found)
+    render_not_found('Channel')
   end
 
   # GET /api/v1/channels/:id/members
@@ -155,23 +125,12 @@ class Api::V1::ChannelsController < Api::V1::BaseController
 
     return unless ensure_channel_access(channel)
 
-    members = channel.members.includes([]).order(:username)
-    render json: {
-      members: members.map do |member|
-        {
-          id: member.id,
-          username: member.username,
-          is_online: member.online?,
-          status: member.status,
-          last_seen_at: member.last_seen_at&.iso8601,
-          avatar_url: member.avatar_url,
-          avatar_initials: member.avatar_initials,
-          avatar_color_index: member.avatar_color_index
-        }
-      end
-    }
+    channel_members = channel.members.includes([]).order(:username)
+    serialized_members = channel_members.map { |member| serialize_member(member) }
+
+    render_collection(:members, serialized_members)
   rescue ActiveRecord::RecordNotFound
-    render_error('Channel not found', :not_found)
+    render_not_found('Channel')
   end
 
   # POST /api/v1/channels/:id/mark_as_read
@@ -183,11 +142,53 @@ class Api::V1::ChannelsController < Api::V1::BaseController
 
     if membership
       membership.mark_as_read!
-      render json: { success: true, unread_count: 0 }
+      render_success_message('Marked as read', data: { unread_count: 0 })
     else
-      render_error('Not a member of this channel', :forbidden)
+      render_forbidden('Not a member of this channel')
     end
   rescue ActiveRecord::RecordNotFound
-    render_error('Channel not found', :not_found)
+    render_not_found('Channel')
+  end
+
+  private
+
+  def serialize_channel(channel, user, is_member: false, online_count: 0, last_message: nil)
+    {
+      id: channel.id,
+      name: channel.name,
+      description: channel.description,
+      type: channel.channel_type,
+      member_count: channel.member_count,
+      online_member_count: online_count,
+      last_message: last_message ? serialize_last_message(last_message) : nil,
+      unread_count: channel.unread_count_for(user),
+      is_member: is_member,
+      created_at: channel.created_at&.iso8601
+    }
+  end
+
+  def serialize_last_message(message)
+    {
+      id: message.id,
+      content: message.transport_content || E2eePolicy::PLACEHOLDER_CONTENT,
+      created_at: message.created_at.iso8601,
+      user: {
+        id: message.user.id,
+        username: message.user.username
+      }
+    }
+  end
+
+  def serialize_member(member)
+    {
+      id: member.id,
+      username: member.username,
+      is_online: member.online?,
+      status: member.status,
+      last_seen_at: member.last_seen_at&.iso8601,
+      avatar_url: member.avatar_url,
+      avatar_initials: member.avatar_initials,
+      avatar_color_index: member.avatar_color_index
+    }
   end
 end

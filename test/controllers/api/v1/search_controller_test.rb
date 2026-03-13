@@ -257,4 +257,37 @@ class Api::V1::SearchControllerTest < ActionDispatch::IntegrationTest
     assert message["channel"].key?("id")
     assert message["channel"].key?("name")
   end
+
+  # E2EE exclusion test
+  test "should exclude E2EE-encoded messages from search results" do
+    # Plaintext message that matches the search term
+    plaintext_msg = Message.create!(
+      content: "findme plaintext",
+      content_encoding: "plaintext",
+      channel: @channel,
+      user: @user
+    )
+    # E2EE message whose stored content is just a placeholder — must never appear in search
+    e2ee_msg = Message.create!(
+      content: "[Encrypted]",
+      content_encoding: "e2ee",
+      encrypted_content: "base64payload==",
+      content_hmac: "hmac==",
+      channel: @channel,
+      user: @user
+    )
+
+    get api_v1_search_path,
+        params: { q: "findme" },
+        headers: { "Authorization" => "Bearer #{@raw_token}" }
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    ids = json["messages"].map { |m| m["id"] }
+
+    assert_includes ids, plaintext_msg.id,
+      "Plaintext message matching the query should be present in results"
+    refute_includes ids, e2ee_msg.id,
+      "E2EE-encoded message should be excluded from search results"
+  end
 end

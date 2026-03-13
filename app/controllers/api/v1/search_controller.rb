@@ -127,6 +127,7 @@ class Api::V1::SearchController < Api::V1::BaseController
 
     Message.joins(:channel)
            .where(channel_id: accessible_channels)
+           .where(content_encoding: ['plaintext', nil])
            .where('LOWER(content) LIKE LOWER(?)', "%#{sanitized_query}%")
            .includes(:user, :channel)
            .order(created_at: :desc)

@@ -36,4 +36,37 @@ class MessageTest < ActiveSupport::TestCase
 
     assert channel.members.exists?(id: invitee.id), "invitee should be added to the private channel"
   end
+
+  test "e2ee message in private channel requires sender metadata and stores placeholder content" do
+    owner = create_user(username: "owner_e2ee_private")
+    recipient = create_user(username: "recipient_e2ee_private")
+    channel = Channel.create!(name: "private-e2ee-model", channel_type: "private", created_by: owner)
+    channel.add_member(owner)
+    channel.add_member(recipient)
+
+    invalid = channel.messages.build(
+      user: owner,
+      content: "plaintext",
+      content_encoding: "e2ee",
+      encrypted_content: "{\"v\":\"1\"}",
+      content_hmac: "hmac-model"
+    )
+    refute invalid.valid?
+    assert_includes invalid.errors[:sender_device_id], "can't be blank"
+    assert_includes invalid.errors[:e2ee_version], "can't be blank"
+
+    valid = channel.messages.build(
+      user: owner,
+      content: "plaintext-should-not-persist",
+      content_encoding: "e2ee",
+      encrypted_content: "{\"v\":\"1\",\"iv\":\"abc\",\"ciphertext\":\"def\"}",
+      content_hmac: "hmac-model-ok",
+      sender_device_id: "device-model-test",
+      e2ee_version: "1"
+    )
+
+    assert valid.valid?
+    valid.save!
+    assert_equal E2eePolicy::PLACEHOLDER_CONTENT, valid.content
+  end
 end
