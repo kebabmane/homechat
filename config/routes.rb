@@ -161,6 +161,13 @@ Rails.application.routes.draw do
       
       # Webhook endpoints for bot communication
       post 'webhooks/:webhook_id', to: 'webhooks#receive', as: :webhook
+
+      # E2EE key management
+      put 'me/e2ee_key', to: 'keys#publish_e2ee_key'
+      get 'users/:id/e2ee_key', to: 'keys#get_user_e2ee_key', as: :user_e2ee_key
+      get 'channels/:id/e2ee_keys', to: 'keys#get_channel_e2ee_keys'
+      post 'channels/:id/key_shares', to: 'keys#submit_key_shares'
+      get 'channels/:id/key_shares/me', to: 'keys#get_my_key_share'
     end
   end
 
