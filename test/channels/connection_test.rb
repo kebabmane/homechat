@@ -14,10 +14,16 @@ class ApplicationCable::ConnectionTest < ActionCable::Connection::TestCase
     assert_equal @user, connection.current_user
   end
 
-  test "connects with valid bearer token in params" do
-    connect params: { token: @raw_token }
+  test "connects with valid bearer token in Authorization header" do
+    connect headers: { "Authorization" => "Bearer #{@raw_token}" }
 
     assert_equal @user, connection.current_user
+  end
+
+  test "rejects connection with token in URL query params (insecure)" do
+    assert_reject_connection do
+      connect params: { token: @raw_token }
+    end
   end
 
   test "rejects connection without authentication" do
@@ -26,17 +32,17 @@ class ApplicationCable::ConnectionTest < ActionCable::Connection::TestCase
     end
   end
 
-  test "rejects connection with invalid token" do
+  test "rejects connection with invalid token in header" do
     assert_reject_connection do
-      connect params: { token: "invalid_token" }
+      connect headers: { "Authorization" => "Bearer invalid_token" }
     end
   end
 
-  test "rejects connection with expired/inactive token" do
+  test "rejects connection with expired/inactive token in header" do
     @token.update!(active: false)
 
     assert_reject_connection do
-      connect params: { token: @raw_token }
+      connect headers: { "Authorization" => "Bearer #{@raw_token}" }
     end
   end
 
@@ -50,8 +56,8 @@ class ApplicationCable::ConnectionTest < ActionCable::Connection::TestCase
     other_user = create_user(username: "other_cable_user")
     other_token = ApiToken.create!(name: "Other Token", user: other_user, scopes: nil)
 
-    # Session should take precedence
-    connect params: { token: other_token.token }, session: { user_id: @user.id }
+    # Session should take precedence over Authorization header
+    connect headers: { "Authorization" => "Bearer #{other_token.token}" }, session: { user_id: @user.id }
 
     assert_equal @user, connection.current_user
   end

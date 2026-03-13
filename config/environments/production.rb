@@ -32,15 +32,32 @@ Rails.application.configure do
   # SSL Configuration based on environment
   # - RAILS_ASSUME_SSL=true: Assume behind SSL-terminating reverse proxy (HA Ingress, nginx, etc.)
   # - RAILS_FORCE_SSL=true: Force HTTPS redirects (for direct SSL termination)
-  # Note: HOME_ASSISTANT_ADDON sets RAILS_ASSUME_SSL based on access_mode in the run script
-  config.assume_ssl = ENV['RAILS_ASSUME_SSL'] == 'true'
+  # In production, fail fast unless transport is explicitly secured.
+  assume_ssl = ENV['RAILS_ASSUME_SSL'] == 'true'
+  force_ssl_env = ENV['RAILS_FORCE_SSL'] == 'true'
+  home_assistant_addon = ENV['HOME_ASSISTANT_ADDON'] == 'true'
 
-  # Force SSL only when explicitly enabled and not using reverse proxy
-  config.force_ssl = ENV['RAILS_FORCE_SSL'] == 'true'
+  config.assume_ssl = assume_ssl
+  config.force_ssl = force_ssl_env || (!home_assistant_addon)
+
+  if !config.force_ssl && !config.assume_ssl
+    raise <<~MSG
+      Insecure transport configuration in production.
+      Set RAILS_FORCE_SSL=true for direct deployments, or RAILS_ASSUME_SSL=true behind an SSL-terminating proxy.
+    MSG
+  end
 
   # ActionCable configuration - respect protocol from X-Forwarded-Proto header
   # This ensures WebSocket connections use the correct protocol (ws/wss)
-  config.action_cable.allowed_request_origins = [/.*/]  # Allow all origins in production (HA Ingress uses various origins)
+  # ActionCable origin allowlist — restricts WebSocket connections to LAN/localhost origins.
+  # HA Ingress mode strips the Origin header entirely; nil origin is handled by the cable connection layer.
+  config.action_cable.allowed_request_origins = [
+    /\Ahttps:\/\/localhost(:\d+)?\z/,
+    /\Ahttps:\/\/127\.0\.0\.1(:\d+)?\z/,
+    /\Ahttps:\/\/192\.168\.\d+\.\d+(:\d+)?\z/,
+    /\Ahttps:\/\/10\.\d+\.\d+\.\d+(:\d+)?\z/,
+    /\Ahttps:\/\/172\.(1[6-9]|2[0-9]|3[01])\.\d+\.\d+(:\d+)?\z/,
+  ]
 
   # Skip http-to-https redirect for the default health check endpoint.
   # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
