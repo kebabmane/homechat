@@ -31,6 +31,8 @@ class FcmNotificationService
           type: "message",
           channel_id: message.channel_id,
           message_id: message.id,
+          title: "HomeChat",
+          body: "New message",
           notification_privacy: "generic"
         }
       }
@@ -47,6 +49,9 @@ class FcmNotificationService
         body: "New invitation",
         data: {
           type: "channel_invite",
+          channel_id: channel.id,
+          title: "HomeChat",
+          body: "New invitation",
           notification_privacy: "generic"
         }
       }
@@ -62,9 +67,11 @@ class FcmNotificationService
         title: "HomeChat",
         body: "New direct message",
         data: {
-          type: "message",
+          type: "direct_message",
           channel_id: message.channel_id,
           message_id: message.id,
+          title: "HomeChat",
+          body: "New direct message",
           notification_privacy: "generic"
         }
       }
@@ -80,9 +87,11 @@ class FcmNotificationService
         title: "HomeChat",
         body: "New mention",
         data: {
-          type: "message",
+          type: "mention",
           channel_id: message.channel_id,
           message_id: message.id,
+          title: "HomeChat",
+          body: "New mention",
           notification_privacy: "generic"
         }
       }
@@ -146,21 +155,17 @@ class FcmNotificationService
     def build_message_payload(token, notification_data)
       {
         token: token,
-        notification: {
-          title: notification_data[:title],
-          body: notification_data[:body]
-        },
         data: notification_data[:data].transform_values(&:to_s),
         android: {
-          priority: "high",
-          notification: {
-            sound: "default",
-            click_action: "OPEN_CHANNEL"
-          }
+          priority: "high"
         },
         apns: {
           payload: {
             aps: {
+              alert: {
+                title: notification_data[:title],
+                body: notification_data[:body]
+              },
               sound: "default",
               badge: 1,
               'mutable-content': 1
@@ -200,7 +205,21 @@ class FcmNotificationService
 
     def fcm_config
       @fcm_config ||= begin
-        config = Rails.application.credentials.fcm || {}
+        settings_credentials = Setting.fcm_credentials
+        config = if settings_credentials.present?
+          {
+            "project_id" => settings_credentials[:project_id],
+            "service_account_json" => {
+              "type" => "service_account",
+              "project_id" => settings_credentials[:project_id],
+              "private_key" => settings_credentials[:private_key],
+              "client_email" => settings_credentials[:client_email],
+              "token_uri" => "https://oauth2.googleapis.com/token"
+            }
+          }
+        else
+          Rails.application.credentials.fcm || {}
+        end
 
         # Also check environment variables as fallback
         if config.empty?

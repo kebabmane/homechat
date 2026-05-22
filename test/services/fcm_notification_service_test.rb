@@ -79,13 +79,17 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
     end
 
     assert_not_nil captured_body
-    notification_title = captured_body.dig("message", "notification", "title")
-    notification_body = captured_body.dig("message", "notification", "body")
+    notification_payload = captured_body.dig("message", "notification")
     data_payload = captured_body.dig("message", "data") || {}
+    apns_alert = captured_body.dig("message", "apns", "payload", "aps", "alert") || {}
 
-    assert_equal "HomeChat", notification_title
-    assert_equal "New message", notification_body
-    assert_not notification_body.include?(@message.content),
+    assert_nil notification_payload,
+      "Android FCM should remain data-only so server-rendered notification text is not exposed"
+    assert_equal "HomeChat", data_payload["title"]
+    assert_equal "New message", data_payload["body"]
+    assert_equal "HomeChat", apns_alert["title"]
+    assert_equal "New message", apns_alert["body"]
+    assert_not captured_body.to_json.include?(@message.content),
       "Notification body must not contain actual message content"
     assert_not captured_body.to_json.include?(@channel.name),
       "FCM payload must not expose channel names"
@@ -136,18 +140,22 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
     end
 
     assert_not_nil captured_body
-    notification_body = captured_body.dig("message", "notification", "body")
-    notification_title = captured_body.dig("message", "notification", "title")
+    notification_payload = captured_body.dig("message", "notification")
     data_payload = captured_body.dig("message", "data") || {}
+    apns_alert = captured_body.dig("message", "apns", "payload", "aps", "alert") || {}
 
-    assert_equal "HomeChat", notification_title
-    assert_equal "New direct message", notification_body
-    assert_not notification_body.to_s.include?(dm_message.content),
+    assert_nil notification_payload,
+      "Android FCM should remain data-only so server-rendered notification text is not exposed"
+    assert_equal "HomeChat", data_payload["title"]
+    assert_equal "New direct message", data_payload["body"]
+    assert_equal "HomeChat", apns_alert["title"]
+    assert_equal "New direct message", apns_alert["body"]
+    assert_not captured_body.to_json.include?(dm_message.content),
       "DM notification body must not contain actual message content"
     assert_not captured_body.to_json.include?(@sender.username),
       "DM notification payload must not expose sender names"
     assert_equal "generic", data_payload["notification_privacy"]
-    assert_equal "message", data_payload["type"]
+    assert_equal "direct_message", data_payload["type"]
     assert_equal dm_channel.id.to_s, data_payload["channel_id"]
     assert_equal dm_message.id.to_s, data_payload["message_id"]
   end
@@ -181,20 +189,24 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
     end
 
     assert_not_nil captured_body
-    notification_body = captured_body.dig("message", "notification", "body")
-    notification_title = captured_body.dig("message", "notification", "title")
+    notification_payload = captured_body.dig("message", "notification")
     data_payload = captured_body.dig("message", "data") || {}
+    apns_alert = captured_body.dig("message", "apns", "payload", "aps", "alert") || {}
 
-    assert_equal "HomeChat", notification_title
-    assert_equal "New mention", notification_body
-    assert_not notification_body.to_s.include?(@message.content),
+    assert_nil notification_payload,
+      "Android FCM should remain data-only so server-rendered notification text is not exposed"
+    assert_equal "HomeChat", data_payload["title"]
+    assert_equal "New mention", data_payload["body"]
+    assert_equal "HomeChat", apns_alert["title"]
+    assert_equal "New mention", apns_alert["body"]
+    assert_not captured_body.to_json.include?(@message.content),
       "Mention notification body must not contain actual message content"
     assert_not captured_body.to_json.include?(@channel.name),
       "Mention payload must not expose channel names"
     assert_not captured_body.to_json.include?(@sender.username),
       "Mention payload must not expose sender names"
     assert_equal "generic", data_payload["notification_privacy"]
-    assert_equal "message", data_payload["type"]
+    assert_equal "mention", data_payload["type"]
     assert_equal @channel.id.to_s, data_payload["channel_id"]
     assert_equal @message.id.to_s, data_payload["message_id"]
   end
