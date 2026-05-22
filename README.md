@@ -20,6 +20,7 @@ HomeChat is a private chat platform that works completely offline on your local 
 | **Smart Home** | Two-way Home Assistant integration for automation notifications. |
 | **File Sharing** | Image uploads, attachments, and rich media support. |
 | **Security** | 2FA, API tokens, rate limiting, audit logging, account lockout. |
+| **E2EE Controls** | Private chat message content is encrypted client-side, with server-side policy enforcement. |
 
 ## Quick Start
 
@@ -76,6 +77,26 @@ See [Deployment Guide](docs/deployment/) for detailed instructions.
 | [Security](docs/security/) | Hardening guide, API tokens, 2FA |
 | [Development](docs/development/) | Local setup, testing, contributing |
 | [Operations](docs/operations/) | Backup, monitoring, troubleshooting |
+
+## API Compatibility
+
+The canonical REST contract lives in `api-contracts/openapi.yaml`, with `api-contracts/openapi.json` kept as the generated JSON mirror. Mobile DTOs are generated from that contract into the Android and iOS repos.
+
+```bash
+scripts/generate-mobile-dtos.sh
+scripts/generate-mobile-dtos.sh --android
+scripts/generate-mobile-dtos.sh --ios
+```
+
+The `API Contract Check` GitHub workflow validates the OpenAPI spec, verifies the JSON mirror, checks out the private Android/iOS repos, regenerates mobile DTOs, and fails if committed generated models drift. Configure `CROSS_REPO_PAT` in this repo's GitHub secrets so CI can read `homechat-android` and `homechat-ios`.
+
+Version and capability negotiation happens through:
+
+- `GET /api/v1/server_info`
+- `GET /api/v1/health`
+- `api_version`
+- `min_client_version`
+- E2EE capability fields
 
 ## Home Assistant Integration
 
@@ -165,9 +186,9 @@ See [Security Hardening Guide](docs/security/hardening-guide.md) for production 
 ## Tests
 
 ```bash
-bin/rails test           # Run all tests
-bin/rails test:system    # System tests with browser
-COVERAGE=true bin/rails test  # With coverage report
+bin/rails test                         # Run all tests
+bin/rails test:system                  # System tests with browser
+COVERAGE=1 PARALLEL_WORKERS=1 bin/rails test  # Coverage report
 ```
 
 ## Contributing
