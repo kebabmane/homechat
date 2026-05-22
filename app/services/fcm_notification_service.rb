@@ -29,6 +29,8 @@ class FcmNotificationService
         body: "New message",
         data: {
           type: "message",
+          channel_id: message.channel_id,
+          message_id: message.id,
           notification_privacy: "generic"
         }
       }
@@ -61,6 +63,8 @@ class FcmNotificationService
         body: "New direct message",
         data: {
           type: "message",
+          channel_id: message.channel_id,
+          message_id: message.id,
           notification_privacy: "generic"
         }
       }
@@ -77,6 +81,8 @@ class FcmNotificationService
         body: "New mention",
         data: {
           type: "message",
+          channel_id: message.channel_id,
+          message_id: message.id,
           notification_privacy: "generic"
         }
       }

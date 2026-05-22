@@ -3,13 +3,18 @@ require "test_helper"
 class RackAttackTest < ActionDispatch::IntegrationTest
   def setup
     @user = create_user(username: "rackattack_user", password: "password123")
-    # Rack::Attack is disabled in test by default; temporarily enable it
+    @rack_attack_enabled = Rack::Attack.enabled
+    @rack_attack_store = Rack::Attack.cache.store
+
     Rack::Attack.enabled = true
     Rack::Attack.cache.store = ActiveSupport::Cache::MemoryStore.new
+    Rack::Attack.reset!
   end
 
   def teardown
-    Rack::Attack.enabled = false
+    Rack::Attack.reset!
+    Rack::Attack.cache.store = @rack_attack_store
+    Rack::Attack.enabled = @rack_attack_enabled
   end
 
   test "throttles login attempts by IP" do

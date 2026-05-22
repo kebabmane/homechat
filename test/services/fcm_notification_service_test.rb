@@ -65,6 +65,8 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
     data_payload = captured_body.dig("message", "data") || {}
     assert_not data_payload.key?("content"),
       "FCM data payload must not include 'content' key (E2EE privacy)"
+    assert_equal @channel.id.to_s, data_payload["channel_id"]
+    assert_equal @message.id.to_s, data_payload["message_id"]
   end
 
   test "send_message_notification payload does not expose sender or channel names" do
@@ -90,6 +92,9 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
     assert_not captured_body.to_json.include?(@sender.username),
       "FCM payload must not expose sender names"
     assert_equal "generic", data_payload["notification_privacy"]
+    assert_equal "message", data_payload["type"]
+    assert_equal @channel.id.to_s, data_payload["channel_id"]
+    assert_equal @message.id.to_s, data_payload["message_id"]
   end
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -113,6 +118,8 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
     data_payload = captured_body.dig("message", "data") || {}
     assert_not data_payload.key?("content"),
       "Direct message FCM payload must not include 'content' key"
+    assert_equal dm_channel.id.to_s, data_payload["channel_id"]
+    assert_equal dm_message.id.to_s, data_payload["message_id"]
   end
 
   test "send_direct_message_notification body is generic string" do
@@ -140,6 +147,9 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
     assert_not captured_body.to_json.include?(@sender.username),
       "DM notification payload must not expose sender names"
     assert_equal "generic", data_payload["notification_privacy"]
+    assert_equal "message", data_payload["type"]
+    assert_equal dm_channel.id.to_s, data_payload["channel_id"]
+    assert_equal dm_message.id.to_s, data_payload["message_id"]
   end
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -158,6 +168,8 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
     data_payload = captured_body.dig("message", "data") || {}
     assert_not data_payload.key?("content"),
       "Mention FCM payload must not include 'content' key"
+    assert_equal @channel.id.to_s, data_payload["channel_id"]
+    assert_equal @message.id.to_s, data_payload["message_id"]
   end
 
   test "send_mention_notification body is generic and omits channel name" do
@@ -182,6 +194,9 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
     assert_not captured_body.to_json.include?(@sender.username),
       "Mention payload must not expose sender names"
     assert_equal "generic", data_payload["notification_privacy"]
+    assert_equal "message", data_payload["type"]
+    assert_equal @channel.id.to_s, data_payload["channel_id"]
+    assert_equal @message.id.to_s, data_payload["message_id"]
   end
 
   private
