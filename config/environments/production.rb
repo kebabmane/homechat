@@ -32,18 +32,21 @@ Rails.application.configure do
   # SSL Configuration based on environment
   # - RAILS_ASSUME_SSL=true: Assume behind SSL-terminating reverse proxy (HA Ingress, nginx, etc.)
   # - RAILS_FORCE_SSL=true: Force HTTPS redirects (for direct SSL termination)
-  # In production, fail fast unless transport is explicitly secured.
+  # - RAILS_ALLOW_INSECURE_HTTP=true: Explicitly allow plain HTTP for local Docker/LAN deployments.
+  # In production, fail fast unless transport is explicitly secured or plain HTTP is explicitly acknowledged.
   assume_ssl = ENV["RAILS_ASSUME_SSL"] == "true"
   force_ssl_env = ENV["RAILS_FORCE_SSL"] == "true"
   home_assistant_addon = ENV["HOME_ASSISTANT_ADDON"] == "true"
+  allow_insecure_http = ENV["RAILS_ALLOW_INSECURE_HTTP"] == "true" || home_assistant_addon
 
   config.assume_ssl = assume_ssl
-  config.force_ssl = force_ssl_env || (!home_assistant_addon)
+  config.force_ssl = force_ssl_env
 
-  if !config.force_ssl && !config.assume_ssl
+  if !config.force_ssl && !config.assume_ssl && !allow_insecure_http
     raise <<~MSG
       Insecure transport configuration in production.
-      Set RAILS_FORCE_SSL=true for direct deployments, or RAILS_ASSUME_SSL=true behind an SSL-terminating proxy.
+      Set RAILS_FORCE_SSL=true for direct HTTPS deployments, RAILS_ASSUME_SSL=true behind an SSL-terminating proxy,
+      or RAILS_ALLOW_INSECURE_HTTP=true only for explicitly trusted local/LAN deployments.
     MSG
   end
 
@@ -58,6 +61,16 @@ Rails.application.configure do
     /\Ahttps:\/\/10\.\d+\.\d+\.\d+(:\d+)?\z/,
     /\Ahttps:\/\/172\.(1[6-9]|2[0-9]|3[01])\.\d+\.\d+(:\d+)?\z/
   ]
+
+  if allow_insecure_http
+    config.action_cable.allowed_request_origins += [
+      /\Ahttp:\/\/localhost(:\d+)?\z/,
+      /\Ahttp:\/\/127\.0\.0\.1(:\d+)?\z/,
+      /\Ahttp:\/\/192\.168\.\d+\.\d+(:\d+)?\z/,
+      /\Ahttp:\/\/10\.\d+\.\d+\.\d+(:\d+)?\z/,
+      /\Ahttp:\/\/172\.(1[6-9]|2[0-9]|3[01])\.\d+\.\d+(:\d+)?\z/
+    ]
+  end
 
   # Skip http-to-https redirect for the default health check endpoint.
   # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }

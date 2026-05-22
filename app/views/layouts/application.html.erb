@@ -20,6 +20,11 @@
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
+    <% if logged_in? %>
+      <%= javascript_tag nonce: true, type: "module" do %>
+        import "channels"
+      <% end %>
+    <% end %>
     <meta name="theme-color" content="<%= Setting.fetch(:pwa_theme_color, '#2563eb') %>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

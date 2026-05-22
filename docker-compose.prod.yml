@@ -5,9 +5,16 @@
 #
 # Required environment variables (set in .env or export):
 #   - RAILS_MASTER_KEY: Your Rails master key (from config/master.key)
+#   - AR_ENCRYPTION_PRIMARY_KEY: 64 hex chars, stable for this deployment
+#   - AR_ENCRYPTION_DETERMINISTIC_KEY: 64 hex chars, stable for this deployment
+#   - AR_ENCRYPTION_KEY_DERIVATION_SALT: 64 hex chars, stable for this deployment
 #
 # Optional environment variables:
 #   - API_TOKEN_PEPPER: Additional security for API tokens
+#
+# This compose file publishes plain HTTP on localhost/LAN. Put it behind a TLS
+# reverse proxy for internet-facing use, or switch RAILS_ALLOW_INSECURE_HTTP off
+# and provide RAILS_FORCE_SSL/RAILS_ASSUME_SSL as appropriate.
 
 services:
   web:
@@ -17,27 +24,31 @@ services:
     ports:
       - "3000:80"
     volumes:
-      # Persist database and uploads
-      - homechat_data:/rails/db
+      # Persist SQLite databases and uploads. Do not mount /rails/db: the image
+      # owns migration files, while production SQLite files live in /rails/storage.
       - homechat_storage:/rails/storage
     environment:
       - RAILS_ENV=production
       - RAILS_MASTER_KEY=${RAILS_MASTER_KEY}
       - RAILS_LOG_TO_STDOUT=1
+      - RAILS_SERVE_STATIC_FILES=true
+      - RAILS_ALLOW_INSECURE_HTTP=${RAILS_ALLOW_INSECURE_HTTP:-true}
+      - SOLID_QUEUE_IN_PUMA=true
+      - AR_ENCRYPTION_PRIMARY_KEY=${AR_ENCRYPTION_PRIMARY_KEY}
+      - AR_ENCRYPTION_DETERMINISTIC_KEY=${AR_ENCRYPTION_DETERMINISTIC_KEY}
+      - AR_ENCRYPTION_KEY_DERIVATION_SALT=${AR_ENCRYPTION_KEY_DERIVATION_SALT}
       # Optional: API token security
       - API_TOKEN_PEPPER=${API_TOKEN_PEPPER:-}
       # Optional: Enable structured logging
       - LOGRAGE_ENABLED=true
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/up"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:80/up"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
 volumes:
-  homechat_data:
-    driver: local
   homechat_storage:
     driver: local

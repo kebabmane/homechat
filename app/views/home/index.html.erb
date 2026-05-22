@@ -56,17 +56,11 @@
         </div>
 
         <!-- QR Code Section -->
-        <% if @qr_code %>
+        <% if @qr_svg %>
           <div class="text-center">
             <p class="text-xs text-gray-500 mb-3">Already have the app? Scan to connect:</p>
             <div class="inline-block bg-white p-3 rounded-lg border border-gray-200">
-              <%= @qr_code.as_svg(
-                color: "000",
-                shape_rendering: "crispEdges",
-                module_size: 4,
-                standalone: true,
-                use_path: true
-              ).html_safe %>
+              <%= @qr_svg.html_safe %>
             </div>
             <p class="mt-2 text-xs text-gray-400 font-mono break-all"><%= @server_config&.base_url %></p>
           </div>

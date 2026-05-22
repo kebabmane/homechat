@@ -22,16 +22,10 @@ if User.count == 0
     message: "Default admin user created. Please change password after first login."
   }
 
-  # Create data directory if it doesn't exist
-  FileUtils.mkdir_p('/data') if Rails.env.production?
-
-  credentials_file = Rails.env.production? ? '/data/admin_credentials.json' : 'tmp/admin_credentials.json'
+  credentials_dir = Rails.env.production? ? Rails.root.join("storage") : Rails.root.join("tmp")
+  FileUtils.mkdir_p(credentials_dir)
+  credentials_file = credentials_dir.join("admin_credentials.json")
   File.write(credentials_file, JSON.pretty_generate(credentials_data))
 
-  Rails.logger.debug "🔐 Admin user created successfully!"
-  Rails.logger.debug "📁 Credentials stored in: #{credentials_file}"
-  Rails.logger.debug "👤 Username: #{admin_username}"
-  Rails.logger.debug "🔑 Password: #{admin_password}"
-
-  Rails.logger.info "Admin user created: #{admin_username}"
+  Rails.logger.info "Initial admin user created; credentials written to #{credentials_file}"
 end
