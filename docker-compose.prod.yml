@@ -37,6 +37,9 @@ services:
       - AR_ENCRYPTION_PRIMARY_KEY=${AR_ENCRYPTION_PRIMARY_KEY}
       - AR_ENCRYPTION_DETERMINISTIC_KEY=${AR_ENCRYPTION_DETERMINISTIC_KEY}
       - AR_ENCRYPTION_KEY_DERIVATION_SALT=${AR_ENCRYPTION_KEY_DERIVATION_SALT}
+      # mDNS generally does not work inside Docker Desktop/bridge networking.
+      # Set DISCOVERY_MODE=local only on hosts configured to expose Bonjour.
+      - DISCOVERY_MODE=${DISCOVERY_MODE:-cloud}
       # Optional: API token security
       - API_TOKEN_PEPPER=${API_TOKEN_PEPPER:-}
       # Optional: Enable structured logging
