@@ -2,15 +2,15 @@
 
 <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-12 space-y-6">
   <div>
-    <%= link_to admin_bot_path(@bot), class: 'text-sm text-purple-600 hover:text-purple-700 font-medium' do %>
-      ← Back to bot details
+    <%= link_to admin_bot_path(@bot), class: 'text-sm text-stone-600 hover:text-stone-900 font-medium' do %>
+      ← Back to Bot
     <% end %>
   </div>
   <header class="space-y-2">
-    <h1 class="text-2xl font-semibold text-gray-900">Edit <%= @bot.name %></h1>
-    <p class="text-sm text-gray-600">Update the prompt, model, or activation state for this assistant.</p>
+    <h1 class="text-2xl font-semibold text-stone-900">Edit <%= @bot.name %></h1>
+    <p class="text-sm text-stone-600">Update the prompt, model, or activation state for this assistant.</p>
   </header>
-  <section class="rounded-xl border border-gray-200 bg-white shadow-sm p-6">
+  <section class="rounded-2xl border border-stone-200 bg-white/90 shadow-sm p-6">
     <%= render 'form' %>
   </section>
 </div>

@@ -6,8 +6,8 @@ class ChatChannelTest < ActionCable::Channel::TestCase
     @channel = Channel.create!(name: "chat-test", channel_type: "public", creator: @user)
     @channel.add_member(@user)
 
-    # Stub the connection to have a current_user
-    stub_connection current_user: @user
+    # Stub the connection to have a current_user and current_api_token_id
+    stub_connection current_user: @user, current_api_token_id: nil
   end
 
   test "subscribes to public channel" do
@@ -88,7 +88,7 @@ class ChatChannelTest < ActionCable::Channel::TestCase
     private_channel.add_member(other_user)
 
     # Even if somehow subscribed, speak should check access
-    stub_connection current_user: @user
+    stub_connection current_user: @user, current_api_token_id: nil
 
     # This should be rejected at subscription level
     subscribe channel_id: private_channel.id
@@ -110,6 +110,15 @@ class ChatChannelTest < ActionCable::Channel::TestCase
   test "speak accepts e2ee payload in private channels" do
     private_channel = Channel.create!(name: "private-e2ee-ok-#{SecureRandom.hex(2)}", channel_type: "private", creator: @user)
     private_channel.add_member(@user)
+
+    # Register a device key so the sender identity check passes
+    UserE2eeKey.create!(
+      user: @user,
+      device_id: "device-chat-test",
+      encryption_public_key: Base64.strict_encode64(SecureRandom.bytes(32)),
+      signing_public_key: Base64.strict_encode64(SecureRandom.bytes(32)),
+      key_fingerprint: "fingerprint-1"
+    )
 
     subscribe channel_id: private_channel.id
     assert subscription.confirmed?

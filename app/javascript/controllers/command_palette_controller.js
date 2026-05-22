@@ -12,6 +12,7 @@ export default class extends Controller {
   connect() {
     this._selectedIndex = 0
     this._filteredItems = []
+    this._previouslyFocused = null
 
     this._onKeydown = this.handleGlobalKeydown.bind(this)
     window.addEventListener("keydown", this._onKeydown)
@@ -63,6 +64,7 @@ export default class extends Controller {
   open() {
     if (!this.hasModalTarget) return
 
+    this._previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
     this.modalTarget.classList.remove("hidden")
     this.modalTarget.classList.add("flex")
     if (this.hasBackdropTarget) {
@@ -72,6 +74,8 @@ export default class extends Controller {
     // Focus input and select all text
     if (this.hasInputTarget) {
       this.inputTarget.value = ""
+      this.inputTarget.setAttribute("aria-expanded", "true")
+      this.inputTarget.removeAttribute("aria-activedescendant")
       this.inputTarget.focus()
     }
 
@@ -96,6 +100,13 @@ export default class extends Controller {
 
     // Reset state
     this._selectedIndex = 0
+    if (this.hasInputTarget) {
+      this.inputTarget.setAttribute("aria-expanded", "false")
+      this.inputTarget.removeAttribute("aria-activedescendant")
+    }
+    if (this._previouslyFocused && typeof this._previouslyFocused.focus === "function") {
+      this._previouslyFocused.focus()
+    }
   }
 
   isOpen() {
@@ -167,6 +178,9 @@ export default class extends Controller {
     if (!this.hasResultsTarget) return
 
     if (items.length === 0) {
+      if (this.hasInputTarget) {
+        this.inputTarget.removeAttribute("aria-activedescendant")
+      }
       this.resultsTarget.innerHTML = `
         <div class="px-4 py-8 text-center text-gray-500 text-sm">
           No channels found
@@ -183,7 +197,7 @@ export default class extends Controller {
       if (item.section !== currentSection) {
         currentSection = item.section
         html += `
-          <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
+          <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50" role="presentation">
             ${currentSection}
           </div>
         `
@@ -202,7 +216,10 @@ export default class extends Controller {
                 data-command-palette-target="item"
                 data-action="click->command-palette#selectItem mouseenter->command-palette#hoverItem"
                 data-index="${index}"
-                data-url="${item.url}">
+                data-url="${item.url}"
+                id="command-palette-option-${index}"
+                role="option"
+                aria-selected="${isSelected}">
           ${icon}
           <span class="flex-1 truncate font-medium">${this.escapeHtml(item.name)}</span>
           ${isSelected ? '<span class="text-xs text-gray-400">↵</span>' : ''}
@@ -232,6 +249,7 @@ export default class extends Controller {
       item.classList.toggle("text-blue-900", isSelected)
       item.classList.toggle("text-gray-700", !isSelected)
       item.classList.toggle("hover:bg-gray-50", !isSelected)
+      item.setAttribute("aria-selected", isSelected.toString())
 
       // Update enter hint
       const hint = item.querySelector(".text-xs.text-gray-400")
@@ -244,6 +262,9 @@ export default class extends Controller {
     // Scroll selected into view
     const selectedItem = this.itemTargets[this._selectedIndex]
     if (selectedItem) {
+      if (this.hasInputTarget) {
+        this.inputTarget.setAttribute("aria-activedescendant", selectedItem.id)
+      }
       selectedItem.scrollIntoView({ block: "nearest" })
     }
   }

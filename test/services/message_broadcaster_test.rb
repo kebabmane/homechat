@@ -104,13 +104,13 @@ class MessageBroadcasterTest < ActiveSupport::TestCase
     logger_stub.define_singleton_method(:debug) { |_| }
 
     Rails.stub(:logger, logger_stub) do
-      ActionCable.server.stub(:broadcast, ->(_stream, _payload) {}) do
+      ActionCable.server.stub(:broadcast, ->(_stream, _payload) { }) do
         MessageBroadcaster.new(message).send(:broadcast_to_action_cable)
       end
     end
 
     logged_messages.each do |log_line|
-      refute log_line.include?(message.content),
+      assert_not log_line.include?(message.content),
         "Logger should not emit message content — found in: #{log_line}"
     end
 

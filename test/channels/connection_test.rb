@@ -20,9 +20,15 @@ class ApplicationCable::ConnectionTest < ActionCable::Connection::TestCase
     assert_equal @user, connection.current_user
   end
 
-  test "rejects connection with token in URL query params (insecure)" do
+  test "rejects valid token in URL query params when no session" do
     assert_reject_connection do
       connect params: { token: @raw_token }
+    end
+  end
+
+  test "rejects connection with token in URL query params" do
+    assert_reject_connection do
+      connect params: { token: "invalid_token" }
     end
   end
 

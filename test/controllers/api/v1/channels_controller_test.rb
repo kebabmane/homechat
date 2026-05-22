@@ -60,7 +60,7 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     json = JSON.parse(response.body)
     channel_types = json["channels"].map { |c| c["type"] }
-    refute_includes channel_types, "dm"
+    assert_not_includes channel_types, "dm"
   end
 
   test "should include channel metadata in response" do
@@ -98,7 +98,7 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
     non_member_channel = json["channels"].find { |c| c["name"] == "new-channel" }
 
     assert member_channel["is_member"]
-    refute non_member_channel["is_member"]
+    assert_not non_member_channel["is_member"]
   end
 
   # Join tests

@@ -45,6 +45,16 @@
 
 # Ignore development files
 /.devcontainer
+/.playwright-cli
+
+# Ignore local test and generated output that production images do not need.
+/coverage
+/output
+/test
+/tmp
+/log
+*.log
+.DS_Store
 
 # Ignore Docker-related files
 /.dockerignore

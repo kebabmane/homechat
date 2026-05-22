@@ -6,6 +6,8 @@ class Api::V1::HealthController < Api::V1::BaseController
       status: "ok",
       timestamp: Time.current.iso8601,
       version: "1.0.0",
+      api_version: "1.0.0",
+      min_client_version: "1.0.0",
       service: "HomeChat",
       push_enabled: Setting.fcm_configured?
     }

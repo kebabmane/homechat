@@ -1,7 +1,7 @@
 class Api::V1::MetricsController < Api::V1::BaseController
-  # Skip authentication for health metrics (or require admin token for detailed metrics)
-  skip_before_action :authenticate_api_request, only: [:health]
-  before_action :require_admin_token, only: [:detailed]
+  # Skip authentication for health metrics (admin token required for detailed metrics)
+  skip_before_action :authenticate_api_request, only: [ :health ]
+  before_action :require_admin_token, only: [ :index ]
 
   # GET /api/v1/metrics/health
   # Basic health check - no auth required
@@ -9,8 +9,7 @@ class Api::V1::MetricsController < Api::V1::BaseController
     render json: {
       status: "ok",
       timestamp: Time.current.iso8601,
-      version: Rails.application.class.module_parent_name,
-      environment: Rails.env
+      version: Rails.application.class.module_parent_name
     }
   end
 
@@ -22,6 +21,7 @@ class Api::V1::MetricsController < Api::V1::BaseController
     respond_to do |format|
       format.json { render json: metrics }
       format.text { render plain: prometheus_format(metrics), content_type: "text/plain" }
+      format.any { render json: metrics }
     end
   end
 
@@ -113,7 +113,7 @@ class Api::V1::MetricsController < Api::V1::BaseController
       # Fallback: use ObjectSpace (less accurate)
       GC.stat[:heap_live_slots] * 40 / 1024 / 1024
     end
-  rescue
+  rescue StandardError
     nil
   end
 

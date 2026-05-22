@@ -1,5 +1,5 @@
 class PagesController < ApplicationController
-  layout 'authentication'
+  layout "authentication"
 
   skip_before_action :mark_active
   skip_before_action :set_sidebar_data
@@ -8,4 +8,3 @@ class PagesController < ApplicationController
   def terms; end
   def about; end
 end
-

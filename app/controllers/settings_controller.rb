@@ -14,41 +14,43 @@ class SettingsController < ApplicationController
   def update
     # Filter out blank password fields and current_password (not a user attribute)
     filtered_params = user_params.reject { |key, value|
-      key == 'current_password' || ((key == 'password' || key == 'password_confirmation') && value.blank?)
+      key == "current_password" || ((key == "password" || key == "password_confirmation") && value.blank?)
     }
 
-    # Only require current password when changing password
-    if filtered_params['password'].present?
+    if reauthentication_required?(filtered_params)
       current_password = params[:user]&.dig(:current_password)
 
       if current_password.blank?
-        flash.now[:alert] = 'Current password is required to change your password.'
+        flash.now[:alert] = "Current password is required to update your settings."
         render :edit, status: :unprocessable_content
         return
       end
 
       unless current_user.authenticate(current_password)
-        flash.now[:alert] = 'Current password is incorrect.'
+        flash.now[:alert] = "Current password is incorrect."
         render :edit, status: :unprocessable_content
         return
       end
     end
 
     if current_user.update(filtered_params)
-      redirect_to edit_settings_path, notice: 'Settings updated successfully.'
+      redirect_to edit_settings_path, notice: "Settings updated successfully."
     else
-      flash.now[:alert] = 'Could not update settings.'
+      flash.now[:alert] = "Could not update settings."
       render :edit, status: :unprocessable_content
     end
+  rescue ActionController::ParameterMissing
+    flash.now[:alert] = "User parameters are required."
+    render :edit, status: :unprocessable_content
   end
 
   def destroy
     # Handle avatar removal
     if params[:remove_avatar] && current_user.avatar.attached?
       current_user.avatar.purge
-      redirect_to edit_settings_path, notice: 'Avatar removed successfully.'
+      redirect_to edit_settings_path, notice: "Avatar removed successfully."
     else
-      redirect_to edit_settings_path, alert: 'Could not remove avatar.'
+      redirect_to edit_settings_path, alert: "Could not remove avatar."
     end
   end
 
@@ -56,6 +58,16 @@ class SettingsController < ApplicationController
 
   def user_params
     params.require(:user).permit(:username, :password, :password_confirmation, :avatar, :current_password, :timezone)
+  end
+
+  def reauthentication_required?(filtered_params)
+    return false if filtered_params.blank?
+
+    password_change = filtered_params.key?("password") || filtered_params.key?(:password)
+    username = filtered_params["username"] || filtered_params[:username]
+    username_change = username.present? && username != current_user.username
+
+    password_change || username_change
   end
 
   def build_server_configuration
@@ -72,9 +84,13 @@ class SettingsController < ApplicationController
     # This is separate from API tokens - it's used only for initial mobile app setup
     payload = {
       user_id: current_user.id,
-      purpose: 'mobile_setup',
+      purpose: "mobile_setup",
       exp: 10.minutes.from_now.to_i
     }
-    Base64.urlsafe_encode64(payload.to_json)
+    verifier = ActiveSupport::MessageVerifier.new(
+      Rails.application.secret_key_base,
+      digest: "SHA256"
+    )
+    verifier.generate(payload, expires_in: 10.minutes, purpose: "mobile_setup")
   end
 end

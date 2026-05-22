@@ -1,4 +1,11 @@
 class AuditLog < ApplicationRecord
+  REDACTED_VALUE = "[REDACTED]".freeze
+  SENSITIVE_KEY_PATTERN = /
+    passw|email|secret|token|key|crypt|salt|certificate|otp|ssn|cvv|cvc|
+    authorization|cookie|message|content|body|payload|caption|title|sender|
+    signature|hmac|fcm|username|room_id|filename
+  /ix
+
   belongs_to :user, optional: true
 
   validates :action, presence: true
@@ -58,11 +65,11 @@ class AuditLog < ApplicationRecord
         resource_id: resource&.id,
         ip_address: ip_address,
         user_agent: user_agent&.truncate(500),
-        changes_made: changes,
-        metadata: metadata
+        changes_made: sanitize_object(changes),
+        metadata: sanitize_object(metadata)
       )
     rescue => e
-      Rails.logger.error "Failed to create audit log: #{e.message}"
+      Rails.logger.error "Failed to create audit log: #{e.class}"
       nil
     end
 
@@ -77,6 +84,27 @@ class AuditLog < ApplicationRecord
         metadata: metadata&.merge(admin_action: true)
       )
     end
+
+    private
+
+    def sanitize_object(value, key: nil)
+      return REDACTED_VALUE if sensitive_key?(key)
+
+      case value
+      when Hash
+        value.each_with_object({}) do |(child_key, child_value), sanitized|
+          sanitized[child_key.to_s] = sanitize_object(child_value, key: child_key)
+        end
+      when Array
+        value.map { |item| sanitize_object(item, key: key) }
+      else
+        value
+      end
+    end
+
+    def sensitive_key?(key)
+      key.present? && key.to_s.match?(SENSITIVE_KEY_PATTERN)
+    end
   end
 
   def admin_action?
@@ -84,7 +112,7 @@ class AuditLog < ApplicationRecord
   end
 
   def changes_summary
-    return nil unless changes_made.present?
+    return nil if changes_made.blank?
 
     changes_made.map do |key, (old_val, new_val)|
       "#{key}: #{old_val.inspect} → #{new_val.inspect}"

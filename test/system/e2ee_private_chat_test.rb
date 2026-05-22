@@ -2,14 +2,14 @@ require "application_system_test_case"
 
 class E2eePrivateChatTest < JsSystemTestCase
   test "dm message is encrypted at rest and decrypted in UI" do
-    alice = User.create!(username: "alice_e2ee", password: "secret", password_confirmation: "secret")
-    bob = User.create!(username: "bob_e2ee", password: "secret", password_confirmation: "secret")
+    alice = User.create!(username: "alice_e2ee", password: "password123", password_confirmation: "password123")
+    bob = User.create!(username: "bob_e2ee", password: "password123", password_confirmation: "password123")
 
     dm_channel = Channel.create!(name: "dm-alice-bob-e2ee", channel_type: "dm", created_by: alice)
     dm_channel.add_member(alice)
     dm_channel.add_member(bob)
 
-    sign_in(username: alice.username, password: "secret")
+    sign_in(username: alice.username, password: "password123")
 
     visit channel_path(dm_channel)
 

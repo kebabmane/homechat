@@ -43,6 +43,7 @@ export default class extends Controller {
   }
 
   async beforeSubmit(event) {
+    if (event.defaultPrevented) return
     if (!this._required()) return
     if (this._submitting) return
 
@@ -301,13 +302,12 @@ export default class extends Controller {
     const iv = crypto.getRandomValues(new Uint8Array(12))
     const encoded = new TextEncoder().encode(plaintext)
     const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, this._channelKey, encoded)
+    const ciphertextBytes = new Uint8Array(ciphertext)
+    const combined = new Uint8Array(iv.length + ciphertextBytes.length)
+    combined.set(iv, 0)
+    combined.set(ciphertextBytes, iv.length)
 
-    return JSON.stringify({
-      v: E2EE_VERSION,
-      alg: "AES-GCM",
-      iv: this._bytesToBase64(iv),
-      ciphertext: this._bytesToBase64(new Uint8Array(ciphertext))
-    })
+    return this._bytesToBase64(combined)
   }
 
   async _computeHmac(encryptedPayload) {
@@ -345,10 +345,11 @@ export default class extends Controller {
 
     const body = node.querySelector('[data-e2ee-body="true"]')
     if (!body) return
+    const contentNode = body.querySelector('[data-e2ee-content="true"]') || body
 
     const senderFingerprint = node.dataset.messageSenderKeyFingerprint
     if (senderFingerprint && this._blockedFingerprints.has(senderFingerprint)) {
-      body.textContent = "[Blocked due to key change]"
+      contentNode.textContent = "[Blocked due to key change]"
       node.dataset.e2eeDecrypted = "true"
       return
     }
@@ -363,14 +364,23 @@ export default class extends Controller {
         if (computed !== expectedHmac) throw new Error("HMAC verification failed")
       }
 
-      const parsed = JSON.parse(encryptedPayload)
-      const iv = this._base64ToBytes(parsed.iv)
-      const ciphertext = this._base64ToBytes(parsed.ciphertext)
+      let iv
+      let ciphertext
+      if (encryptedPayload.trim().startsWith("{")) {
+        const parsed = JSON.parse(encryptedPayload)
+        iv = this._base64ToBytes(parsed.iv)
+        ciphertext = this._base64ToBytes(parsed.ciphertext)
+      } else {
+        const combined = this._base64ToBytes(encryptedPayload)
+        if (combined.length <= 12) throw new Error("Encrypted payload too short")
+        iv = combined.slice(0, 12)
+        ciphertext = combined.slice(12)
+      }
       const plaintextBytes = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, this._channelKey, ciphertext)
-      body.textContent = new TextDecoder().decode(plaintextBytes)
+      contentNode.textContent = new TextDecoder().decode(plaintextBytes)
     } catch (error) {
       console.error("Failed to decrypt message", error)
-      body.textContent = "[Unable to decrypt]"
+      contentNode.textContent = "[Unable to decrypt]"
     }
 
     node.dataset.e2eeDecrypted = "true"

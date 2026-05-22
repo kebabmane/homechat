@@ -1,0 +1,90 @@
+name: Mobile + Server Contract CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  server_e2ee_contract:
+    name: Server E2EE Contract Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout server repo
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Prepare database
+        run: bin/rails db:prepare
+
+      - name: Run E2EE server contract tests
+        run: |
+          bin/rails test \
+            test/controllers/api/v1/messages_controller_test.rb \
+            test/controllers/api/v1/keys_controller_test.rb \
+            test/controllers/api/v1/server_info_controller_test.rb \
+            test/channels/chat_channel_test.rb \
+            test/models/message_test.rb
+
+  android_contract:
+    name: Android E2EE Contract Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Android repo
+        uses: actions/checkout@v4
+        with:
+          repository: kebabmane/homechat-android
+          path: homechat-android
+          token: ${{ secrets.CROSS_REPO_PAT || github.token }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Run Android contract tests
+        working-directory: homechat-android
+        run: |
+          ./gradlew :app:testDebugUnitTest \
+            --tests "*MessageRepositoryImplTest" \
+            --tests "*AuthViewModelTest" \
+            --no-daemon
+
+  ios_contract:
+    name: iOS E2EE Contract Tests
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout iOS repo
+        uses: actions/checkout@v4
+        with:
+          repository: kebabmane/homechat-ios
+          path: homechat-ios
+          token: ${{ secrets.CROSS_REPO_PAT || github.token }}
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Run iOS contract tests
+        working-directory: homechat-ios
+        run: |
+          xcodebuild \
+            -project HomeChatIOS.xcodeproj \
+            -scheme HomeChatIOS \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+            test \
+            -only-testing:HomeChatIOSTests/APIDecodeTests \
+            -only-testing:HomeChatIOSTests/MessageModelTests \
+            -only-testing:HomeChatIOSTests/E2EEServiceTests \
+            -only-testing:HomeChatIOSTests/HmacServiceTests \
+            -only-testing:HomeChatIOSTests/AppLockServiceTests \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO

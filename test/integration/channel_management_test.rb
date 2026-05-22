@@ -15,6 +15,6 @@ class ChannelManagementTest < ActionDispatch::IntegrationTest
 
     delete leave_channel_path(channel)
     assert_response :redirect
-    refute channel.reload.member?(user)
+    assert_not channel.reload.member?(user)
   end
 end

@@ -2,11 +2,11 @@ require "application_system_test_case"
 
 class AdminSettingsTest < JsSystemTestCase
   setup do
-    @admin = User.create!(username: "settingsadmin", password: "secret", password_confirmation: "secret", role: "admin")
+    @admin = User.create!(username: "settingsadmin", password: "password123", password_confirmation: "password123", role: "admin")
   end
 
   test "admin settings page shows all consolidated sections" do
-    sign_in(username: @admin.username, password: "secret")
+    sign_in(username: @admin.username, password: "password123")
     visit edit_admin_settings_path
 
     # General settings section
@@ -29,7 +29,7 @@ class AdminSettingsTest < JsSystemTestCase
   end
 
   test "can toggle API enabled setting" do
-    sign_in(username: @admin.username, password: "secret")
+    sign_in(username: @admin.username, password: "password123")
     visit edit_admin_settings_path
 
     # Toggle API enabled checkbox
@@ -46,7 +46,7 @@ class AdminSettingsTest < JsSystemTestCase
   end
 
   test "can toggle Home Assistant enabled setting" do
-    sign_in(username: @admin.username, password: "secret")
+    sign_in(username: @admin.username, password: "password123")
     visit edit_admin_settings_path
 
     # Toggle HA enabled checkbox
@@ -63,7 +63,7 @@ class AdminSettingsTest < JsSystemTestCase
   end
 
   test "can update webhook base URL" do
-    sign_in(username: @admin.username, password: "secret")
+    sign_in(username: @admin.username, password: "password123")
     visit edit_admin_settings_path
 
     # Update webhook URL
@@ -76,7 +76,7 @@ class AdminSettingsTest < JsSystemTestCase
   end
 
   test "admin nav shows all links including Settings" do
-    sign_in(username: @admin.username, password: "secret")
+    sign_in(username: @admin.username, password: "password123")
     visit admin_dashboard_path
 
     # Check all nav links are present
@@ -89,7 +89,7 @@ class AdminSettingsTest < JsSystemTestCase
   end
 
   test "HA Setup page shows documentation only" do
-    sign_in(username: @admin.username, password: "secret")
+    sign_in(username: @admin.username, password: "password123")
     visit admin_integrations_path
 
     # Should show setup documentation
@@ -101,8 +101,8 @@ class AdminSettingsTest < JsSystemTestCase
   end
 
   test "non-admin cannot access admin settings" do
-    regular_user = User.create!(username: "regularuser", password: "secret", password_confirmation: "secret", role: "user")
-    sign_in(username: regular_user.username, password: "secret")
+    regular_user = User.create!(username: "regularuser", password: "password123", password_confirmation: "password123", role: "user")
+    sign_in(username: regular_user.username, password: "password123")
 
     visit edit_admin_settings_path
 

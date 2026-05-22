@@ -1,5 +1,5 @@
 class SessionsController < ApplicationController
-  layout 'authentication'
+  layout "authentication"
 
   def new
   end
@@ -72,10 +72,9 @@ class SessionsController < ApplicationController
       user.register_failed_attempt!
 
       if user.locked?
-        flash.now[:alert] = "Too many failed attempts. Account locked for 15 minutes."
+        flash.now[:alert] = "Account is locked. Try again in 15 minutes."
       else
-        remaining = user.remaining_attempts
-        flash.now[:alert] = "Invalid password. #{remaining} attempts remaining."
+        flash.now[:alert] = "Invalid username or password."
       end
 
       AuditLog.log(
@@ -90,7 +89,7 @@ class SessionsController < ApplicationController
         }
       )
     else
-      flash.now[:alert] = 'Invalid username or password'
+      flash.now[:alert] = "Invalid username or password"
 
       AuditLog.log(
         action: AuditLog::ACTIONS[:login_failed],

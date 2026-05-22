@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 // Popover showing channel members when the header count is clicked.
 export default class extends Controller {
-  static targets = ["panel"]
+  static targets = ["panel", "trigger"]
   static values = {
     url: String
   }
@@ -10,6 +10,7 @@ export default class extends Controller {
   connect() {
     this.boundHandleOutside = this.handleOutside.bind(this)
     this.boundHandleEscape = this.handleEscape.bind(this)
+    this._opener = null
   }
 
   disconnect() {
@@ -19,6 +20,7 @@ export default class extends Controller {
   toggle(event) {
     event.preventDefault()
     if (!this.hasPanelTarget) return
+    this._opener = event.currentTarget
     const hidden = this.panelTarget.classList.contains("hidden")
     hidden ? this.show() : this.hide()
   }
@@ -27,6 +29,7 @@ export default class extends Controller {
     if (!this.hasPanelTarget) return
     this.panelTarget.classList.remove("hidden")
     this.panelTarget.setAttribute('aria-hidden', 'false')
+    if (this.hasTriggerTarget) this.triggerTarget.setAttribute('aria-expanded', 'true')
     this.loadMembers()
     document.addEventListener("click", this.boundHandleOutside, true)
     document.addEventListener("keydown", this.boundHandleEscape)
@@ -40,8 +43,13 @@ export default class extends Controller {
     if (!this.hasPanelTarget) return
     this.panelTarget.classList.add("hidden")
     this.panelTarget.setAttribute('aria-hidden', 'true')
+    if (this.hasTriggerTarget) this.triggerTarget.setAttribute('aria-expanded', 'false')
     document.removeEventListener("click", this.boundHandleOutside, true)
     document.removeEventListener("keydown", this.boundHandleEscape)
+
+    if (this._opener && typeof this._opener.focus === "function") {
+      this._opener.focus()
+    }
   }
 
   handleOutside(event) {

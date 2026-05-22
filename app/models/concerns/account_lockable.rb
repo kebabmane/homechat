@@ -35,7 +35,7 @@ module AccountLockable
       metadata: { reason: "max_failed_attempts", locked_until: locked_until.iso8601 }
     ) rescue nil
 
-    Rails.logger.warn "Account locked for user #{username} until #{locked_until}"
+    Rails.logger.warn "Account locked for user_id=#{id} until #{locked_until}"
   end
 
   def unlock_access!
@@ -82,7 +82,7 @@ module AccountLockable
 
   def remaining_attempts
     return MAX_FAILED_ATTEMPTS unless lockout_enabled?
-    [MAX_FAILED_ATTEMPTS - failed_attempts, 0].max
+    [ MAX_FAILED_ATTEMPTS - failed_attempts, 0 ].max
   end
 
   def lockout_remaining_time
@@ -97,7 +97,7 @@ module AccountLockable
       return nil unless user
 
       if user.locked?
-        Rails.logger.warn "Login attempt for locked account: #{username}"
+        Rails.logger.warn "Login attempt for locked account user_id=#{user.id}"
         return nil
       end
 

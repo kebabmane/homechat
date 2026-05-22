@@ -101,7 +101,7 @@ class Api::V1::KeysControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     json = JSON.parse(response.body)
-    refute json["success"]
+    assert_not json["success"]
   end
 
   test "get_user_e2ee_key returns device list" do
@@ -224,14 +224,14 @@ class Api::V1::KeysControllerTest < ActionDispatch::IntegrationTest
 
     post "/api/v1/channels/#{@channel.id}/key_shares",
          params: {
-           key_shares: [{
+           key_shares: [ {
              recipient_user_id: outsider.id,
              recipient_device_id: outsider_device,
              encrypted_channel_key: "wrapped",
              signature: "sig",
              sender_device_id: @user_device_id,
              sender_key_fingerprint: "u_fp"
-           }]
+           } ]
          },
          headers: auth_headers(token: @raw_token, device_id: @user_device_id)
 

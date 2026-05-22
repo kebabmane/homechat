@@ -102,4 +102,3 @@ class ChannelTest < ActiveSupport::TestCase
     assert_equal 1, channel.unread_count_for(member)
   end
 end
-

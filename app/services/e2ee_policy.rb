@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 class E2eePolicy
-  HEADER_VERSION = 'X-HomeChat-E2EE-Version'
-  HEADER_DEVICE_ID = 'X-HomeChat-Device-Id'
+  HEADER_VERSION = "X-HomeChat-E2EE-Version"
+  HEADER_DEVICE_ID = "X-HomeChat-Device-Id"
 
-  REQUIRED_VERSION = '1'
-  REQUIRED_ENCODING = 'e2ee'
+  REQUIRED_VERSION = "1"
+  REQUIRED_ENCODING = "e2ee"
   ENFORCED_CHANNEL_TYPES = %w[private dm].freeze
-  PLACEHOLDER_CONTENT = '[Encrypted message]'
-  LEGACY_UPGRADE_ERROR_CODE = 'e2ee_upgrade_required'
-  BOT_FORBIDDEN_CODE = 'e2ee_bot_forbidden'
+  PLACEHOLDER_CONTENT = "[Encrypted message]"
+  LEGACY_UPGRADE_ERROR_CODE = "e2ee_upgrade_required"
+  BOT_FORBIDDEN_CODE = "e2ee_bot_forbidden"
 
   DEVICE_ID_FORMAT = /\A[a-zA-Z0-9._:-]{8,128}\z/
 
@@ -59,8 +59,8 @@ class E2eePolicy
 
       if !allow_files && files_present?(payload)
         return {
-          message: 'File attachments are disabled for end-to-end encrypted private and direct channels',
-          code: 'e2ee_files_not_supported',
+          message: "File attachments are disabled for end-to-end encrypted private and direct channels",
+          code: "e2ee_files_not_supported",
           status: :unprocessable_entity
         }
       end
@@ -70,7 +70,7 @@ class E2eePolicy
 
     def e2ee_required_error
       {
-        message: 'End-to-end encryption is required for private and direct messages. Upgrade your client.',
+        message: "End-to-end encryption is required for private and direct messages. Upgrade your client.",
         code: LEGACY_UPGRADE_ERROR_CODE,
         status: :upgrade_required
       }
@@ -78,7 +78,7 @@ class E2eePolicy
 
     def bot_forbidden_error
       {
-        message: 'Bot posting is disabled in end-to-end encrypted channels',
+        message: "Bot posting is disabled in end-to-end encrypted channels",
         code: BOT_FORBIDDEN_CODE,
         status: :forbidden
       }
@@ -96,7 +96,7 @@ class E2eePolicy
     end
 
     def value_from_params(params, key)
-      return nil unless params.present?
+      return nil if params.blank?
 
       if params.respond_to?(:[])
         value = params[key] || params[key.to_s]

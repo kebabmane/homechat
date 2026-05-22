@@ -1,4 +1,4 @@
-require 'digest'
+require "digest"
 
 class Api::V1::KeysController < Api::V1::BaseController
   class KeyShareValidationError < StandardError; end
@@ -17,10 +17,10 @@ class Api::V1::KeysController < Api::V1::BaseController
     encryption_public_key = params[:encryption_public_key].presence || params[:public_key]
     signing_public_key = params[:signing_public_key].presence || params[:public_key]
     key_fingerprint = params[:key_fingerprint].presence || fingerprint_for(encryption_public_key, signing_public_key)
-    key_version = params[:key_version].presence || '1'
+    key_version = params[:key_version].presence || "1"
 
     if !E2eePolicy.valid_device_id?(device_id) || encryption_public_key.blank? || signing_public_key.blank? || key_fingerprint.blank?
-      return render json: { success: false, error: 'device_id, encryption_public_key, signing_public_key and key_fingerprint are required' }, status: :unprocessable_entity
+      return render json: { success: false, error: "device_id, encryption_public_key, signing_public_key and key_fingerprint are required" }, status: :unprocessable_entity
     end
 
     key_record = UserE2eeKey.find_or_initialize_by(user_id: current_api_user.id, device_id: device_id)
@@ -55,7 +55,7 @@ class Api::V1::KeysController < Api::V1::BaseController
     key_records = UserE2eeKey.where(user_id: params[:id], revoked_at: nil).order(updated_at: :desc)
 
     if key_records.blank?
-      return render json: { success: false, error: 'E2EE key not found for this user' }, status: :not_found
+      return render json: { success: false, error: "E2EE key not found for this user" }, status: :not_found
     end
 
     render json: {
@@ -70,18 +70,18 @@ class Api::V1::KeysController < Api::V1::BaseController
     channel = Channel.find_by(id: params[:id])
 
     unless channel
-      return render json: { success: false, error: 'Channel not found' }, status: :not_found
+      return render json: { success: false, error: "Channel not found" }, status: :not_found
     end
 
     unless channel.accessible_by?(current_api_user)
-      return render json: { success: false, error: 'Forbidden - You do not have access to this channel' }, status: :forbidden
+      return render json: { success: false, error: "Forbidden - You do not have access to this channel" }, status: :forbidden
     end
 
     member_keys = UserE2eeKey
                     .joins(:user)
                     .joins("INNER JOIN channel_memberships ON channel_memberships.user_id = user_e2ee_keys.user_id AND channel_memberships.channel_id = #{channel.id.to_i}")
                     .where(revoked_at: nil)
-                    .order('users.username ASC, user_e2ee_keys.updated_at DESC')
+                    .order("users.username ASC, user_e2ee_keys.updated_at DESC")
 
     members = member_keys.map do |mk|
       {
@@ -109,35 +109,35 @@ class Api::V1::KeysController < Api::V1::BaseController
     channel = Channel.find_by(id: params[:id])
 
     unless channel
-      return render json: { success: false, error: 'Channel not found' }, status: :not_found
+      return render json: { success: false, error: "Channel not found" }, status: :not_found
     end
 
     unless channel.accessible_by?(current_api_user)
-      return render json: { success: false, error: 'Forbidden - You do not have access to this channel' }, status: :forbidden
+      return render json: { success: false, error: "Forbidden - You do not have access to this channel" }, status: :forbidden
     end
 
     sender_device_id = E2eePolicy.device_id_from(request:, params: params)
     sender_key = UserE2eeKey.find_by(user_id: current_api_user.id, device_id: sender_device_id, revoked_at: nil)
 
     unless sender_key
-      return render json: { success: false, error: 'Sender device key not found or inactive' }, status: :unprocessable_entity
+      return render json: { success: false, error: "Sender device key not found or inactive" }, status: :unprocessable_entity
     end
 
     raw_shares = params[:key_shares]
 
     shares_list = case raw_shares
-                  when ActionController::Parameters
+    when ActionController::Parameters
                     raw_shares.values
-                  when Array
+    when Array
                     raw_shares
-                  else
+    else
                     []
-                  end
+    end
 
     shares_list = shares_list.select { |s| s.is_a?(Hash) || s.is_a?(ActionController::Parameters) }
 
     if shares_list.blank?
-      return render json: { success: false, error: 'key_shares must be a non-empty array' }, status: :unprocessable_entity
+      return render json: { success: false, error: "key_shares must be a non-empty array" }, status: :unprocessable_entity
     end
 
     created_count = 0
@@ -151,23 +151,23 @@ class Api::V1::KeysController < Api::V1::BaseController
         signature = share[:signature]
         sender_share_device_id = share[:sender_device_id].presence || sender_device_id
         sender_key_fingerprint = share[:sender_key_fingerprint].presence || sender_key.key_fingerprint
-        key_version = share[:key_version].presence || '1'
+        key_version = share[:key_version].presence || "1"
 
         if recipient_user_id.zero? || recipient_device_id.blank? || encrypted_channel_key.blank? || signature.blank?
-          raise KeyShareValidationError, 'Each share must include recipient_user_id, recipient_device_id, encrypted_channel_key, and signature'
+          raise KeyShareValidationError, "Each share must include recipient_user_id, recipient_device_id, encrypted_channel_key, and signature"
         end
 
         unless sender_share_device_id == sender_device_id && sender_key_fingerprint == sender_key.key_fingerprint
-          raise KeyShareValidationError, 'sender_device_id and sender_key_fingerprint must match your active device key'
+          raise KeyShareValidationError, "sender_device_id and sender_key_fingerprint must match your active device key"
         end
 
         unless channel.channel_memberships.exists?(user_id: recipient_user_id)
-          raise KeyShareValidationError, 'recipient_user_id must be a current member of the channel'
+          raise KeyShareValidationError, "recipient_user_id must be a current member of the channel"
         end
 
         recipient_key = UserE2eeKey.find_by(user_id: recipient_user_id, device_id: recipient_device_id, revoked_at: nil)
         unless recipient_key
-          raise KeyShareValidationError, 'recipient_device_id must belong to an active channel member device key'
+          raise KeyShareValidationError, "recipient_device_id must belong to an active channel member device key"
         end
 
         key_share = ChannelKeyShare.find_or_initialize_by(
@@ -177,7 +177,7 @@ class Api::V1::KeysController < Api::V1::BaseController
         )
 
         if key_share.persisted? && key_share.sender_user_id != current_api_user.id
-          raise KeyShareValidationError, 'Only the original sender may overwrite an existing key share for this recipient device'
+          raise KeyShareValidationError, "Only the original sender may overwrite an existing key share for this recipient device"
         end
 
         key_share.assign_attributes(
@@ -207,16 +207,16 @@ class Api::V1::KeysController < Api::V1::BaseController
     channel = Channel.find_by(id: params[:id])
 
     unless channel
-      return render json: { success: false, error: 'Channel not found' }, status: :not_found
+      return render json: { success: false, error: "Channel not found" }, status: :not_found
     end
 
     unless channel.accessible_by?(current_api_user)
-      return render json: { success: false, error: 'Forbidden - You do not have access to this channel' }, status: :forbidden
+      return render json: { success: false, error: "Forbidden - You do not have access to this channel" }, status: :forbidden
     end
 
     recipient_device_id = E2eePolicy.device_id_from(request:, params: params)
     unless E2eePolicy.valid_device_id?(recipient_device_id)
-      return render json: { success: false, error: 'A valid device_id is required' }, status: :unprocessable_entity
+      return render json: { success: false, error: "A valid device_id is required" }, status: :unprocessable_entity
     end
 
     key_share = ChannelKeyShare.find_by(
@@ -226,7 +226,7 @@ class Api::V1::KeysController < Api::V1::BaseController
     )
 
     unless key_share
-      return render json: { success: false, error: 'No key share found for this channel/device' }, status: :not_found
+      return render json: { success: false, error: "No key share found for this channel/device" }, status: :not_found
     end
 
     render json: {

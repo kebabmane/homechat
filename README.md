@@ -1,8 +1,8 @@
 # HomeChat
 
 [![Build Status](https://github.com/kebabmane/homechat/workflows/CI/badge.svg)](https://github.com/kebabmane/homechat/actions)
-[![Ruby](https://img.shields.io/badge/ruby-3.3+-red.svg)](https://www.ruby-lang.org/)
-[![Rails](https://img.shields.io/badge/rails-8.0-red.svg)](https://rubyonrails.org/)
+[![Ruby](https://img.shields.io/badge/ruby-4.0+-red.svg)](https://www.ruby-lang.org/)
+[![Rails](https://img.shields.io/badge/rails-8.1-red.svg)](https://rubyonrails.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > Self-hosted, offline-first chat for households and teams. Built with Rails 8, SQLite, and Hotwire.
@@ -106,7 +106,7 @@ See [Integration Setup](docs/deployment/home-assistant.md) for full guide.
 
 | Component | Technology |
 |-----------|------------|
-| Backend | Ruby 3.3, Rails 8.0 |
+| Backend | Ruby 4.0, Rails 8.1 |
 | Database | SQLite 3 |
 | Real-time | ActionCable (Solid Cable) |
 | Frontend | Hotwire (Turbo + Stimulus), Tailwind CSS |

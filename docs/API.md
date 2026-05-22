@@ -405,8 +405,8 @@ GET /api/v1/metrics
   "application": {
     "name": "Homechat",
     "environment": "production",
-    "ruby_version": "3.3.0",
-    "rails_version": "8.0.2"
+    "ruby_version": "3.3.11",
+    "rails_version": "8.1.3"
   },
   "users": {
     "total": 100,

@@ -127,4 +127,82 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
     json = JSON.parse(response.body)
     assert_equal "e2ee_files_not_supported", json["code"]
   end
+
+  test "index should include receipt counters without errors" do
+    message = Message.create!(content: "Receipt target", user: @recipient, channel: @channel)
+    MessageReceipt.create!(message: message, user: @user, status: :delivered)
+    MessageReceipt.create!(message: message, user: @recipient, status: :read)
+
+    get api_v1_messages_path,
+        params: { channel_id: @channel.id },
+        headers: auth_headers
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    serialized = json["messages"].find { |m| m["id"] == message.id }
+    assert_not_nil serialized
+    assert_equal 1, serialized.dig("receipts", "delivered_count")
+    assert_equal 1, serialized.dig("receipts", "read_count")
+  end
+
+  test "dm channels should include unread count and last message data" do
+    dm_channel = Channel.create!(
+      name: "dm-#{@user.username}-#{@recipient.username}-#{SecureRandom.hex(2)}",
+      channel_type: "dm",
+      creator: @user
+    )
+    dm_channel.add_member(@user)
+    dm_channel.add_member(@recipient)
+
+    Message.create!(content: "from recipient", user: @recipient, channel: dm_channel)
+    Message.create!(content: "from self", user: @user, channel: dm_channel)
+
+    get "/api/v1/dm/channels", headers: auth_headers
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    channel_json = json["channels"].find { |channel| channel["id"] == dm_channel.id }
+    assert_not_nil channel_json
+    assert_equal @recipient.username, channel_json["name"]
+    assert_equal 1, channel_json["unread_count"]
+    assert_equal "from self", channel_json.dig("last_message", "content")
+  end
+
+  test "create_media rejects disallowed file types" do
+    post media_api_v1_channel_path(@channel),
+         params: {
+           files: [ Rack::Test::UploadedFile.new(StringIO.new("#!/bin/bash\nevil"), "application/x-sh", original_filename: "evil.sh") ],
+           caption: "bad file"
+         },
+         headers: auth_headers
+
+    assert_response :unprocessable_entity
+    json = JSON.parse(response.body)
+    assert json["errors"].any? { |e| e.include?("unsupported type") }
+  end
+
+  test "create_media rejects oversized files" do
+    post media_api_v1_channel_path(@channel),
+         params: {
+           files: [ Rack::Test::UploadedFile.new(StringIO.new("x" * (Message::MAX_FILE_SIZE + 1)), "text/plain", original_filename: "huge.txt") ],
+           caption: "big file"
+         },
+         headers: auth_headers
+
+    assert_response :unprocessable_entity
+    json = JSON.parse(response.body)
+    assert json["errors"].any? { |e| e.include?("must be less than") }
+  end
+
+  test "create_media accepts valid image file" do
+    assert_difference("Message.count", 1) do
+      post media_api_v1_channel_path(@channel),
+           params: {
+             files: [ Rack::Test::UploadedFile.new(StringIO.new("fake image"), "image/png", original_filename: "photo.png") ],
+             caption: "nice photo"
+           },
+           headers: auth_headers
+      assert_response :success
+    end
+  end
 end

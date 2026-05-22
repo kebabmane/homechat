@@ -1,152 +1,192 @@
-<div class="flex flex-col h-full bg-gray-50/50">
-  <!-- Sidebar Header -->
-  <div class="px-4 py-3 border-b border-gray-200/60 bg-gray-50 sticky top-0 z-10">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold shadow-sm">
-          H
-        </div>
-        <h2 class="text-lg font-bold text-gray-900 tracking-tight">HomeChat</h2>
-      </div>
-      <div class="relative flex items-center space-x-2">
-        <!-- Mobile close - 44px touch target -->
-        <button class="md:hidden p-2 -m-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" data-action="click->sidebar#close" aria-label="Close sidebar">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    </div>
+<div class="sidebar-root">
+  <!-- Header -->
+  <div class="sidebar-header">
+    <span class="sidebar-wordmark">
+      <span class="sidebar-logo-mark" aria-hidden="true"></span>
+      HomeChat
+    </span>
+    <button class="md:hidden sidebar-close-btn" data-action="click->sidebar#close" aria-label="Close sidebar">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
   </div>
 
-  <!-- Channel List -->
-  <div class="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-    <!-- My Channels Section -->
-    <div>
-      <div class="flex items-center justify-between px-2 mb-2 group">
-        <h3 class="text-xs font-bold text-gray-600 uppercase tracking-wider">Channels</h3>
-        <%= link_to new_channel_path, class: "text-gray-500 hover:text-gray-900 transition-colors p-2 -m-1 rounded-lg hover:bg-gray-200 opacity-40 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-blue-500", title: "New Channel" do %>
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+  <div class="sidebar-command-hint">
+    <kbd>Cmd</kbd>
+    <span>+</span>
+    <kbd>K</kbd>
+    <span>Quick switch</span>
+  </div>
+
+  <!-- Scrollable body -->
+  <div class="sidebar-scroll">
+
+    <!-- Channels -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header">
+        <span class="sidebar-section-label">Channels</span>
+        <%= link_to new_channel_path,
+            class: "sidebar-section-action",
+            title: "New Channel",
+            "aria-label": "New channel" do %>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14M5 12h14" />
           </svg>
         <% end %>
       </div>
 
-      <div class="space-y-0.5">
+      <div class="sidebar-items">
         <% @sidebar_my_channels.each do |channel| %>
           <% active = request.path == channel_path(channel) %>
           <%= link_to channel_path(channel),
-              class: "flex items-center px-2.5 py-2.5 sm:py-1.5 text-sm font-medium rounded-md transition-all duration-150 group #{active ? 'bg-white text-blue-700 shadow-sm ring-1 ring-gray-200' : 'text-gray-700 hover:bg-gray-200/80 hover:text-gray-900'}",
+              class: "sidebar-item #{active ? 'sidebar-item-active' : ''}",
               aria: { current: (active ? 'page' : nil) } do %>
-            <% if channel.channel_type == 'private' %>
-              <svg class="w-4 h-4 mr-2.5 flex-shrink-0 #{active ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-600'}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
-            <% else %>
-              <span class="mr-2.5 text-lg leading-none flex-shrink-0 #{active ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-600'}">#</span>
-            <% end %>
-            <span class="flex-1 truncate"><%= channel.name %></span>
+            <span class="sidebar-item-icon">
+              <% if channel.channel_type == 'private' %>
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                </svg>
+              <% else %>
+                <span aria-hidden="true">#</span>
+              <% end %>
+            </span>
+            <span class="sidebar-item-label flex items-center gap-1.5">
+              <span><%= channel.name %></span>
+              <% if E2eePolicy.required_for_channel?(channel) %>
+                <%= e2ee_icon(class_name: 'w-3 h-3', tone_class: 'text-emerald-600', aria_hidden: true) %>
+                <span class="sr-only">End-to-end encrypted</span>
+              <% end %>
+            </span>
             <% if @sidebar_unread_counts&.dig(channel.id).to_i > 0 %>
-              <span class="unread-badge ml-auto flex-shrink-0 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-xs font-semibold text-white bg-blue-600 rounded-full">
+              <span class="unread-badge sidebar-unread-badge">
                 <%= @sidebar_unread_counts[channel.id] > 99 ? '99+' : @sidebar_unread_counts[channel.id] %>
               </span>
             <% end %>
           <% end %>
         <% end %>
 
-        <% if @sidebar_my_channels.count == 0 %>
-          <div class="text-xs text-gray-500 px-3 py-2 italic">No channels joined</div>
+        <% if @sidebar_my_channels.empty? %>
+          <div class="sidebar-empty-text">No channels joined</div>
         <% end %>
 
-        <%= link_to channels_path, class: "flex items-center px-2.5 py-2.5 sm:py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-200/70 rounded-md transition-colors mt-2" do %>
-          <span class="flex items-center justify-center w-4 h-4 mr-2.5 rounded-full bg-gray-200 text-gray-600 group-hover:bg-gray-300">
-            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          </span>
-          <span>Browse all channels</span>
+        <%= link_to channels_path, class: "sidebar-browse-link" do %>
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          Browse all channels
         <% end %>
       </div>
     </div>
 
-    <!-- Direct Messages Section -->
-    <div>
-      <div class="flex items-center justify-between px-2 mb-2 group">
-        <h3 class="text-xs font-bold text-gray-600 uppercase tracking-wider">Direct Messages</h3>
-        <%= link_to new_dm_path, class: "text-gray-500 hover:text-gray-900 transition-colors p-2 -m-1 rounded-lg hover:bg-gray-200 opacity-40 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-blue-500", title: "New DM" do %>
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+    <!-- Direct Messages -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header">
+        <span class="sidebar-section-label">Direct Messages</span>
+        <%= link_to new_dm_path,
+            class: "sidebar-section-action",
+            title: "New DM",
+            "aria-label": "New direct message" do %>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14M5 12h14" />
           </svg>
         <% end %>
       </div>
 
-      <div class="space-y-0.5">
+      <div class="sidebar-items">
         <% @sidebar_dm_channels.each do |channel| %>
-          <% other_user = channel.other_user(current_user) %>
+          <% other_user = @sidebar_dm_other_users_by_channel_id&.[](channel.id) %>
           <% active = request.path == channel_path(channel) %>
           <%= link_to channel_path(channel),
-              class: "flex items-center px-2.5 py-2.5 sm:py-1.5 text-sm font-medium rounded-md transition-all duration-150 group #{active ? 'bg-white text-blue-700 shadow-sm ring-1 ring-gray-200' : 'text-gray-700 hover:bg-gray-200/80 hover:text-gray-900'}" do %>
-            <span class="relative mr-2.5 flex-shrink-0">
-               <%= avatar_for(other_user, size: 'h-5 w-5') %>
-               <% if user_online?(other_user) %>
-                 <span class="absolute bottom-0 right-0 block h-2 w-2 rounded-full ring-2 ring-white bg-green-500 status-online" aria-hidden="true"></span>
-                 <span class="sr-only">(online)</span>
-               <% end %>
+              class: "sidebar-item #{active ? 'sidebar-item-active' : ''}",
+              aria: { current: (active ? 'page' : nil) } do %>
+            <span class="sidebar-item-icon relative">
+              <%= avatar_for(other_user, size: 'h-5 w-5') %>
+              <% if user_online?(other_user) %>
+                <span class="absolute -bottom-0.5 -right-0.5 block h-2 w-2 rounded-full bg-green-500 status-online sidebar-dm-online-dot" aria-hidden="true"></span>
+                <span class="sr-only">(online)</span>
+              <% end %>
             </span>
-            <span class="flex-1 truncate"><%= other_user&.username || 'Unknown User' %></span>
+            <span class="sidebar-item-label flex items-center gap-1.5">
+              <span><%= other_user&.username || 'Unknown User' %></span>
+              <% if E2eePolicy.required_for_channel?(channel) %>
+                <%= e2ee_icon(class_name: 'w-3 h-3', tone_class: 'text-emerald-600', aria_hidden: true) %>
+                <span class="sr-only">End-to-end encrypted</span>
+              <% end %>
+            </span>
             <% if @sidebar_unread_counts&.dig(channel.id).to_i > 0 %>
-              <span class="unread-badge ml-auto flex-shrink-0 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-xs font-semibold text-white bg-blue-600 rounded-full">
+              <span class="unread-badge sidebar-unread-badge">
                 <%= @sidebar_unread_counts[channel.id] > 99 ? '99+' : @sidebar_unread_counts[channel.id] %>
               </span>
             <% end %>
           <% end %>
         <% end %>
+
         <% if @sidebar_dm_channels.blank? %>
-          <div class="text-xs text-gray-500 px-3 py-2 italic">No conversations yet</div>
+          <div class="sidebar-empty-text">No conversations yet</div>
         <% end %>
       </div>
     </div>
 
+    <!-- Admin -->
     <% if current_user.admin? %>
-    <!-- Admin Section -->
-    <div>
-      <div class="flex items-center px-2 mb-2">
-        <h3 class="text-xs font-bold text-gray-600 uppercase tracking-wider">Admin</h3>
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="sidebar-section-label">Admin</span>
+        </div>
+        <div class="sidebar-items">
+          <%= link_to admin_dashboard_path, class: "sidebar-item" do %>
+            <span class="sidebar-item-icon">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </span>
+            <span class="sidebar-item-label">Admin Dashboard</span>
+          <% end %>
+        </div>
       </div>
-      <div class="space-y-0.5">
-        <%= link_to admin_dashboard_path,
-            class: "flex items-center px-2.5 py-2.5 sm:py-1.5 text-sm font-medium rounded-md transition-all duration-150 group text-gray-700 hover:bg-gray-200/80 hover:text-gray-900" do %>
-          <svg class="w-4 h-4 mr-2.5 text-gray-500 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          </svg>
-          <span class="truncate">Admin Dashboard</span>
-        <% end %>
-      </div>
-    </div>
     <% end %>
+
   </div>
 
-  <!-- User Menu -->
-  <div class="p-3 border-t border-gray-200/60 bg-gray-50/50">
-    <div class="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-gray-200/50 transition-colors group">
-      <div class="flex items-center space-x-3 min-w-0">
+  <!-- User footer -->
+  <div class="sidebar-footer">
+    <div class="sidebar-user-row group">
+      <div class="sidebar-user-info">
         <div class="flex-shrink-0">
           <%= avatar_for(current_user, size: 'h-8 w-8') %>
         </div>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-semibold text-gray-900 truncate"><%= current_user.username %></p>
-          <p class="text-xs text-green-600 flex items-center">
-            <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></span>
-            Online
+        <div class="min-w-0">
+          <p class="sidebar-username"><%= current_user.username %></p>
+          <p class="sidebar-user-status">
+            <% if user_online?(current_user) %>
+              <%= status_with_dot('Online', kind: :ok, class_name: 'text-green-500') %>
+            <% else %>
+              <span class="text-stone-400"><%= last_seen_text(current_user) %></span>
+            <% end %>
           </p>
         </div>
       </div>
-      
-      <div class="flex items-center space-x-0.5 opacity-50 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-         <%= link_to edit_settings_path, class: "text-gray-400 hover:text-gray-700 p-2.5 sm:p-1.5 rounded-lg hover:bg-gray-200 focus-visible:ring-2 focus-visible:ring-blue-500", title: "Settings" do %>
-          <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+
+      <div class="sidebar-user-actions">
+        <%= link_to edit_settings_path,
+            class: "sidebar-action-btn",
+            title: "Settings",
+            "aria-label": "Settings" do %>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
         <% end %>
         <%= link_to signout_path,
             data: { turbo_method: :delete, turbo_confirm: "Sign out?" },
-            class: "text-gray-400 hover:text-red-600 p-2.5 sm:p-1.5 rounded-lg hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-blue-500", title: "Sign Out" do %>
-          <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+            class: "sidebar-action-btn danger",
+            title: "Sign Out",
+            "aria-label": "Sign out" do %>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
         <% end %>
       </div>
     </div>

@@ -1,65 +1,65 @@
 class Api::V1::WebhooksController < Api::V1::BaseController
   class E2eeBotPostingForbidden < StandardError; end
 
-  skip_before_action :authenticate_api_request, only: [:receive]
-  before_action :authenticate_webhook, only: [:receive]
-  
+  skip_before_action :authenticate_api_request, only: [ :receive ]
+  before_action :authenticate_webhook, only: [ :receive ]
+
   def receive
     # Get raw body for JSON parsing (already read for signature verification, need to rewind)
     request.body.rewind
     webhook_data = JSON.parse(request.body.read).with_indifferent_access
     webhook_id = params[:webhook_id]
-    
-    Rails.logger.info "Received webhook #{webhook_id} (action=#{webhook_data[:action]})"
-    
+
+    Rails.logger.info "Received webhook action=#{webhook_data[:action]}"
+
     # Find the bot associated with this webhook
     bot = Bot.find_by(webhook_id: webhook_id, active: true)
-    
+
     unless bot
-      render_error('Bot not found or inactive', :not_found)
+      render_error("Bot not found or inactive", :not_found)
       return
     end
-    
+
     begin
       case webhook_data[:action]
-      when 'send_message'
+      when "send_message"
         handle_send_message(bot, webhook_data)
-      when 'status_update'
+      when "status_update"
         handle_status_update(bot, webhook_data)
-      when 'command'
+      when "command"
         handle_command(bot, webhook_data)
       else
         # Default: treat as a message to send to HomeChat
         handle_incoming_message(bot, webhook_data)
       end
-      
-      render json: { status: 'ok', message: 'Webhook processed successfully' }
-      
+
+      render json: { status: "ok", message: "Webhook processed successfully" }
+
     rescue StandardError => e
       if e.is_a?(E2eeBotPostingForbidden)
         render_api_error(e.message, status: :forbidden, code: E2eePolicy::BOT_FORBIDDEN_CODE)
         return
       end
 
-      Rails.logger.error "Webhook processing error: #{e.message}"
+      Rails.logger.error "Webhook processing error: #{e.class}"
       Rails.logger.error e.backtrace.join("\n") if Rails.env.development?
-      render_error('Failed to process webhook', :internal_server_error)
+      render_error("Failed to process webhook", :internal_server_error)
     end
   end
-  
+
   private
-  
+
   def authenticate_webhook
     webhook_id = params[:webhook_id]
 
-    unless webhook_id.present?
-      render_error('Missing webhook ID', :unauthorized)
+    if webhook_id.blank?
+      render_error("Missing webhook ID", :unauthorized)
       return
     end
 
     bot = Bot.find_by(webhook_id: webhook_id, active: true)
     unless bot
-      render_error('Invalid webhook ID or bot inactive', :unauthorized)
+      render_error("Invalid webhook ID or bot inactive", :unauthorized)
       return
     end
 
@@ -69,123 +69,122 @@ class Api::V1::WebhooksController < Api::V1::BaseController
     request.body.rewind
 
     # Get signature from header
-    signature_header = request.headers['X-Hub-Signature-256'] || request.headers['X-Signature-256']
+    signature_header = request.headers["X-Hub-Signature-256"] || request.headers["X-Signature-256"]
 
     unless bot.verify_webhook_signature(payload, signature_header)
-      Rails.logger.warn "Webhook signature verification failed for bot #{bot.name} (ID: #{webhook_id})"
-      render_error('Invalid webhook signature', :unauthorized)
+      Rails.logger.warn "Webhook signature verification failed for bot_id=#{bot.id}"
+      render_error("Invalid webhook signature", :unauthorized)
       return
     end
 
-    Rails.logger.debug "Webhook signature verified for bot #{bot.name}"
+    Rails.logger.debug "Webhook signature verified for bot_id=#{bot.id}"
   end
 
   def current_api_user
     # Return a system user for webhook requests
-    @current_api_user ||= User.find_by(username: 'system') || create_system_user
+    @current_api_user ||= User.find_by(username: "system") || create_system_user
   end
 
   def create_system_user
     password = SecureRandom.hex(16)
     User.create!(
-      username: 'system',
+      username: "system",
       password: password,
       password_confirmation: password,
-      role: 'user'
+      role: "user"
     )
   rescue ActiveRecord::RecordInvalid => e
-    Rails.logger.warn "Failed to create system user: #{e.message}"
-    User.find_by(username: 'system')
+    Rails.logger.warn "Failed to create system user: #{e.class}"
+    User.find_by(username: "system")
   end
 
   def webhook_params
-    params.permit(:action, :message, :room_id, :user_id, :title, :priority, :data, :command, :args => [])
+    params.permit(:action, :message, :room_id, :user_id, :title, :priority, :data, :command, args: [])
   end
-  
+
   def handle_send_message(bot, data)
     message_content = data[:message]
-    room_id = data[:room_id] || 'home-assistant'
+    room_id = data[:room_id] || "home-assistant"
     title = data[:title]
-    
+
     return if message_content.blank?
-    
+
     # Find or create channel
     channel = find_or_create_channel(room_id)
     ensure_bot_post_allowed!(channel)
-    
+
     # Create message from bot
     message = channel.messages.build(
       user: bot_user(bot),
       content: format_bot_message(message_content, title, bot.name),
-      message_type: 'bot'
+      message_type: "bot"
     )
-    
+
     if message.save
       broadcast_message(message, channel)
-      Rails.logger.info "Bot #{bot.name} sent message to #{channel.name}"
+      Rails.logger.info "Bot id=#{bot.id} sent message to channel_id=#{channel.id}"
     else
       raise "Failed to create message: #{message.errors.full_messages.join(', ')}"
     end
   end
-  
+
   def handle_status_update(bot, data)
     status = data[:status] || data[:message]
-    
-    # Log the status update
-    Rails.logger.info "Bot #{bot.name} status: #{status}"
-    
+
+    Rails.logger.info "Bot id=#{bot.id} status update received"
+
     # Optionally send status to a dedicated channel
     if status.present?
-      channel = find_or_create_channel('bot-status')
+      channel = find_or_create_channel("bot-status")
       ensure_bot_post_allowed!(channel)
       message = channel.messages.build(
         user: bot_user(bot),
         content: "🤖 **Bot Status Update**: #{status}",
-        message_type: 'status'
+        message_type: "status"
       )
-      
+
       message.save && broadcast_message(message, channel)
     end
   end
-  
+
   def handle_command(bot, data)
     command = data[:command]
     args = data[:args] || []
-    
-    Rails.logger.info "Bot #{bot.name} command: #{command} #{args.join(' ')}"
-    
+
+    Rails.logger.info "Bot id=#{bot.id} command received"
+
     case command
-    when 'ping'
-      respond_to_bot(bot, 'pong', data[:room_id])
-    when 'status'
+    when "ping"
+      respond_to_bot(bot, "pong", data[:room_id])
+    when "status"
       respond_to_bot(bot, "Bot #{bot.name} is active", data[:room_id])
-    when 'echo'
-      message = args.map { |a| a.to_s.gsub(/[\r\n]/, ' ') }.join(' ').truncate(500)
+    when "echo"
+      message = args.map { |a| a.to_s.gsub(/[\r\n]/, " ") }.join(" ").truncate(500)
       respond_to_bot(bot, message, data[:room_id]) if message.present?
     else
       respond_to_bot(bot, "Unknown command: #{command}", data[:room_id])
     end
   end
-  
+
   def handle_incoming_message(bot, data)
     # Default handler: treat webhook data as a message to post
     message_content = data[:message] || data.to_s
     handle_send_message(bot, { message: message_content, room_id: data[:room_id] })
   end
-  
+
   def respond_to_bot(bot, message, room_id = nil)
-    channel = find_or_create_channel(room_id || 'home-assistant')
+    channel = find_or_create_channel(room_id || "home-assistant")
     ensure_bot_post_allowed!(channel)
-    
+
     response_message = channel.messages.build(
       user: bot_user(bot),
       content: message,
-      message_type: 'bot_response'
+      message_type: "bot_response"
     )
-    
+
     response_message.save && broadcast_message(response_message, channel)
   end
-  
+
   def bot_user(bot)
     return bot.identity_user if bot.identity_user.present?
 
@@ -197,43 +196,43 @@ class Api::V1::WebhooksController < Api::V1::BaseController
         username: username,
         password: password,
         password_confirmation: password,
-        role: 'user'
+        role: "user"
       )
     end
   rescue ActiveRecord::RecordInvalid
     # If username is taken, use the system user
-    User.find_by(username: 'system') || current_api_user
+    User.find_by(username: "system") || current_api_user
   end
-  
+
   def find_or_create_channel(room_id)
-    room_id = 'home-assistant' if room_id.blank?
+    room_id = "home-assistant" if room_id.blank?
 
     Channel.find_by(name: room_id) || Channel.create!(
       name: room_id,
       description: "Auto-created channel for #{room_id}",
-      channel_type: 'public',
+      channel_type: "public",
       created_by: current_api_user
     )
   end
-  
+
   def format_bot_message(content, title, bot_name)
     formatted = content.to_s
-    
+
     if title.present?
       formatted = "**#{title}**\n#{formatted}"
     end
-    
+
     formatted
   end
-  
+
   def broadcast_message(message, channel)
     # Use explicit stream name for mobile client compatibility
     ActionCable.server.broadcast("chat_channel_#{channel.id}", {
-      type: 'new_message',
+      type: "new_message",
       message: {
         id: message.id,
         content: message.transport_content,
-        content_encoding: message.content_encoding || 'plaintext',
+        content_encoding: message.content_encoding || "plaintext",
         encrypted_content: message.encrypted_content,
         content_hmac: message.content_hmac,
         user: {
@@ -244,11 +243,11 @@ class Api::V1::WebhooksController < Api::V1::BaseController
           avatar_color_index: message.user.avatar_color_index
         },
         createdAt: message.created_at.iso8601,
-        messageType: message.message_type || 'bot'
+        messageType: message.message_type || "bot"
       }
       })
   rescue => e
-    Rails.logger.error "Failed to broadcast bot message: #{e.message}"
+    Rails.logger.error "Failed to broadcast bot message: #{e.class}"
   end
 
   def ensure_bot_post_allowed!(channel)

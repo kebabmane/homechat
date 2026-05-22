@@ -120,24 +120,24 @@ module ApiResponse
   #
   # @param resource_name [String] Name of the resource that wasn't found
   #
-  def render_not_found(resource_name = 'Resource')
-    render_api_error("#{resource_name} not found", status: :not_found, code: 'not_found')
+  def render_not_found(resource_name = "Resource")
+    render_api_error("#{resource_name} not found", status: :not_found, code: "not_found")
   end
 
   # Render an unauthorized error
   #
   # @param message [String] Error message (default: 'Unauthorized')
   #
-  def render_unauthorized(message = 'Unauthorized')
-    render_api_error(message, status: :unauthorized, code: 'unauthorized')
+  def render_unauthorized(message = "Unauthorized")
+    render_api_error(message, status: :unauthorized, code: "unauthorized")
   end
 
   # Render a forbidden error
   #
   # @param message [String] Error message (default: 'Forbidden')
   #
-  def render_forbidden(message = 'Forbidden')
-    render_api_error(message, status: :forbidden, code: 'forbidden')
+  def render_forbidden(message = "Forbidden")
+    render_api_error(message, status: :forbidden, code: "forbidden")
   end
 
   # Helper to wrap legacy bare object responses in standard envelope
@@ -165,6 +165,7 @@ module ApiResponse
     meta[:page] = page if page.present?
     meta[:per_page] = per_page if per_page.present?
 
-    render_collection(collection_key, items, meta: meta)
+    response = { success: true, collection_key => items, has_more: has_more, meta: meta }
+    render json: response, status: :ok
   end
 end

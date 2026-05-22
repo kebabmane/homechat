@@ -2,14 +2,14 @@ require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
   test "should require username" do
-    user = User.new(password: "secret", password_confirmation: "secret")
+    user = User.new(password: "password123", password_confirmation: "password123")
     assert_not user.valid?
     assert_includes user.errors[:username], "can't be blank"
   end
 
   test "should require unique username" do
     create_user(username: "testuser")
-    duplicate_user = User.new(username: "testuser", password: "secret", password_confirmation: "secret")
+    duplicate_user = User.new(username: "testuser", password: "password123", password_confirmation: "password123")
     assert_not duplicate_user.valid?
     assert_includes duplicate_user.errors[:username], "has already been taken"
   end
@@ -33,15 +33,26 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test "should validate password confirmation" do
-    user = User.new(username: "testuser", password: "secret", password_confirmation: "different")
+    user = User.new(username: "testuser", password: "password123", password_confirmation: "different")
     assert_not user.valid?
     assert_includes user.errors[:password_confirmation], "doesn't match Password"
   end
 
   test "should authenticate with correct password" do
-    user = create_user(password: "secret")
-    assert user.authenticate("secret")
+    user = create_user(password: "password123")
+    assert user.authenticate("password123")
     assert_not user.authenticate("wrong")
+  end
+
+  test "should reject password shorter than 8 characters" do
+    user = User.new(username: "shortpass", password: "short", password_confirmation: "short")
+    assert_not user.valid?
+    assert_includes user.errors[:password], "is too short (minimum is 8 characters)"
+  end
+
+  test "should accept password of exactly 8 characters" do
+    user = User.new(username: "exactpass", password: "exactly8", password_confirmation: "exactly8")
+    assert user.valid?
   end
 
   test "should have many channel memberships" do

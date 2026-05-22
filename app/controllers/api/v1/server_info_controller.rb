@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Api::V1::ServerInfoController < Api::V1::BaseController
-  skip_before_action :authenticate_api_request, only: [:show]
+  skip_before_action :authenticate_api_request, only: [ :show ]
 
   # GET /api/v1/server_info
   # Public endpoint for clients to discover server capabilities and connection info
@@ -17,13 +17,17 @@ class Api::V1::ServerInfoController < Api::V1::BaseController
       ha_ingress: config.home_assistant_mode?,
       nabu_casa_url: config.nabu_casa_url,
       push_enabled: Setting.fcm_configured?,
+      api_version: "1.0.0",
+      min_client_version: "1.0.0",
       e2ee_enabled: true,
       e2ee_required_private_dm: true,
       min_e2ee_version: E2eePolicy::REQUIRED_VERSION,
       e2ee_capabilities: {
         channel_scope: E2eePolicy::ENFORCED_CHANNEL_TYPES,
         legacy_write_blocked: true,
-        bot_posting_blocked: true
+        bot_posting_blocked: true,
+        encrypted_attachments: false,
+        plaintext_attachments_blocked_in_e2ee: true
       },
       registration_enabled: registration_enabled?,
       timestamp: Time.current.iso8601
@@ -47,6 +51,6 @@ class Api::V1::ServerInfoController < Api::V1::BaseController
   end
 
   def registration_enabled?
-    Setting.respond_to?(:registration_enabled?) ? Setting.registration_enabled? : true
+    Setting.registration_enabled?
   end
 end

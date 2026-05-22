@@ -9,6 +9,10 @@
 
 # Ignore all environment files.
 /.env*
+*.env
+.env.bak
+/onyx_data/deployment/.env*
+!/onyx_data/deployment/.env.example
 
 # Ignore all logfiles and tempfiles.
 /log/*
@@ -41,3 +45,6 @@ node_modules/
 playwright-report/
 test-results/
 .DS_Store
+coverage/
+output/
+.playwright-cli/

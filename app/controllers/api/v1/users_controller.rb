@@ -1,35 +1,33 @@
 class Api::V1::UsersController < Api::V1::BaseController
   before_action :require_non_bot_token
-  before_action -> { require_scope('user:profile') }
+  before_action -> { require_scope("user:profile") }
 
   # GET /api/v1/me
   def me
-    render json: {
-      id: current_api_user.id,
-      username: current_api_user.username,
-      role: current_api_user.role,
-      timezone: current_api_user.timezone,
-      two_factor_enabled: current_api_user.two_factor_enabled?,
-      avatar_url: current_api_user.avatar.attached? ? rails_blob_url(current_api_user.avatar, host: request.base_url) : nil,
-      created_at: current_api_user.created_at&.iso8601
-    }
+    render json: profile_payload(current_api_user)
   end
 
   # PATCH /api/v1/me
-  # Update profile (username, timezone, avatar) - no password required
+  # Update profile (username, timezone, avatar).
+  # Changing username requires current password re-authentication.
   def update
     update_params = profile_params
+
+    # Sensitive change: username modification requires current password
+    if update_params[:username].present? && update_params[:username] != current_api_user.username
+      current_password = params[:current_password]
+      if current_password.blank?
+        return render json: { success: false, error: "Current password is required to change username" }, status: :unprocessable_entity
+      end
+      unless current_api_user.authenticate(current_password)
+        return render json: { success: false, error: "Current password is incorrect" }, status: :unprocessable_entity
+      end
+    end
 
     if current_api_user.update(update_params)
       render json: {
         success: true,
-        user: {
-          id: current_api_user.id,
-          username: current_api_user.username,
-          role: current_api_user.role,
-          timezone: current_api_user.timezone,
-          avatar_url: current_api_user.avatar.attached? ? rails_blob_url(current_api_user.avatar, host: request.base_url) : nil
-        },
+        user: profile_payload(current_api_user),
         message: "Profile updated successfully"
       }
     else
@@ -92,5 +90,19 @@ class Api::V1::UsersController < Api::V1::BaseController
 
   def profile_params
     params.permit(:username, :timezone, :avatar)
+  end
+
+  def profile_payload(user)
+    {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      timezone: user.timezone,
+      two_factor_enabled: user.two_factor_enabled?,
+      avatar_url: user.avatar.attached? ? rails_blob_url(user.avatar, host: request.base_url) : nil,
+      avatar_initials: user.avatar_initials,
+      avatar_color_index: user.avatar_color_index,
+      created_at: user.created_at&.iso8601
+    }
   end
 end

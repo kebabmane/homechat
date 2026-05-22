@@ -205,7 +205,78 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     end
 
     message = Message.last
-    # HTML tags are stripped; inner text content is preserved
-    assert_equal "alert('XSS')", message.content
+    # Content is stored as-is; XSS protection happens at render time via html_escape
+    assert_equal xss_content, message.content
+  end
+
+  test "should require login to edit message" do
+    message = @channel.messages.create!(content: "Edit me", user: @user)
+    get edit_channel_message_path(@channel, message)
+    assert_redirected_to signin_path
+  end
+
+  test "should render edit form for author" do
+    sign_in_as(@user)
+    message = @channel.messages.create!(content: "Edit me", user: @user)
+
+    get edit_channel_message_path(@channel, message)
+    assert_response :success
+    assert_includes response.body, "Save"
+  end
+
+  test "should allow author to edit plaintext message" do
+    sign_in_as(@user)
+    message = @channel.messages.create!(content: "Original", user: @user)
+
+    patch channel_message_path(@channel, message), params: { message: { content: "Updated" } }
+    assert_redirected_to channel_path(@channel)
+
+    message.reload
+    assert_equal "Updated", message.content
+  end
+
+  test "should not allow non-author to edit message" do
+    sign_in_as(@other_user)
+    message = @channel.messages.create!(content: "Original", user: @user)
+    @channel.add_member(@other_user)
+
+    get edit_channel_message_path(@channel, message)
+    assert_redirected_to channel_path(@channel)
+    assert_equal "You can only edit your own messages.", flash[:alert]
+
+    patch channel_message_path(@channel, message), params: { message: { content: "Hacked" } }
+    assert_redirected_to channel_path(@channel)
+
+    message.reload
+    assert_equal "Original", message.content
+  end
+
+  test "should not allow editing e2ee message" do
+    sign_in_as(@user)
+    message = @private_channel.messages.create!(
+      content: E2eePolicy::PLACEHOLDER_CONTENT,
+      content_encoding: "e2ee",
+      encrypted_content: '{"v":"1","iv":"abc","ciphertext":"def"}',
+      content_hmac: "hmac",
+      e2ee_version: "1",
+      sender_device_id: "device-web-test",
+      user: @user
+    )
+
+    patch channel_message_path(@private_channel, message), params: { message: { content: "Updated" } }
+    assert_redirected_to channel_path(@private_channel)
+    assert_equal "Encrypted messages cannot be edited.", flash[:alert]
+
+    message.reload
+    assert_equal E2eePolicy::PLACEHOLDER_CONTENT, message.content
+  end
+
+  test "should render edit form on invalid update" do
+    sign_in_as(@user)
+    message = @channel.messages.create!(content: "Original", user: @user)
+
+    patch channel_message_path(@channel, message), params: { message: { content: "" } }
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Save"
   end
 end

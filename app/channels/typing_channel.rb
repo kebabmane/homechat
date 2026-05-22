@@ -1,17 +1,21 @@
 class TypingChannel < ApplicationCable::Channel
+  include RateLimited
+
+  rate_limit :typing, :stop_typing, max: 1, period: 1
+
   def subscribed
     channel = find_channel
     return reject unless channel && can_access_channel?(channel)
 
     stream_from stream_name
-    Rails.logger.debug "#{current_user.username} subscribed to typing channel for #{channel.name}"
+    Rails.logger.debug "User id=#{current_user.id} subscribed to typing channel_id=#{channel.id}"
   end
 
   def typing(data)
     channel = find_channel
     return unless channel && can_access_channel?(channel)
 
-    typing_flag = data.key?('typing') ? ActiveModel::Type::Boolean.new.cast(data['typing']) : true
+    typing_flag = data.key?("typing") ? ActiveModel::Type::Boolean.new.cast(data["typing"]) : true
 
     # Use the authenticated user's username, not the data provided
     ActionCable.server.broadcast(stream_name, {

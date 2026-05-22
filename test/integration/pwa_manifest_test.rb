@@ -86,4 +86,3 @@ class PwaManifestTest < ActionDispatch::IntegrationTest
     assert data.key?("background_color"), "Manifest should have background_color"
   end
 end
-

@@ -1,9 +1,5 @@
-#!/usr/bin/env sh
-
-if ! gem list foreman -i --silent; then
-  echo "Installing foreman..."
-  gem install foreman
-fi
+#!/usr/bin/env bash
+set -e
 
 # Default to port 3000 if not specified
 export PORT="${PORT:-3000}"
@@ -13,4 +9,16 @@ export PORT="${PORT:-3000}"
 export RUBY_DEBUG_OPEN="true"
 export RUBY_DEBUG_LAZY="true"
 
-exec foreman start -f Procfile.dev "$@"
+if bundle exec foreman --version >/dev/null 2>&1; then
+  exec bundle exec foreman start -f Procfile.dev "$@"
+fi
+
+if command -v foreman >/dev/null 2>&1; then
+  exec foreman start -f Procfile.dev "$@"
+fi
+
+echo "Foreman not found; starting processes manually."
+bin/rails tailwindcss:watch &
+css_pid=$!
+trap 'kill "$css_pid"' EXIT
+exec bin/rails server -b 0.0.0.0 -p "$PORT"

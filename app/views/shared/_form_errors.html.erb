@@ -1,0 +1,10 @@
+<% if model.errors.any? %>
+  <div class="rounded-xl border border-rose-200 bg-rose-50 p-4" role="alert" aria-live="assertive">
+    <p class="text-sm font-semibold text-rose-700">Please fix the following errors:</p>
+    <ul class="mt-2 list-inside list-disc space-y-1 text-sm text-rose-700">
+      <% model.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>

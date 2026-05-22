@@ -63,11 +63,11 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
 
     assert_not_nil captured_body, "Expected an HTTP request to be made"
     data_payload = captured_body.dig("message", "data") || {}
-    refute data_payload.key?("content"),
+    assert_not data_payload.key?("content"),
       "FCM data payload must not include 'content' key (E2EE privacy)"
   end
 
-  test "send_message_notification body is generic channel name string" do
+  test "send_message_notification payload does not expose sender or channel names" do
     captured_body = nil
 
     http_stub = build_http_stub { |body| captured_body = body }
@@ -77,13 +77,19 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
     end
 
     assert_not_nil captured_body
+    notification_title = captured_body.dig("message", "notification", "title")
     notification_body = captured_body.dig("message", "notification", "body")
-    assert_not_nil notification_body
+    data_payload = captured_body.dig("message", "data") || {}
 
-    refute notification_body.include?(@message.content),
+    assert_equal "HomeChat", notification_title
+    assert_equal "New message", notification_body
+    assert_not notification_body.include?(@message.content),
       "Notification body must not contain actual message content"
-    assert_match @channel.name, notification_body,
-      "Generic body should reference the channel name"
+    assert_not captured_body.to_json.include?(@channel.name),
+      "FCM payload must not expose channel names"
+    assert_not captured_body.to_json.include?(@sender.username),
+      "FCM payload must not expose sender names"
+    assert_equal "generic", data_payload["notification_privacy"]
   end
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -105,7 +111,7 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
 
     assert_not_nil captured_body
     data_payload = captured_body.dig("message", "data") || {}
-    refute data_payload.key?("content"),
+    assert_not data_payload.key?("content"),
       "Direct message FCM payload must not include 'content' key"
   end
 
@@ -124,8 +130,16 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
 
     assert_not_nil captured_body
     notification_body = captured_body.dig("message", "notification", "body")
-    refute notification_body.to_s.include?(dm_message.content),
+    notification_title = captured_body.dig("message", "notification", "title")
+    data_payload = captured_body.dig("message", "data") || {}
+
+    assert_equal "HomeChat", notification_title
+    assert_equal "New direct message", notification_body
+    assert_not notification_body.to_s.include?(dm_message.content),
       "DM notification body must not contain actual message content"
+    assert_not captured_body.to_json.include?(@sender.username),
+      "DM notification payload must not expose sender names"
+    assert_equal "generic", data_payload["notification_privacy"]
   end
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -142,11 +156,11 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
 
     assert_not_nil captured_body
     data_payload = captured_body.dig("message", "data") || {}
-    refute data_payload.key?("content"),
+    assert_not data_payload.key?("content"),
       "Mention FCM payload must not include 'content' key"
   end
 
-  test "send_mention_notification body references channel name not message text" do
+  test "send_mention_notification body is generic and omits channel name" do
     captured_body = nil
     http_stub = build_http_stub { |body| captured_body = body }
 
@@ -156,10 +170,18 @@ class FcmNotificationServiceTest < ActiveSupport::TestCase
 
     assert_not_nil captured_body
     notification_body = captured_body.dig("message", "notification", "body")
-    refute notification_body.to_s.include?(@message.content),
+    notification_title = captured_body.dig("message", "notification", "title")
+    data_payload = captured_body.dig("message", "data") || {}
+
+    assert_equal "HomeChat", notification_title
+    assert_equal "New mention", notification_body
+    assert_not notification_body.to_s.include?(@message.content),
       "Mention notification body must not contain actual message content"
-    assert_match @channel.name, notification_body.to_s,
-      "Mention body should reference the channel name"
+    assert_not captured_body.to_json.include?(@channel.name),
+      "Mention payload must not expose channel names"
+    assert_not captured_body.to_json.include?(@sender.username),
+      "Mention payload must not expose sender names"
+    assert_equal "generic", data_payload["notification_privacy"]
   end
 
   private

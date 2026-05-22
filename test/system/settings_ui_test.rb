@@ -2,8 +2,8 @@ require "application_system_test_case"
 
 class SettingsUiTest < JsSystemTestCase
   test "admin changes site name updates document title" do
-    admin = User.create!(username: "adminui", password: "secret", password_confirmation: "secret", role: "admin")
-    sign_in(username: admin.username, password: "secret")
+    admin = User.create!(username: "adminui", password: "password123", password_confirmation: "password123", role: "admin")
+    sign_in(username: admin.username, password: "password123")
 
     visit edit_admin_settings_path
     # Set new site name
@@ -17,11 +17,11 @@ class SettingsUiTest < JsSystemTestCase
   end
 
   test "enter-to-send preference toggles composer behavior" do
-    owner = User.create!(username: "ownerui", password: "secret", password_confirmation: "secret")
+    owner = User.create!(username: "ownerui", password: "password123", password_confirmation: "password123")
     channel = Channel.create!(name: "prefs", created_by: owner, channel_type: "public")
-    user = User.create!(username: "enduser", password: "secret", password_confirmation: "secret")
+    user = User.create!(username: "enduser", password: "password123", password_confirmation: "password123")
 
-    sign_in(username: user.username, password: "secret")
+    sign_in(username: user.username, password: "password123")
 
     # Turn preference OFF in settings
     visit edit_settings_path

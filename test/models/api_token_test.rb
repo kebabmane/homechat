@@ -108,38 +108,38 @@ class ApiTokenTest < ActiveSupport::TestCase
     # Legacy tokens have nil scopes (not empty array)
     token = ApiToken.create!(name: "Legacy Token", user: create_user, scopes: nil)
     assert token.legacy_full_access?
-    assert token.has_scope?('admin:users')
-    assert token.has_scope?('user:profile')
-    assert token.has_scope?('anything:at:all')
+    assert token.has_scope?("admin:users")
+    assert token.has_scope?("user:profile")
+    assert token.has_scope?("anything:at:all")
   end
 
   test "scoped token restricts access" do
-    token = ApiToken.create!(name: "Scoped Token", user: create_user, scopes: ['user:profile'])
+    token = ApiToken.create!(name: "Scoped Token", user: create_user, scopes: [ "user:profile" ])
     assert_not token.legacy_full_access?
-    assert token.has_scope?('user:profile')
-    assert_not token.has_scope?('admin:users')
-    assert_not token.has_scope?('user:messages')
+    assert token.has_scope?("user:profile")
+    assert_not token.has_scope?("admin:users")
+    assert_not token.has_scope?("user:messages")
   end
 
   test "wildcard scopes work" do
-    token = ApiToken.create!(name: "Admin Token", user: create_user, scopes: ['admin:*'])
-    assert token.has_scope?('admin:users')
-    assert token.has_scope?('admin:tokens')
-    assert token.has_scope?('admin:bots')
-    assert_not token.has_scope?('user:profile')
+    token = ApiToken.create!(name: "Admin Token", user: create_user, scopes: [ "admin:*" ])
+    assert token.has_scope?("admin:users")
+    assert token.has_scope?("admin:tokens")
+    assert token.has_scope?("admin:bots")
+    assert_not token.has_scope?("user:profile")
   end
 
   test "channel wildcard scopes work" do
-    token = ApiToken.create!(name: "Channel Token", user: create_user, scopes: ['channel:*:read'])
-    assert token.has_scope?('channel:123:read')
-    assert token.has_scope?('channel:456:read')
-    assert_not token.has_scope?('channel:123:write')
+    token = ApiToken.create!(name: "Channel Token", user: create_user, scopes: [ "channel:*:read" ])
+    assert token.has_scope?("channel:123:read")
+    assert token.has_scope?("channel:456:read")
+    assert_not token.has_scope?("channel:123:write")
   end
 
   test "channel-specific scopes work" do
     user = create_user
-    channel = Channel.create!(name: 'test-channel', channel_type: 'public', created_by: user)
-    token = ApiToken.create!(name: "Channel Token", user: user, scopes: ["channel:#{channel.id}:write"])
+    channel = Channel.create!(name: "test-channel", channel_type: "public", created_by: user)
+    token = ApiToken.create!(name: "Channel Token", user: user, scopes: [ "channel:#{channel.id}:write" ])
 
     assert token.can_access_channel?(channel, :write)
     assert token.can_access_channel?(channel, :read)
@@ -148,15 +148,15 @@ class ApiTokenTest < ActiveSupport::TestCase
 
   test "token channel assignments work" do
     user = create_user
-    channel = Channel.create!(name: 'assigned-channel', channel_type: 'public', created_by: user)
+    channel = Channel.create!(name: "assigned-channel", channel_type: "public", created_by: user)
     # Use a scope that doesn't grant channel access to test assignments
-    token = ApiToken.create!(name: "Assignment Token", user: user, scopes: ['bot:post'])
+    token = ApiToken.create!(name: "Assignment Token", user: user, scopes: [ "bot:post" ])
 
     # Without assignment, no access (has explicit scope but not for channels)
     assert_not token.can_access_channel?(channel, :read)
 
     # Add assignment
-    token.token_channel_assignments.create!(channel: channel, permission: 'write')
+    token.token_channel_assignments.create!(channel: channel, permission: "write")
 
     assert token.can_access_channel?(channel, :read)
     assert token.can_access_channel?(channel, :write)
@@ -189,25 +189,25 @@ class ApiTokenTest < ActiveSupport::TestCase
   end
 
   test "bot tokens cannot access user data" do
-    token = ApiToken.create!(name: "Bot Token", user: create_user, token_type: 'bot', scopes: ['bot:post'])
+    token = ApiToken.create!(name: "Bot Token", user: create_user, token_type: "bot", scopes: [ "bot:post" ])
     assert token.bot_token?
     assert_not token.can_access_user_data?
   end
 
   test "user tokens can access user data" do
-    token = ApiToken.create!(name: "User Token", user: create_user, token_type: 'user', scopes: ['user:profile'])
+    token = ApiToken.create!(name: "User Token", user: create_user, token_type: "user", scopes: [ "user:profile" ])
     assert_not token.bot_token?
     assert token.can_access_user_data?
   end
 
   test "validates token type" do
-    token = ApiToken.new(name: "Bad Token", user: create_user, token_type: 'invalid')
+    token = ApiToken.new(name: "Bad Token", user: create_user, token_type: "invalid")
     assert_not token.valid?
     assert_includes token.errors[:token_type], "is not included in the list"
   end
 
   test "validates scopes format" do
-    token = ApiToken.new(name: "Bad Scopes", user: create_user, scopes: ['invalid:scope:format:too:long'])
+    token = ApiToken.new(name: "Bad Scopes", user: create_user, scopes: [ "invalid:scope:format:too:long" ])
     assert_not token.valid?
     assert token.errors[:scopes].any?
   end

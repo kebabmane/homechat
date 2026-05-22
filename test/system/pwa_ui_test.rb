@@ -2,8 +2,8 @@ require "application_system_test_case"
 
 class PwaUiTest < JsSystemTestCase
   test "install toast container renders when PWA enabled" do
-    admin = User.create!(username: "pwaui", password: "secret", password_confirmation: "secret", role: "admin")
-    sign_in(username: admin.username, password: "secret")
+    admin = User.create!(username: "pwaui", password: "password123", password_confirmation: "password123", role: "admin")
+    sign_in(username: admin.username, password: "password123")
 
     # Ensure enabled via settings
     visit edit_admin_settings_path
@@ -21,8 +21,8 @@ class PwaUiTest < JsSystemTestCase
   end
 
   test "manifest endpoint returns valid JSON" do
-    admin = User.create!(username: "manifesttest", password: "secret", password_confirmation: "secret", role: "admin")
-    sign_in(username: admin.username, password: "secret")
+    admin = User.create!(username: "manifesttest", password: "password123", password_confirmation: "password123", role: "admin")
+    sign_in(username: admin.username, password: "password123")
 
     # Enable PWA
     visit edit_admin_settings_path
@@ -37,8 +37,8 @@ class PwaUiTest < JsSystemTestCase
   end
 
   test "service worker endpoint is accessible when PWA enabled" do
-    admin = User.create!(username: "swtest", password: "secret", password_confirmation: "secret", role: "admin")
-    sign_in(username: admin.username, password: "secret")
+    admin = User.create!(username: "swtest", password: "password123", password_confirmation: "password123", role: "admin")
+    sign_in(username: admin.username, password: "password123")
 
     # Enable PWA
     visit edit_admin_settings_path
@@ -52,14 +52,13 @@ class PwaUiTest < JsSystemTestCase
   end
 
   test "message list controller has offline indicator target" do
-    owner = User.create!(username: "offlineowner", password: "secret", password_confirmation: "secret")
+    owner = User.create!(username: "offlineowner", password: "password123", password_confirmation: "password123")
     channel = Channel.create!(name: "offline-test", created_by: owner, channel_type: "public")
 
-    sign_in(username: owner.username, password: "secret")
+    sign_in(username: owner.username, password: "password123")
     visit channel_path(channel)
 
     # The message list controller should be present
     assert_selector "[data-controller~='message-list']"
   end
 end
-

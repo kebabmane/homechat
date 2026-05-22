@@ -9,7 +9,7 @@ module TwoFactorAuthenticatable
 
   included do
     # Encrypt backup codes before saving (only if column exists)
-    serialize :otp_backup_codes, coder: JSON if column_names.include?('otp_backup_codes')
+    serialize :otp_backup_codes, coder: JSON if column_names.include?("otp_backup_codes")
   end
 
   def two_factor_available?
@@ -23,7 +23,12 @@ module TwoFactorAuthenticatable
 
   def enable_two_factor!
     self.otp_secret = generate_otp_secret
-    self.otp_backup_codes = generate_backup_codes
+    enable_two_factor_with_existing_secret!
+    true
+  end
+
+  def enable_two_factor_with_existing_secret!
+    raw_codes = generate_backup_codes  # sets self.otp_backup_codes to hashed digests internally
     self.otp_required_for_login = true
     save!
 
@@ -32,7 +37,7 @@ module TwoFactorAuthenticatable
       resource: self
     )
 
-    true
+    raw_codes
   end
 
   def disable_two_factor!
@@ -70,10 +75,10 @@ module TwoFactorAuthenticatable
   end
 
   def otp_provisioning_uri
-    return nil unless otp_secret.present?
+    return nil if otp_secret.blank?
 
     issuer = Setting.fetch("site_name", "HomeChat")
-    totp.provisioning_uri("#{username}@#{issuer}", issuer: issuer)
+    totp.provisioning_uri("#{username}@#{issuer}")
   end
 
   def otp_qr_code
@@ -83,9 +88,9 @@ module TwoFactorAuthenticatable
   end
 
   def regenerate_backup_codes!
-    self.otp_backup_codes = generate_backup_codes
+    raw_codes = generate_backup_codes  # sets self.otp_backup_codes to hashed digests internally
     save!
-    otp_backup_codes
+    raw_codes
   end
 
   private
@@ -95,9 +100,9 @@ module TwoFactorAuthenticatable
   end
 
   def generate_backup_codes
-    BACKUP_CODE_COUNT.times.map do
-      SecureRandom.alphanumeric(BACKUP_CODE_LENGTH).upcase
-    end
+    raw_codes = BACKUP_CODE_COUNT.times.map { SecureRandom.alphanumeric(BACKUP_CODE_LENGTH).upcase }
+    self.otp_backup_codes = raw_codes.map { |c| BCrypt::Password.create(c) }
+    raw_codes  # return plaintext once for display; only hashes are persisted
   end
 
   def totp
@@ -114,15 +119,13 @@ module TwoFactorAuthenticatable
   def verify_backup_code(code)
     return false unless otp_backup_codes.is_a?(Array)
 
-    code = code.upcase
-    if otp_backup_codes.include?(code)
-      # Remove used backup code
-      self.otp_backup_codes = otp_backup_codes - [code]
-      save!
-      Rails.logger.info "Backup code used for user #{username}. #{otp_backup_codes.length} remaining."
-      true
-    else
-      false
-    end
+    code = code.upcase.strip
+    idx = otp_backup_codes.find_index { |digest| BCrypt::Password.new(digest) == code rescue false }
+    return false unless idx
+
+    self.otp_backup_codes = otp_backup_codes.reject.with_index { |_, i| i == idx }
+    save!
+    Rails.logger.info "Backup code used for user_id=#{id}. #{otp_backup_codes.length} remaining."
+    true
   end
 end

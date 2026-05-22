@@ -1,5 +1,5 @@
 class HomeController < ApplicationController
-  layout 'authentication'
+  layout "authentication"
 
   skip_before_action :mark_active, raise: false
   skip_before_action :set_sidebar_data, raise: false
@@ -17,7 +17,7 @@ class HomeController < ApplicationController
       host: request.host,
       port: request.port,
       use_ssl: request.ssl?,
-      server_name: Setting.fetch(:site_name, 'HomeChat')
+      server_name: Setting.fetch(:site_name, "HomeChat")
     )
   end
 end

@@ -24,30 +24,43 @@ module ApplicationCable
       # Only allow Authorization: Bearer header tokens (no query param fallback)
       token = extract_bearer_token
 
-      return nil unless token.present?
+      return nil if token.blank?
 
       # Validate API token and return associated user
       token_record = ApiToken.valid_token?(token)
+      # L5: Store token ID so channels can do periodic re-validation
+      @current_api_token_id = token_record&.id
       token_record&.user
     end
 
+    public
+
+    # L5: Exposes the token record ID to channels for periodic re-validation.
+    # Returns nil for session-based (web) connections.
+    def current_api_token_id
+      @current_api_token_id
+    end
+
+    private
+
     def extract_bearer_token
-      auth_header = request.headers['Authorization']
-      return nil unless auth_header&.start_with?('Bearer ')
-      auth_header.gsub(/^Bearer /, '')
+      auth_header = request.headers["Authorization"]
+      return nil unless auth_header&.start_with?("Bearer ")
+
+      auth_header.gsub(/^Bearer /, "")
     end
 
     def create_system_user
       password = SecureRandom.hex(16)
       User.create!(
-        username: 'system',
+        username: "system",
         password: password,
         password_confirmation: password,
-        role: 'user'
+        role: "user"
       )
     rescue ActiveRecord::RecordInvalid => e
-      Rails.logger.warn "Failed to create system user for WebSocket: #{e.message}"
-      User.find_by(username: 'system')
+      Rails.logger.warn "Failed to create system user for WebSocket: #{e.class}"
+      User.find_by(username: "system")
     end
 
     def session

@@ -123,7 +123,7 @@ builder:
   
   # Build arguments passed to Docker
   args:
-    RUBY_VERSION: 3.3.0
+    RUBY_VERSION: 4.0.1
     
   # Secrets available during build (if needed)
   # secrets:

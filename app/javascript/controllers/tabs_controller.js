@@ -18,11 +18,29 @@ export default class extends Controller {
   select(event) {
     event.preventDefault()
     const tab = event.currentTarget
-    const id = tab?.dataset.tabsId
-    if (!id) return
-    this.activeValue = id
-    this.showActive()
-    tab.focus()
+    this.activateTab(tab)
+    tab?.focus()
+  }
+
+  onKeydown(event) {
+    const key = event.key
+    if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(key)) return
+
+    event.preventDefault()
+
+    const currentIndex = this.tabTargets.indexOf(event.currentTarget)
+    if (currentIndex < 0) return
+
+    let nextIndex = currentIndex
+    if (key === "ArrowRight") nextIndex = (currentIndex + 1) % this.tabTargets.length
+    if (key === "ArrowLeft") nextIndex = (currentIndex - 1 + this.tabTargets.length) % this.tabTargets.length
+    if (key === "Home") nextIndex = 0
+    if (key === "End") nextIndex = this.tabTargets.length - 1
+
+    const nextTab = this.tabTargets[nextIndex]
+    if (!nextTab) return
+    this.activateTab(nextTab)
+    nextTab.focus()
   }
 
   showActive() {
@@ -36,7 +54,7 @@ export default class extends Controller {
     this.tabTargets.forEach((tab) => {
       const isActive = tab.dataset.tabsId === current
       tab.classList.toggle("is-active", isActive)
-      tab.setAttribute("aria-selected", isActive)
+      tab.setAttribute("aria-selected", isActive.toString())
       tab.setAttribute("tabindex", isActive ? "0" : "-1")
     })
 
@@ -44,6 +62,14 @@ export default class extends Controller {
       const isActive = panel.dataset.tabsId === current
       panel.classList.toggle("hidden", !isActive)
       panel.setAttribute("aria-hidden", (!isActive).toString())
+      panel.toggleAttribute("hidden", !isActive)
     })
+  }
+
+  activateTab(tab) {
+    const id = tab?.dataset.tabsId
+    if (!id) return
+    this.activeValue = id
+    this.showActive()
   }
 }

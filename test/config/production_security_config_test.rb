@@ -12,6 +12,6 @@ class ProductionSecurityConfigTest < ActiveSupport::TestCase
     source = File.read(Rails.root.join("config/environments/production.rb"))
 
     assert_includes source, "\\Ahttps:\\/\\/localhost"
-    refute_includes source, "\\Ahttps?:\\/\\/localhost"
+    assert_not_includes source, "\\Ahttps?:\\/\\/localhost"
   end
 end

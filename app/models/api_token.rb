@@ -24,18 +24,28 @@ class ApiToken < ApplicationRecord
 
   attr_accessor :token
 
+  # Ensure scopes is always an Array regardless of how the JSON was persisted
+  def scopes
+    val = super
+    case val
+    when Array  then val
+    when String then JSON.parse(val) rescue []
+    else []
+    end
+  end
+
   scope :active, -> { where(active: true) }
-  scope :not_expired, -> { where('expires_at IS NULL OR expires_at > ?', Time.current) }
-  scope :bots, -> { where(token_type: 'bot') }
+  scope :not_expired, -> { where("expires_at IS NULL OR expires_at > ?", Time.current) }
+  scope :bots, -> { where(token_type: "bot") }
 
-  # Class-level cache for token validation (short TTL)
-  @@token_cache = {}
-  @@cache_ttl = 60.seconds
+  # Cache configuration - uses Rails.cache (Redis in production)
+  CACHE_TTL = 60.seconds
+  CACHE_KEY_PREFIX = "api_token:v1:"
 
-  def self.generate_for_integration(name = "Home Assistant", user = nil)
+  def self.generate_for_integration(name = "Home Assistant", user = nil, scopes: [ "user:channels", "user:messages", "bot:post" ])
     # Use system user for integrations if no specific user provided
-    system_user = user || User.find_by(username: 'system')
-    create!(name: name, active: true, user: system_user)
+    system_user = user || User.find_by(username: "system")
+    create!(name: name, active: true, user: system_user, token_type: "bot", scopes: scopes)
   end
 
   # Returns the ApiToken record if valid, nil otherwise.
@@ -65,7 +75,10 @@ class ApiToken < ApplicationRecord
         end
       rescue BCrypt::Errors::InvalidHash
         # Token might still use old SHA256 format, try that
-        if token_record.token_digest == hash_token_string_sha256(token_string)
+        if ActiveSupport::SecurityUtils.secure_compare(
+             token_record.token_digest,
+             hash_token_string_sha256(token_string)
+           )
           # Upgrade to BCrypt and set prefix
           token_record.update!(
             token_digest: hash_token_string(token_string),
@@ -110,22 +123,28 @@ class ApiToken < ApplicationRecord
   # Legacy tokens (nil scopes or empty array) get full access for backward compatibility
   # Tokens with explicit scopes have restricted access
   def legacy_full_access?
-    scopes.nil? || scopes.empty?
+    if scopes.blank?
+      Rails.logger.warn "[ApiToken] Token #{id} (#{name.inspect}) is using legacy nil-scope full access. " \
+                        "Run the assign_default_scopes_to_api_tokens migration to assign explicit scopes."
+      true
+    else
+      false
+    end
   end
 
   # Check if token has a specific scope
   def has_scope?(scope)
     return true if legacy_full_access?
-    return true if scopes.include?('*')
+    return true if scopes.include?("*")
     return true if scopes.include?(scope)
 
     # Check wildcard matches (e.g., "admin:*" covers "admin:users")
-    category = scope.split(':').first
+    category = scope.split(":").first
     return true if scopes.include?("#{category}:*")
 
     # Check channel wildcards (e.g., "channel:*:read" covers "channel:123:read")
     if scope.match?(/^channel:\d+:/)
-      action = scope.split(':').last
+      action = scope.split(":").last
       return true if scopes.include?("channel:*:#{action}")
     end
 
@@ -136,6 +155,9 @@ class ApiToken < ApplicationRecord
   # Permission hierarchy: manage > write > read
   def can_access_channel?(channel, action = :read)
     return true if legacy_full_access?
+
+    # user:channels scope grants read access to all channels (membership enforced by accessible_by?)
+    return true if action.to_sym == :read && has_scope?("user:channels") && !bot_token?
 
     # Check direct scope match
     return true if has_scope?("channel:*:#{action}")
@@ -167,17 +189,17 @@ class ApiToken < ApplicationRecord
 
   # Bot token check
   def bot_token?
-    token_type == 'bot'
+    token_type == "bot"
   end
 
   # Prevent bot tokens from accessing user data
   def can_access_user_data?
-    !bot_token? && (has_scope?('user:profile') || legacy_full_access?)
+    !bot_token? && (has_scope?("user:profile") || legacy_full_access?)
   end
 
   # Get the effective token type (defaults to 'user' for nil)
   def effective_token_type
-    token_type || 'user'
+    token_type || "user"
   end
 
   private
@@ -203,7 +225,7 @@ class ApiToken < ApplicationRecord
     return if scopes.blank?
 
     scopes.each do |scope|
-      next if scope == '*'
+      next if scope == "*"
       next if ADMIN_SCOPES.include?(scope)
       next if USER_SCOPES.include?(scope)
       next if BOT_SCOPES.include?(scope)
@@ -216,7 +238,7 @@ class ApiToken < ApplicationRecord
 
   def validate_expiration
     return if expires_at.blank?
-    errors.add(:expires_at, 'must be in the future') if expires_at <= Time.current
+    errors.add(:expires_at, "must be in the future") if expires_at <= Time.current
   end
 
   def self.hash_token_string(token)
@@ -229,43 +251,48 @@ class ApiToken < ApplicationRecord
   end
 
   def self.peppered_token(token)
-    # Use pepper from credentials, fallback to empty string for development
-    pepper = Rails.application.credentials.dig(:api_token, :pepper) || ENV['API_TOKEN_PEPPER'] || ''
+    pepper = Rails.application.credentials.dig(:api_token, :pepper) || ENV["API_TOKEN_PEPPER"]
+    if pepper.blank? && Rails.env.production?
+      raise "API_TOKEN_PEPPER must be configured in production (credentials or ENV)"
+    end
     "#{token}#{pepper}"
   end
 
-  # Simple in-memory cache for token validation
-  # Now caches the token record instead of just the user
+  # Redis-backed cache for token validation (uses Rails.cache)
+  # Caches the token record ID to avoid storing ActiveRecord objects
   def self.check_cache(token_string)
-    key = Digest::SHA256.hexdigest(token_string)
-    entry = @@token_cache[key]
+    cache_key = "#{CACHE_KEY_PREFIX}#{Digest::SHA256.hexdigest(token_string)}"
+    token_id = Rails.cache.read(cache_key)
 
-    if entry && entry[:cache_expires_at] > Time.current
-      # Check if the token itself has expired
-      token_record = entry[:token]
-      return nil if token_record.expired?
-      token_record
-    else
-      @@token_cache.delete(key)
-      nil
-    end
+    return nil unless token_id
+
+    # Fetch the token record from the database
+    token_record = find_by(id: token_id)
+    return nil unless token_record
+
+    # Check if the token itself has expired
+    return nil if token_record.expired?
+    return nil unless token_record.active?
+
+    token_record
   end
 
   def self.cache_token(token_string, token_record)
-    # Limit cache size
-    if @@token_cache.size > 1000
-      # Remove expired entries
-      @@token_cache.delete_if { |_, v| v[:cache_expires_at] < Time.current }
-    end
-
-    key = Digest::SHA256.hexdigest(token_string)
-    @@token_cache[key] = {
-      token: token_record,
-      cache_expires_at: Time.current + @@cache_ttl
-    }
+    cache_key = "#{CACHE_KEY_PREFIX}#{Digest::SHA256.hexdigest(token_string)}"
+    # Store only the token ID, not the full record
+    Rails.cache.write(cache_key, token_record.id, expires_in: CACHE_TTL)
   end
 
   def self.clear_cache
-    @@token_cache.clear
+    # Clear all cached tokens by deleting keys with our prefix
+    # This works best with Redis, for memory store it just doesn't do much
+    if Rails.cache.respond_to?(:delete_matched)
+      Rails.cache.delete_matched("#{CACHE_KEY_PREFIX}*")
+    end
+  end
+
+  def self.invalidate_token_cache(token_string)
+    cache_key = "#{CACHE_KEY_PREFIX}#{Digest::SHA256.hexdigest(token_string)}"
+    Rails.cache.delete(cache_key)
   end
 end

@@ -1,10 +1,10 @@
 class Api::V1::MessagesController < Api::V1::BaseController
   # Scope checks for message operations
   # Bot tokens can post via create action but cannot access DMs or delete
-  before_action :require_message_read_scope, only: [:index, :dm_channels]
-  before_action :require_message_write_scope, only: [:create, :create_for_channel, :create_media]
-  before_action :require_non_bot_for_dm, only: [:create_dm, :dm_channels, :start_dm_by_username]
-  before_action :require_non_bot_for_delete, only: [:destroy]
+  before_action :require_message_read_scope, only: [ :index, :dm_channels ]
+  before_action :require_message_write_scope, only: [ :create, :create_for_channel, :create_media ]
+  before_action :require_non_bot_for_dm, only: [ :create_dm, :dm_channels, :start_dm_by_username ]
+  before_action :require_non_bot_for_delete, only: [ :destroy ]
 
   # DELETE /api/v1/messages/:id
   def destroy
@@ -17,17 +17,17 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
       # Broadcast deletion to channel subscribers using explicit stream name
       ActionCable.server.broadcast("chat_channel_#{channel.id}", {
-        type: 'message_deleted',
+        type: "message_deleted",
         message_id: message.id
       })
 
       message.destroy
-      render_success_message('Message deleted')
+      render_success_message("Message deleted")
     else
-      render_forbidden('You can only delete your own messages')
+      render_forbidden("You can only delete your own messages")
     end
   rescue ActiveRecord::RecordNotFound
-    render_not_found('Message')
+    render_not_found("Message")
   end
 
   def create
@@ -36,42 +36,43 @@ class Api::V1::MessagesController < Api::V1::BaseController
       room_id = params[:room_id]
       user_id = params[:user_id]
       title = params[:title]
-      sender = params[:sender] || 'Home Assistant'
-      
+      sender = params[:sender] || "Home Assistant"
+
       # Find or create the channel
       channel = find_or_create_channel(room_id)
-      
+      return unless require_channel_access(channel, :read)
+
       # Find the user (or use current token user)
       user = current_api_user
       if user_id.present?
         if user.nil? || user_id.to_s != user.id.to_s
-          unless current_api_token&.has_scope?('admin:users') || user&.admin?
-            render json: { error: 'Forbidden - Cannot impersonate user' }, status: :forbidden
+          unless current_api_token&.has_scope?("admin:users") || user&.admin?
+            render json: { error: "Forbidden - Cannot impersonate user" }, status: :forbidden
             return
           end
         end
 
         user = User.find_by(id: user_id)
         unless user
-          render_error('User not found', :not_found)
+          render_error("User not found", :not_found)
           return
         end
       end
-      
+
       payload = normalized_message_payload(raw_message)
       payload[:content] = format_message_content(payload[:content], title, sender) unless E2eePolicy.required_for_channel?(channel)
 
-      if (error = validate_channel_write(channel, payload, allow_files: true))
+      if (error = validate_channel_write(channel, payload, allow_files: false))
         render_api_error(error[:message], status: error[:status], code: error[:code])
         return
       end
 
       # Create the message
       message = channel.messages.build(
-        build_message_attributes_for_channel(channel, payload, user, 'api')
+        build_message_attributes_for_channel(channel, payload, user, "api")
       )
       message.skip_chat_broadcast = true
-      
+
       if message.save
         # Broadcast the message to the channel (for Turbo Streams web clients)
         broadcast_message(message, channel)
@@ -86,23 +87,23 @@ class Api::V1::MessagesController < Api::V1::BaseController
             channel: channel.name,
             created_at: message.created_at.iso8601
           }
-        }, 'Message sent successfully')
+        }, "Message sent successfully")
       else
         render_error("Failed to create message: #{message.errors.full_messages.join(', ')}")
       end
-      
+
     rescue ActionController::ParameterMissing => e
       render_error("Missing required parameter: #{e.param}")
     rescue StandardError => e
-      Rails.logger.error "API Message Creation Error: #{e.message}"
+      Rails.logger.error "API Message Creation Error: #{e.class}"
       Rails.logger.error e.backtrace.join("\n") if Rails.env.development?
       render_error("Internal server error", :internal_server_error)
     end
   end
-  
+
   def index
     channel_id = params[:channel_id]
-    limit = [params[:limit]&.to_i || 50, 100].min
+    limit = [ params[:limit]&.to_i || 50, 100 ].min
 
     begin
       messages = if channel_id
@@ -110,16 +111,16 @@ class Api::V1::MessagesController < Api::V1::BaseController
         return unless ensure_channel_access(channel)
 
         channel.messages
-               .includes(:user, files_attachments: :blob)
-               .order(created_at: :desc)
+               .includes(:user, :message_receipts, files_attachments: :blob)
+               .order(created_at: :desc, id: :desc)
                .limit(limit + 1)
                .to_a
       else
         accessible_channels = Channel.accessible_by(current_api_user).select(:id)
 
-        Message.includes(:user, :channel, files_attachments: :blob)
+        Message.includes(:user, :channel, :message_receipts, files_attachments: :blob)
                .where(channel_id: accessible_channels)
-               .order(created_at: :desc)
+               .order(created_at: :desc, id: :desc)
                .limit(limit + 1)
                .to_a
       end
@@ -130,24 +131,23 @@ class Api::V1::MessagesController < Api::V1::BaseController
       render_paginated(:messages, messages.map { |m| serialize_message(m) }, has_more: has_more)
 
     rescue ActiveRecord::RecordNotFound
-      render_not_found('Channel')
+      render_not_found("Channel")
     rescue StandardError => e
-      Rails.logger.error "API Message Index Error: #{e.message}"
-      render_api_error('Internal server error', status: :internal_server_error)
+      Rails.logger.error "API Message Index Error: #{e.class}"
+      render_api_error("Internal server error", status: :internal_server_error)
     end
   end
-  
+
   private
-  
+
   def find_or_create_channel(room_id)
-    Rails.logger.info "Finding/creating channel for room_id: #{room_id}"
-    Rails.logger.info "Current API user: #{current_api_user&.username} (ID: #{current_api_user&.id})"
+    Rails.logger.info "Finding/creating API channel room_id=[redacted] user_id=#{current_api_user&.id}"
 
     if room_id.present?
       # Try to find existing channel by name first
       channel = Channel.find_by(name: room_id)
       if channel
-        Rails.logger.info "Found existing channel: #{channel.name} (ID: #{channel.id})"
+        Rails.logger.info "Found existing API channel id=#{channel.id}"
         return channel
       end
 
@@ -161,20 +161,20 @@ class Api::V1::MessagesController < Api::V1::BaseController
       channel = Channel.create!(
         name: room_id,
         description: "Auto-created channel for Home Assistant integration",
-        channel_type: 'public',
+        channel_type: "public",
         created_by: api_user
       )
 
-      Rails.logger.info "Created new channel: #{channel.name} (ID: #{channel.id})"
+      Rails.logger.info "Created new API channel id=#{channel.id}"
       channel
     else
       # Use default channels in order of preference
-      channel = Channel.find_by(name: 'home') ||
-                Channel.find_by(name: 'general') ||
-                Channel.find_by(name: 'home-assistant')
+      channel = Channel.find_by(name: "home") ||
+                Channel.find_by(name: "general") ||
+                Channel.find_by(name: "home-assistant")
 
       if channel
-        Rails.logger.info "Using default channel: #{channel.name} (ID: #{channel.id})"
+        Rails.logger.info "Using default API channel id=#{channel.id}"
         return channel
       end
 
@@ -186,35 +186,35 @@ class Api::V1::MessagesController < Api::V1::BaseController
       end
 
       channel = Channel.create!(
-        name: 'home-assistant',
-        description: 'Home Assistant notifications and messages',
-        channel_type: 'public',
+        name: "home-assistant",
+        description: "Home Assistant notifications and messages",
+        channel_type: "public",
         created_by: api_user
       )
 
-      Rails.logger.info "Created default home-assistant channel: #{channel.name} (ID: #{channel.id})"
+      Rails.logger.info "Created default Home Assistant API channel id=#{channel.id}"
       channel
     end
   rescue => e
-    Rails.logger.error "Failed to find/create channel: #{e.message}"
+    Rails.logger.error "Failed to find/create channel: #{e.class}"
     Rails.logger.error e.backtrace.join("\n") if Rails.env.development?
     raise
   end
-  
+
   def format_message_content(message, title, sender)
     content = message.to_s
-    
+
     if title.present?
       content = "**#{title}**\n#{content}"
     end
-    
-    if sender != 'Home Assistant'
+
+    if sender != "Home Assistant"
       content = "#{content}\n\n_From: #{sender}_"
     end
-    
+
     content
   end
-  
+
   def broadcast_message(message, channel)
     # Serialize files for broadcast
     files = if message.files.attached?
@@ -225,7 +225,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
           content_type: file.content_type,
           byte_size: file.byte_size,
           url: Rails.application.routes.url_helpers.rails_blob_url(file, host: request.base_url),
-          thumbnail_url: file.image? ? Rails.application.routes.url_helpers.rails_blob_url(file.variant(resize_to_limit: [400, 400]), host: request.base_url) : nil
+          thumbnail_url: file.image? ? Rails.application.routes.url_helpers.rails_blob_url(file.variant(resize_to_limit: [ 400, 400 ]), host: request.base_url) : nil
         }
       end
     else
@@ -234,11 +234,11 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
     # Broadcast to the channel using explicit stream name for mobile compatibility
     ActionCable.server.broadcast("chat_channel_#{channel.id}", {
-      type: 'new_message',
+      type: "new_message",
       message: {
         id: message.id,
         content: message.transport_content,
-        content_encoding: message.content_encoding || 'plaintext',
+        content_encoding: message.content_encoding || "plaintext",
         encrypted_content: message.encrypted_content,
         content_hmac: message.content_hmac,
         sender_device_id: message.respond_to?(:sender_device_id) ? message.sender_device_id : nil,
@@ -257,7 +257,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
       }
     })
   rescue => e
-    Rails.logger.error "Failed to broadcast message: #{e.message}"
+    Rails.logger.error "Failed to broadcast message: #{e.class}"
   end
 
   # === New scoped endpoints ===
@@ -277,9 +277,9 @@ class Api::V1::MessagesController < Api::V1::BaseController
     payload[:sender_key_fingerprint] ||= params[:sender_key_fingerprint]
     payload[:device_id] ||= params[:device_id]
     payload[:e2ee_version] ||= params[:e2ee_version]
-    message_type = params[:message_type] || 'chat'
+    message_type = params[:message_type] || "chat"
 
-    if (error = validate_channel_write(channel, payload, allow_files: true))
+    if (error = validate_channel_write(channel, payload, allow_files: false))
       render_api_error(error[:message], status: error[:status], code: error[:code])
       return
     end
@@ -299,7 +299,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
       render_model_errors(message)
     end
   rescue ActiveRecord::RecordNotFound
-    render_not_found('Channel')
+    render_not_found("Channel")
   rescue ActionController::ParameterMissing => e
     render_api_error("Missing required parameter: #{e.param}")
   end
@@ -311,15 +311,15 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
     if E2eePolicy.required_for_channel?(channel)
       render_api_error(
-        'File attachments are disabled for end-to-end encrypted private and direct channels',
+        "File attachments are disabled for end-to-end encrypted private and direct channels",
         status: :unprocessable_entity,
-        code: 'e2ee_files_not_supported'
+        code: "e2ee_files_not_supported"
       )
       return
     end
 
     user = current_api_user
-    message = channel.messages.build(user: user, content: params[:caption].presence || 'Attachment', message_type: 'api')
+    message = channel.messages.build(user: user, content: params[:caption].presence || "Attachment", message_type: "api")
     message.skip_chat_broadcast = true
 
     if params[:files].present?
@@ -336,7 +336,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
       render_model_errors(message)
     end
   rescue ActiveRecord::RecordNotFound
-    render_not_found('Channel')
+    render_not_found("Channel")
   end
 
   # POST /api/v1/users/:id/messages
@@ -344,7 +344,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
     target = User.find(params[:id])
     user = current_api_user
     if target == user
-      render_error('Cannot DM self') and return
+      render_error("Cannot DM self") and return
     end
 
     channel = find_or_create_dm(user, target)
@@ -356,13 +356,13 @@ class Api::V1::MessagesController < Api::V1::BaseController
     payload[:device_id] ||= params[:device_id]
     payload[:e2ee_version] ||= params[:e2ee_version]
 
-    if (error = validate_channel_write(channel, payload, allow_files: true))
+    if (error = validate_channel_write(channel, payload, allow_files: false))
       render_api_error(error[:message], status: error[:status], code: error[:code])
       return
     end
 
     message = channel.messages.build(
-      build_message_attributes_for_channel(channel, payload, user, 'chat')
+      build_message_attributes_for_channel(channel, payload, user, "chat")
     )
     message.skip_chat_broadcast = true
 
@@ -371,12 +371,12 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
       # Note: FCM push notifications are now sent via model callback (send_push_notifications)
 
-      render_success({ id: message.id, channel_id: channel.id }, 'DM sent')
+      render_success({ id: message.id, channel_id: channel.id }, "DM sent")
     else
-      render_error(message.errors.full_messages.join(', '))
+      render_error(message.errors.full_messages.join(", "))
     end
   rescue ActiveRecord::RecordNotFound
-    render_error('User not found', :not_found)
+    render_error("User not found", :not_found)
   rescue ActionController::ParameterMissing => e
     render_error("Missing required parameter: #{e.param}")
   end
@@ -391,21 +391,26 @@ class Api::V1::MessagesController < Api::V1::BaseController
                         .joins(:channel_memberships)
                         .where(channel_memberships: { user: user })
                         .preload(channel_memberships: :user)
-                        .order(Arel.sql('last_message_at DESC NULLS LAST'))
+                        .order(Arel.sql("last_message_at DESC NULLS LAST"))
+                        .to_a
+
+    channel_ids = dm_channel_list.map(&:id)
+    last_messages_by_channel_id = latest_messages_by_channel_id(channel_ids)
+    unread_counts_by_channel_id = unread_counts_for_user_and_channels(user, channel_ids)
 
     serialized_channels = dm_channel_list.map do |c|
       other_user = c.channel_memberships
                      .map(&:user)
                      .find { |member| member&.id != user.id }
-      last_message = c.messages.order(:created_at).last
+      last_message = last_messages_by_channel_id[c.id]
 
       {
         id: c.id,
         name: other_user&.username || "Unknown User", # Show as other person's name
         description: nil, # DMs don't need descriptions
-        type: 'dm', # Must match iOS ChannelType.directMessage raw value
+        type: "dm", # Must match iOS ChannelType.directMessage raw value
         member_count: c.member_count,
-        online_member_count: c.members.where(is_online: true).count,
+        online_member_count: c.channel_memberships.count { |membership| membership.user&.is_online },
         last_message: last_message ? {
           id: last_message.id,
           content: last_message.transport_content || E2eePolicy::PLACEHOLDER_CONTENT,
@@ -415,7 +420,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
             username: last_message.user.username
           }
         } : nil,
-        unread_count: c.unread_count_for(user),
+        unread_count: unread_counts_by_channel_id[c.id] || 0,
         is_member: true, # Always true for DMs
         created_at: c.created_at&.iso8601
       }
@@ -430,13 +435,13 @@ class Api::V1::MessagesController < Api::V1::BaseController
     target = User.find_by(username: username)
 
     if target.nil?
-      render_error('User not found', :not_found)
+      render_error("User not found", :not_found)
       return
     end
 
     user = current_api_user
     if target == user
-      render_error('Cannot DM self') and return
+      render_error("Cannot DM self") and return
     end
 
     channel = find_or_create_dm(user, target)
@@ -448,7 +453,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
         type: channel.channel_type,
         members: channel.channel_memberships.includes(:user).map { |m| m.user.username }
       }
-    }, 'DM channel ready')
+    }, "DM channel ready")
   rescue ActionController::ParameterMissing => e
     render_error("Missing required parameter: #{e.param}")
   end
@@ -463,12 +468,17 @@ class Api::V1::MessagesController < Api::V1::BaseController
     E2eePolicy.validate_enforced_write(channel:, payload:, request:, allow_files:)
   end
 
+  PERMITTED_MESSAGE_FIELDS = %i[
+    content content_encoding encrypted_content content_hmac
+    sender_key_fingerprint device_id e2ee_version
+  ].freeze
+
   def normalized_message_payload(raw_message)
     case raw_message
     when ActionController::Parameters
-      raw_message.to_unsafe_h.with_indifferent_access
+      raw_message.permit(PERMITTED_MESSAGE_FIELDS).to_h.with_indifferent_access
     when Hash
-      raw_message.with_indifferent_access
+      raw_message.slice(*PERMITTED_MESSAGE_FIELDS).with_indifferent_access
     else
       { content: raw_message.to_s }.with_indifferent_access
     end
@@ -494,32 +504,61 @@ class Api::V1::MessagesController < Api::V1::BaseController
   end
 
   def find_or_create_dm(a, b)
-    users = [a, b].sort_by(&:id)
+    users = [ a, b ].sort_by(&:id)
     name = "dm-#{users.first.username}-#{users.last.username}"
     Channel.dm_channels.find_by(name: name) || begin
-      ch = Channel.create!(name: name, channel_type: 'dm', created_by: a)
+      ch = Channel.create!(name: name, channel_type: "dm", created_by: a)
       ch.add_member(a)
       ch.add_member(b)
       ch
     end
   end
 
+  def latest_messages_by_channel_id(channel_ids)
+    return {} if channel_ids.empty?
+
+    recent_scope = Message
+                     .select("channel_id, MAX(created_at) AS latest_created_at")
+                     .where(channel_id: channel_ids)
+                     .group(:channel_id)
+
+    Message
+      .joins("INNER JOIN (#{recent_scope.to_sql}) AS recent_messages ON recent_messages.channel_id = messages.channel_id AND recent_messages.latest_created_at = messages.created_at")
+      .includes(:user)
+      .where(channel_id: channel_ids)
+      .group_by(&:channel_id)
+      .transform_values { |messages| messages.max_by { |message| [ message.created_at, message.id ] } }
+  end
+
+  def unread_counts_for_user_and_channels(user, channel_ids)
+    return {} if user.nil? || channel_ids.empty?
+
+    ChannelMembership
+      .where(user_id: user.id, channel_id: channel_ids)
+      .joins("INNER JOIN channels ON channels.id = channel_memberships.channel_id")
+      .joins("INNER JOIN messages ON messages.channel_id = channel_memberships.channel_id")
+      .where.not(messages: { user_id: user.id })
+      .where("messages.created_at > COALESCE(channel_memberships.last_read_at, channel_memberships.joined_at, channels.created_at)")
+      .group("channel_memberships.channel_id")
+      .count("messages.id")
+  end
+
   # Scope check helpers
 
   def require_message_read_scope
-    require_scope('user:messages', 'channel:*:read')
+    require_scope("user:messages", "channel:*:read")
   end
 
   def require_message_write_scope
     # Allow user:messages, bot:post, or channel:*:write scopes
-    require_scope('user:messages', 'bot:post', 'channel:*:write')
+    require_scope("user:messages", "bot:post", "channel:*:write")
   end
 
   def require_non_bot_for_dm
-    require_non_bot_token && require_scope('user:messages')
+    require_non_bot_token && require_scope("user:messages")
   end
 
   def require_non_bot_for_delete
-    require_non_bot_token && require_scope('user:messages')
+    require_non_bot_token && require_scope("user:messages")
   end
 end

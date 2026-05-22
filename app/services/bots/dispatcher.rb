@@ -28,11 +28,11 @@ module Bots
       @triggers ||= begin
         map = {}
         direct_message_bots.each do |bot|
-          map[bot.id] = { bot: bot, reason: 'direct_message' }
+          map[bot.id] = { bot: bot, reason: "direct_message" }
         end
 
         mentioned_bots.each do |bot|
-          map[bot.id] = { bot: bot, reason: 'mention' }
+          map[bot.id] = { bot: bot, reason: "mention" }
         end
 
         map.values
@@ -45,7 +45,7 @@ module Bots
       end.uniq
       return [] if mentions.blank?
 
-      Bot.active.ai_bots.where('LOWER(name) IN (?)', mentions)
+      Bot.active.ai_bots.where("LOWER(name) IN (?)", mentions)
     end
 
     def direct_message_bots

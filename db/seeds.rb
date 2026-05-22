@@ -28,10 +28,10 @@ if User.count == 0
   credentials_file = Rails.env.production? ? '/data/admin_credentials.json' : 'tmp/admin_credentials.json'
   File.write(credentials_file, JSON.pretty_generate(credentials_data))
 
-  puts "🔐 Admin user created successfully!"
-  puts "📁 Credentials stored in: #{credentials_file}"
-  puts "👤 Username: #{admin_username}"
-  puts "🔑 Password: #{admin_password}"
+  Rails.logger.debug "🔐 Admin user created successfully!"
+  Rails.logger.debug "📁 Credentials stored in: #{credentials_file}"
+  Rails.logger.debug "👤 Username: #{admin_username}"
+  Rails.logger.debug "🔑 Password: #{admin_password}"
 
   Rails.logger.info "Admin user created: #{admin_username}"
 end

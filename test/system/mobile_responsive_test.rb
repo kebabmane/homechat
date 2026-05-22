@@ -2,12 +2,12 @@ require "application_system_test_case"
 
 class MobileResponsiveTest < MobileSystemTestCase
   setup do
-    @owner = User.create!(username: "mobileowner", password: "secret", password_confirmation: "secret")
+    @owner = User.create!(username: "mobileowner", password: "password123", password_confirmation: "password123")
     @channel = Channel.create!(name: "mobile-test", created_by: @owner, channel_type: "public")
   end
 
   test "sidebar is hidden by default on mobile" do
-    sign_in(username: @owner.username, password: "secret")
+    sign_in(username: @owner.username, password: "password123")
     visit channel_path(@channel)
 
     # Sidebar panel should have the translate-x class that hides it
@@ -16,7 +16,7 @@ class MobileResponsiveTest < MobileSystemTestCase
   end
 
   test "hamburger menu opens sidebar on mobile" do
-    sign_in(username: @owner.username, password: "secret")
+    sign_in(username: @owner.username, password: "password123")
     visit channel_path(@channel)
 
     # Find and click hamburger menu
@@ -29,7 +29,7 @@ class MobileResponsiveTest < MobileSystemTestCase
   end
 
   test "body scroll is locked when sidebar opens" do
-    sign_in(username: @owner.username, password: "secret")
+    sign_in(username: @owner.username, password: "password123")
     visit channel_path(@channel)
 
     # Open sidebar
@@ -42,7 +42,7 @@ class MobileResponsiveTest < MobileSystemTestCase
   end
 
   test "backdrop click closes sidebar" do
-    sign_in(username: @owner.username, password: "secret")
+    sign_in(username: @owner.username, password: "password123")
     visit channel_path(@channel)
 
     # Open sidebar
@@ -63,11 +63,11 @@ class MobileResponsiveTest < MobileSystemTestCase
 
     # Body scroll should be restored
     body = find("body")
-    refute_match(/overflow-hidden/, body[:class])
+    assert_no_match(/overflow-hidden/, body[:class])
   end
 
   test "settings page shows all sections without tabs on mobile" do
-    sign_in(username: @owner.username, password: "secret")
+    sign_in(username: @owner.username, password: "password123")
     visit edit_settings_path
 
     # All sections should be visible (stacked, not tabbed)

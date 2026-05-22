@@ -28,6 +28,7 @@ module Admin
       @fcm_client_email = Setting.fcm_client_email || ""
       @fcm_private_key_present = Setting.fcm_private_key.present?
       @fcm_configured = Setting.fcm_configured?
+      @active_api_tokens_count = ApiToken.active.count
 
       if @litellm_host.present? && @litellm_api_key_present
         begin
@@ -108,13 +109,36 @@ module Admin
         end
       end
 
+      AuditLog.log(
+        action: "admin.settings_updated",
+        user: current_user,
+        resource: current_user,
+        ip_address: request.remote_ip,
+        user_agent: request.user_agent,
+        metadata: {
+          changed_keys: changed_setting_keys(params),
+          litellm_host_present: params[:litellm_host].present?,
+          litellm_api_key_changed: params[:litellm_api_key].present? || params[:reset_litellm_api_key].present?,
+          fcm_changed: params[:fcm_project_id].present? || params[:fcm_private_key].present? || params[:reset_fcm_private_key].present?
+        }
+      )
+
       redirect_to edit_admin_settings_path, notice: "Server settings saved."
     end
 
     private
 
+    # Returns the list of non-secret setting keys that were submitted (for audit log).
+    def changed_setting_keys(params)
+      keys = %i[site_name allow_signups require_signup_approval pwa_enabled pwa_short_name
+                pwa_theme_color pwa_bg_color pwa_display api_enabled home_assistant_enabled
+                webhook_base_url litellm_host litellm_default_model fcm_enabled fcm_project_id
+                fcm_client_email]
+      keys.select { |k| params[k].present? }
+    end
+
     def ensure_admin!
-      redirect_to dashboard_path, alert: 'Admins only.' unless current_user&.admin?
+      redirect_to dashboard_path, alert: "Admins only." unless current_user&.admin?
     end
   end
 end
