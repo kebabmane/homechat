@@ -1,0 +1,2733 @@
+openapi: 3.0.3
+info:
+  title: HomeChat API
+  description: |
+    HomeChat REST API for mobile clients, Home Assistant integration, and bot webhooks.
+    Authentication is via Bearer token (API token) or X-API-Key header.
+  version: 1.0.0
+  contact:
+    name: HomeChat
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns server health status. No authentication required.
+      security: []
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /server_info:
+    get:
+      summary: Server information
+      description: Returns server capabilities and connection info for client discovery. No authentication required.
+      security: []
+      tags:
+        - Server
+      responses:
+        '200':
+          description: Server info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerInfoResponse'
+  /metrics/health:
+    get:
+      summary: Basic health metrics
+      description: Basic health check without authentication.
+      security: []
+      tags:
+        - Metrics
+      responses:
+        '200':
+          description: Health metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+  /metrics:
+    get:
+      summary: Detailed metrics
+      description: Detailed system metrics. Requires admin authentication.
+      tags:
+        - Metrics
+      responses:
+        '200':
+          description: Detailed metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
+            text/plain:
+              schema:
+                type: string
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /signin:
+    post:
+      summary: Sign in
+      description: Authenticate with username and password. Returns API token or 2FA challenge.
+      security: []
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+      responses:
+        '200':
+          description: Sign in successful or 2FA required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '403':
+          description: Account pending approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /signin/verify_2fa:
+    post:
+      summary: Verify 2FA
+      description: Complete two-factor authentication with temporary token and TOTP code.
+      security: []
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorVerifyRequest'
+      responses:
+        '200':
+          description: 2FA verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /signup:
+    post:
+      summary: Sign up
+      description: Create a new user account.
+      security: []
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      responses:
+        '201':
+          description: User created, or created pending administrator approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '403':
+          description: Registration disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /signout:
+    delete:
+      summary: Sign out
+      description: Deactivate the current API token.
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Signed out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /auth/refresh:
+    post:
+      summary: Refresh token
+      description: Issue a new 90-day token and deactivate the current one.
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '401':
+          description: Token expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/sessions:
+    get:
+      summary: List active sessions
+      description: Returns all active (non-expired) tokens for the current user.
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Active sessions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionsResponse'
+  /auth/sessions/{id}:
+    delete:
+      summary: Revoke a session
+      description: Deactivate a specific session token belonging to the current user.
+      tags:
+        - Authentication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Session revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Cannot revoke current session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /me:
+    get:
+      summary: Get current user profile
+      description: Returns the authenticated user's profile.
+      tags:
+        - Users
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+    patch:
+      summary: Update profile
+      description: Update username, timezone, or avatar. Changing username requires current password.
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateProfileResponse'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /me/change_password:
+    post:
+      summary: Change password
+      description: Change the current user's password.
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /me/avatar:
+    delete:
+      summary: Remove avatar
+      description: Remove the current user's avatar.
+      tags:
+        - Users
+      responses:
+        '200':
+          description: Avatar removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '422':
+          description: No avatar to remove
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /2fa/status:
+    get:
+      summary: 2FA status
+      description: Check if two-factor authentication is enabled.
+      tags:
+        - Two-Factor Authentication
+      responses:
+        '200':
+          description: 2FA status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwoFactorStatusResponse'
+  /2fa/setup:
+    post:
+      summary: Setup 2FA
+      description: Generate a new TOTP secret and provisioning URI for QR code.
+      tags:
+        - Two-Factor Authentication
+      responses:
+        '200':
+          description: 2FA setup data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwoFactorSetupResponse'
+        '422':
+          description: 2FA already enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /2fa/verify:
+    post:
+      summary: Verify and enable 2FA
+      description: Verify TOTP code and enable two-factor authentication.
+      tags:
+        - Two-Factor Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorVerifySetupRequest'
+      responses:
+        '200':
+          description: 2FA enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwoFactorEnableResponse'
+        '422':
+          description: Invalid code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /2fa/disable:
+    post:
+      summary: Disable 2FA
+      description: Disable two-factor authentication. Requires password and TOTP code.
+      tags:
+        - Two-Factor Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorDisableRequest'
+      responses:
+        '200':
+          description: 2FA disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '422':
+          description: Invalid password or code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /2fa/backup_codes:
+    get:
+      summary: Get backup codes
+      description: Retrieve 2FA backup codes. Requires TOTP verification.
+      tags:
+        - Two-Factor Authentication
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Backup codes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwoFactorBackupCodesResponse'
+        '422':
+          description: Invalid code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /2fa/regenerate_backup_codes:
+    post:
+      summary: Regenerate backup codes
+      description: Generate new 2FA backup codes. Requires TOTP verification.
+      tags:
+        - Two-Factor Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorVerifySetupRequest'
+      responses:
+        '200':
+          description: New backup codes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwoFactorBackupCodesResponse'
+        '422':
+          description: Invalid code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /fcm_token:
+    put:
+      summary: Update FCM token
+      description: Register or update the Firebase Cloud Messaging token for push notifications.
+      tags:
+        - Push Notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FCMTokenRequest'
+      responses:
+        '200':
+          description: FCM token updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: FCM token required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Failed to update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Remove FCM token
+      description: Remove the current user's registered Firebase Cloud Messaging token.
+      tags:
+        - Push Notifications
+      responses:
+        '200':
+          description: FCM token removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /messages:
+    get:
+      summary: List messages
+      description: Get messages for a channel or across all accessible channels.
+      tags:
+        - Messages
+      parameters:
+        - name: channel_id
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Messages list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagesResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create message (legacy)
+      description: Post a message to a channel (legacy endpoint for Home Assistant integration).
+      tags:
+        - Messages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLegacyMessageRequest'
+      responses:
+        '200':
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateMessageResponse'
+        '400':
+          description: Missing required parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /messages/{id}:
+    delete:
+      summary: Delete message
+      description: Delete a message. Users can only delete their own messages (admins can delete any).
+      tags:
+        - Messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Message deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Cannot delete this message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /search:
+    get:
+      summary: Search
+      description: Search users, channels, and messages.
+      tags:
+        - Search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [all, users, channels]
+            default: all
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /users/search:
+    get:
+      summary: Search users
+      description: Search for users by username.
+      tags:
+        - Search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+      responses:
+        '200':
+          description: User search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchUsersResponse'
+        '400':
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels:
+    get:
+      summary: List channels
+      description: Get all non-DM channels accessible to the current user.
+      tags:
+        - Channels
+      responses:
+        '200':
+          description: Channels list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelsResponse'
+    post:
+      summary: Create channel
+      description: Create a new channel.
+      tags:
+        - Channels
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChannelRequest'
+      responses:
+        '201':
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateChannelResponse'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/messages:
+    post:
+      summary: Post message to channel
+      description: Create a message in a specific channel.
+      tags:
+        - Channels
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChannelMessageRequest'
+      responses:
+        '200':
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/media:
+    post:
+      summary: Upload media to channel
+      description: Upload file attachments to a channel.
+      tags:
+        - Channels
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateMediaRequest'
+      responses:
+        '200':
+          description: Media uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          description: E2EE channels do not support files
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/join:
+    post:
+      summary: Join channel
+      description: Join a channel.
+      tags:
+        - Channels
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Joined channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Channel not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/leave:
+    delete:
+      summary: Leave channel
+      description: Leave a channel.
+      tags:
+        - Channels
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Left channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/members:
+    get:
+      summary: List channel members
+      description: Get members of a channel.
+      tags:
+        - Channels
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Channel members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelMembersResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/mark_as_read:
+    post:
+      summary: Mark channel as read
+      description: Mark all messages in a channel as read.
+      tags:
+        - Channels
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Not a member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /dm/channels:
+    get:
+      summary: List DM channels
+      description: Get all DM channels for the current user.
+      tags:
+        - Direct Messages
+      responses:
+        '200':
+          description: DM channels list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DMChannelsResponse'
+  /users/{id}/messages:
+    post:
+      summary: Send DM
+      description: Send a direct message to a user.
+      tags:
+        - Direct Messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDMRequest'
+      responses:
+        '200':
+          description: DM sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Cannot DM self
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /dm/start:
+    post:
+      summary: Start DM by username
+      description: Find or create a DM channel with a user by username.
+      tags:
+        - Direct Messages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartDMRequest'
+      responses:
+        '200':
+          description: DM channel ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartDMResponse'
+        '400':
+          description: Cannot DM self
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /bots:
+    get:
+      summary: List bots
+      description: List all bots. Requires admin access.
+      tags:
+        - Bots
+      responses:
+        '200':
+          description: Bots list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BotsResponse'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create bot
+      description: Create a new bot. Requires admin access. Idempotent by name.
+      tags:
+        - Bots
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBotRequest'
+      responses:
+        '200':
+          description: Bot created or already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BotResponse'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /bots/{id}:
+    get:
+      summary: Get bot
+      description: Get a bot by ID. Requires admin access.
+      tags:
+        - Bots
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Bot details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BotResponse'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      summary: Update bot
+      description: Update a bot. Requires admin access.
+      tags:
+        - Bots
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBotRequest'
+      responses:
+        '200':
+          description: Bot updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BotResponse'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Delete bot
+      description: Delete a bot. Requires admin access.
+      tags:
+        - Bots
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Bot deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /bots/{id}/status:
+    get:
+      summary: Bot status
+      description: Get bot status and activity metrics. Requires admin access.
+      tags:
+        - Bots
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Bot status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BotStatusResponse'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /bots/{id}/activate:
+    post:
+      summary: Activate bot
+      description: Activate a bot. Requires admin access.
+      tags:
+        - Bots
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Bot activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /bots/{id}/deactivate:
+    post:
+      summary: Deactivate bot
+      description: Deactivate a bot. Requires admin access.
+      tags:
+        - Bots
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Bot deactivated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /webhooks/{webhook_id}:
+    post:
+      summary: Webhook receiver
+      description: Receive webhook events from external bots. Authenticated via webhook signature.
+      security: []
+      tags:
+        - Webhooks
+      parameters:
+        - name: webhook_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookRequest'
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Invalid webhook signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bot not found or inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to process webhook
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /me/hmac_key:
+    put:
+      summary: Store HMAC key
+      description: Store the current user's encrypted HMAC key material.
+      tags:
+        - E2EE
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HMACKeyRequest'
+      responses:
+        '200':
+          description: HMAC key stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: Get HMAC key
+      description: Retrieve the current user's encrypted HMAC key material.
+      tags:
+        - E2EE
+      responses:
+        '200':
+          description: HMAC key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HMACKeyResponse'
+        '404':
+          description: HMAC key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /me/e2ee_key:
+    put:
+      summary: Publish E2EE key
+      description: Upsert the current user's device-scoped E2EE key bundle.
+      tags:
+        - E2EE
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/E2EEKeyRequest'
+      responses:
+        '200':
+          description: Key published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/E2EEKeyResponse'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /users/{id}/e2ee_key:
+    get:
+      summary: Get user E2EE keys
+      description: Retrieve active E2EE device keys for a given user.
+      tags:
+        - E2EE
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: User E2EE keys
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserE2EEKeysResponse'
+        '404':
+          description: E2EE key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/e2ee_keys:
+    get:
+      summary: Get channel E2EE keys
+      description: Returns active device key bundles for all channel members.
+      tags:
+        - E2EE
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Channel E2EE keys
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelE2EEKeysResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/key_shares:
+    post:
+      summary: Submit key shares
+      description: Accept signed encrypted channel key shares for multiple recipient devices.
+      tags:
+        - E2EE
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeySharesRequest'
+      responses:
+        '200':
+          description: Key shares created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeySharesSubmitResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/key_shares/me:
+    get:
+      summary: Get my key share
+      description: Retrieve the encrypted channel key share destined for the current user's device.
+      tags:
+        - E2EE
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Key share
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyShareResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No key share found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Valid device_id required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/rotate_key:
+    post:
+      summary: Rotate channel key
+      description: Flags a channel for E2EE key rotation.
+      tags:
+        - E2EE
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Key rotation requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyRotationResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/key_rotation_status:
+    get:
+      summary: Key rotation status
+      description: Returns the current key rotation status for the channel.
+      tags:
+        - E2EE
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Rotation status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyRotationStatusResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}/acknowledge_rotation:
+    post:
+      summary: Acknowledge key rotation
+      description: Called by a client after it has generated and distributed the new key.
+      tags:
+        - E2EE
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Rotation acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: API token via Authorization header
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API token via X-API-Key header
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+        service:
+          type: string
+          example: HomeChat
+        push_enabled:
+          type: boolean
+    ServerInfoResponse:
+      type: object
+      properties:
+        server_name:
+          type: string
+        version:
+          type: string
+        mode:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        websocket_path:
+          type: string
+          example: /cable
+        ha_ingress:
+          type: boolean
+        nabu_casa_url:
+          type: string
+          nullable: true
+        push_enabled:
+          type: boolean
+        e2ee_enabled:
+          type: boolean
+        e2ee_required_private_dm:
+          type: boolean
+        min_e2ee_version:
+          type: string
+        e2ee_capabilities:
+          type: object
+          properties:
+            channel_scope:
+              type: array
+              items:
+                type: string
+            legacy_write_blocked:
+              type: boolean
+            bot_posting_blocked:
+              type: boolean
+        registration_enabled:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+    MetricsResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        application:
+          type: object
+          properties:
+            name:
+              type: string
+            environment:
+              type: string
+            ruby_version:
+              type: string
+            rails_version:
+              type: string
+        database:
+          type: object
+          properties:
+            adapter:
+              type: string
+            pool_size:
+              type: integer
+            connections_in_use:
+              type: integer
+            waiting_in_queue:
+              type: integer
+        users:
+          type: object
+          properties:
+            total:
+              type: integer
+            admins:
+              type: integer
+            online:
+              type: integer
+            recently_active:
+              type: integer
+            locked:
+              type: integer
+        channels:
+          type: object
+          properties:
+            total:
+              type: integer
+            public:
+              type: integer
+            private:
+              type: integer
+            dm:
+              type: integer
+            active_today:
+              type: integer
+        messages:
+          type: object
+          properties:
+            total:
+              type: integer
+            today:
+              type: integer
+            this_hour:
+              type: integer
+            with_attachments:
+              type: integer
+        api_tokens:
+          type: object
+          properties:
+            total:
+              type: integer
+            active:
+              type: integer
+            used_today:
+              type: integer
+        system:
+          type: object
+          properties:
+            memory_mb:
+              type: integer
+              nullable: true
+            uptime_seconds:
+              type: integer
+              nullable: true
+            pid:
+              type: integer
+    SignInRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    SignUpRequest:
+      type: object
+      required:
+        - username
+        - password
+        - password_confirmation
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        password_confirmation:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/UserInfo'
+        token:
+          type: string
+        error:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
+        requires_2fa:
+          type: boolean
+        temp_token:
+          type: string
+        pending_approval:
+          type: boolean
+        message:
+          type: string
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        role:
+          type: string
+        two_factor_enabled:
+          type: boolean
+    TwoFactorVerifyRequest:
+      type: object
+      required:
+        - temp_token
+        - code
+      properties:
+        temp_token:
+          type: string
+        code:
+          type: string
+    TwoFactorStatusResponse:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        available:
+          type: boolean
+    TwoFactorSetupResponse:
+      type: object
+      properties:
+        provisioning_uri:
+          type: string
+        secret:
+          type: string
+    TwoFactorVerifySetupRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+    TwoFactorEnableResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        backup_codes:
+          type: array
+          items:
+            type: string
+        message:
+          type: string
+    TwoFactorDisableRequest:
+      type: object
+      required:
+        - password
+        - code
+      properties:
+        password:
+          type: string
+        code:
+          type: string
+    TwoFactorBackupCodesResponse:
+      type: object
+      properties:
+        backup_codes:
+          type: array
+          items:
+            type: string
+        remaining_count:
+          type: integer
+    RefreshTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        token:
+          type: string
+        error:
+          type: string
+    SessionsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TokenSession'
+    TokenSession:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        token_prefix:
+          type: string
+        last_used_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        is_current:
+          type: boolean
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        error:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
+    UserProfileResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        role:
+          type: string
+        timezone:
+          type: string
+          nullable: true
+        two_factor_enabled:
+          type: boolean
+        avatar_url:
+          type: string
+          nullable: true
+        avatar_initials:
+          type: string
+          nullable: true
+        avatar_color_index:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    UpdateProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        timezone:
+          type: string
+        avatar:
+          type: string
+          format: binary
+        current_password:
+          type: string
+    UpdateProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/UserProfileResponse'
+        message:
+          type: string
+    ChangePasswordRequest:
+      type: object
+      required:
+        - current_password
+        - new_password
+        - new_password_confirmation
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+        new_password_confirmation:
+          type: string
+    FCMTokenRequest:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+        platform:
+          type: string
+    HMACKeyRequest:
+      type: object
+      required:
+        - encrypted_hmac_key
+      properties:
+        encrypted_hmac_key:
+          type: string
+        key_version:
+          type: string
+          default: "1"
+    HMACKeyResponse:
+      type: object
+      properties:
+        encrypted_hmac_key:
+          type: string
+        key_version:
+          type: string
+    MessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          $ref: '#/components/schemas/Message'
+    MessagesResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        has_more:
+          type: boolean
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        content:
+          type: string
+        user:
+          $ref: '#/components/schemas/MessageUser'
+        channel_id:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        message_type:
+          type: string
+          example: chat
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageFile'
+        content_hmac:
+          type: string
+          nullable: true
+        content_encoding:
+          type: string
+          example: plaintext
+        encrypted_content:
+          type: string
+          nullable: true
+        sender_device_id:
+          type: string
+          nullable: true
+        sender_key_fingerprint:
+          type: string
+          nullable: true
+        e2ee_version:
+          type: string
+          nullable: true
+        receipts:
+          type: object
+          properties:
+            delivered_count:
+              type: integer
+            read_count:
+              type: integer
+    MessageUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        role:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    MessageFile:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        filename:
+          type: string
+        content_type:
+          type: string
+        byte_size:
+          type: integer
+          format: int64
+        url:
+          type: string
+        thumbnail_url:
+          type: string
+          nullable: true
+    CreateLegacyMessageRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        room_id:
+          type: string
+        user_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        sender:
+          type: string
+          default: Home Assistant
+    CreateMessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            content:
+              type: string
+            user:
+              type: string
+            channel:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+        error:
+          type: string
+    CreateChannelMessageRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        content_encoding:
+          type: string
+          default: plaintext
+        encrypted_content:
+          type: string
+        content_hmac:
+          type: string
+        sender_key_fingerprint:
+          type: string
+        device_id:
+          type: string
+        e2ee_version:
+          type: string
+        message_type:
+          type: string
+          default: chat
+    CreateMediaRequest:
+      type: object
+      properties:
+        caption:
+          type: string
+        files:
+          type: array
+          items:
+            type: string
+            format: binary
+    SearchResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchUserResult'
+        channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchChannelResult'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchMessageResult'
+        totalResults:
+          type: integer
+    SearchUsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchUserResult'
+    SearchUserResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        is_online:
+          type: boolean
+        status:
+          type: string
+          nullable: true
+        last_seen_at:
+          type: string
+          format: date-time
+          nullable: true
+        avatar_url:
+          type: string
+          nullable: true
+        avatar_initials:
+          type: string
+          nullable: true
+        avatar_color_index:
+          type: integer
+          nullable: true
+    SearchChannelResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        type:
+          type: string
+        description:
+          type: string
+          nullable: true
+        members:
+          type: integer
+        is_member:
+          type: boolean
+        online_members:
+          type: integer
+    SearchMessageResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/SearchMessageUser'
+        channel:
+          $ref: '#/components/schemas/SearchMessageChannel'
+    SearchMessageUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+    SearchMessageChannel:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    ChannelsResponse:
+      type: object
+      properties:
+        channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Channel'
+    Channel:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [public, private, dm]
+        member_count:
+          type: integer
+        online_member_count:
+          type: integer
+        last_message:
+          $ref: '#/components/schemas/LastMessage'
+          nullable: true
+        unread_count:
+          type: integer
+        is_member:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    LastMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/SearchMessageUser'
+    CreateChannelRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        channel_type:
+          type: string
+          enum: [public, private]
+          default: public
+    CreateChannelResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            channel:
+              $ref: '#/components/schemas/Channel'
+    ChannelMembersResponse:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChannelMember'
+    ChannelMember:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        is_online:
+          type: boolean
+        status:
+          type: string
+          nullable: true
+        last_seen_at:
+          type: string
+          format: date-time
+          nullable: true
+        avatar_url:
+          type: string
+          nullable: true
+        avatar_initials:
+          type: string
+          nullable: true
+        avatar_color_index:
+          type: integer
+          nullable: true
+    DMChannelsResponse:
+      type: object
+      properties:
+        channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/DMChannel'
+    DMChannel:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          example: dm
+        member_count:
+          type: integer
+        online_member_count:
+          type: integer
+        last_message:
+          $ref: '#/components/schemas/LastMessage'
+          nullable: true
+        unread_count:
+          type: integer
+        is_member:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    CreateDMRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        content_encoding:
+          type: string
+        encrypted_content:
+          type: string
+        content_hmac:
+          type: string
+        sender_key_fingerprint:
+          type: string
+        device_id:
+          type: string
+        e2ee_version:
+          type: string
+    StartDMRequest:
+      type: object
+      required:
+        - username
+      properties:
+        username:
+          type: string
+    StartDMResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        channel:
+          type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            name:
+              type: string
+            type:
+              type: string
+            members:
+              type: array
+              items:
+                type: string
+    BotsResponse:
+      type: object
+      properties:
+        bots:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bot'
+    Bot:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        bot_type:
+          type: string
+        webhook_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    BotResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        bot:
+          $ref: '#/components/schemas/Bot'
+        message:
+          type: string
+    CreateBotRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        webhook_id:
+          type: string
+        bot_type:
+          type: string
+          default: webhook
+        active:
+          type: boolean
+          default: true
+    UpdateBotRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        webhook_id:
+          type: string
+        bot_type:
+          type: string
+        active:
+          type: boolean
+    BotStatusResponse:
+      type: object
+      properties:
+        bot_id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        active:
+          type: boolean
+        last_activity:
+          type: string
+          format: date-time
+        message_count:
+          type: integer
+        status:
+          type: string
+          enum: [active, inactive]
+    WebhookRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [send_message, status_update, command]
+        message:
+          type: string
+        room_id:
+          type: string
+        user_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        priority:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+        command:
+          type: string
+        args:
+          type: array
+          items:
+            type: string
+    E2EEKeyRequest:
+      type: object
+      required:
+        - device_id
+        - encryption_public_key
+        - signing_public_key
+      properties:
+        device_id:
+          type: string
+        encryption_public_key:
+          type: string
+        signing_public_key:
+          type: string
+        key_fingerprint:
+          type: string
+        key_version:
+          type: string
+          default: "1"
+    E2EEKeyResponse:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int64
+        device_id:
+          type: string
+        encryption_public_key:
+          type: string
+        signing_public_key:
+          type: string
+        public_key:
+          type: string
+        key_fingerprint:
+          type: string
+        key_version:
+          type: string
+        rotation_count:
+          type: integer
+        first_published_at:
+          type: string
+          format: date-time
+        last_rotated_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+    UserE2EEKeysResponse:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int64
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/E2EEKeyResponse'
+    ChannelE2EEKeysResponse:
+      type: object
+      properties:
+        channel_id:
+          type: integer
+          format: int64
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/E2EEMemberKey'
+    E2EEMemberKey:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        device_id:
+          type: string
+        encryption_public_key:
+          type: string
+        signing_public_key:
+          type: string
+        key_fingerprint:
+          type: string
+        key_version:
+          type: string
+        rotation_count:
+          type: integer
+        first_published_at:
+          type: string
+          format: date-time
+        last_rotated_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+    KeySharesRequest:
+      type: object
+      required:
+        - key_shares
+      properties:
+        key_shares:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyShareRequest'
+    KeyShareRequest:
+      type: object
+      required:
+        - recipient_user_id
+        - recipient_device_id
+        - encrypted_channel_key
+        - signature
+      properties:
+        recipient_user_id:
+          type: integer
+          format: int64
+        recipient_device_id:
+          type: string
+        encrypted_channel_key:
+          type: string
+        signature:
+          type: string
+        sender_device_id:
+          type: string
+        sender_key_fingerprint:
+          type: string
+        key_version:
+          type: string
+          default: "1"
+    KeySharesSubmitResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        created:
+          type: integer
+    KeyShareResponse:
+      type: object
+      properties:
+        encrypted_channel_key:
+          type: string
+        signature:
+          type: string
+        sender_user_id:
+          type: integer
+          format: int64
+        sender_device_id:
+          type: string
+        sender_key_fingerprint:
+          type: string
+        recipient_device_id:
+          type: string
+        key_version:
+          type: string
+    KeyRotationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        key_epoch:
+          type: integer
+        rotation_required:
+          type: boolean
+    KeyRotationStatusResponse:
+      type: object
+      properties:
+        rotation_required:
+          type: boolean
+        epoch:
+          type: integer
