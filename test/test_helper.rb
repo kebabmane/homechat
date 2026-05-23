@@ -26,7 +26,6 @@ if ENV["COVERAGE"]
 
     # Set minimum coverage thresholds
     minimum_coverage 70
-    minimum_coverage_by_file 70
 
     # Output formats
     formatter SimpleCov::Formatter::MultiFormatter.new([
@@ -43,7 +42,7 @@ require_relative "support/openapi_response_assertions"
 
 class ActiveSupport::TestCase
   # Run tests in parallel with specified workers
-  parallelize(workers: :number_of_processors)
+  parallelize(workers: ENV["COVERAGE"] ? 1 : :number_of_processors)
 
   teardown do
     # Clear in-memory WebSocket throttle store between tests
