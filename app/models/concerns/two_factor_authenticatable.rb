@@ -8,8 +8,7 @@ module TwoFactorAuthenticatable
   BACKUP_CODE_LENGTH = 8
 
   included do
-    # Encrypt backup codes before saving (only if column exists)
-    serialize :otp_backup_codes, coder: JSON if column_names.include?("otp_backup_codes")
+    serialize :otp_backup_codes, coder: JSON
   end
 
   def two_factor_available?
