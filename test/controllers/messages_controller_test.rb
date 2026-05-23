@@ -8,6 +8,23 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     @private_channel = Channel.create!(name: "private-channel", channel_type: "private", creator: @user)
     @channel.add_member(@user)
     @private_channel.add_member(@user)
+    @device_id = "device-web-test"
+    @encryption_public_key = raw_key
+    @signing_public_key = raw_key
+    @device_fingerprint = E2eePolicy.bundle_fingerprint(@encryption_public_key, @signing_public_key)
+    UserE2eeKey.create!(
+      user: @user,
+      device_id: @device_id,
+      encryption_public_key: @encryption_public_key,
+      signing_public_key: @signing_public_key,
+      key_fingerprint: @device_fingerprint,
+      key_version: "1",
+      published_at: Time.current
+    )
+  end
+
+  def raw_key
+    Base64.strict_encode64(SecureRandom.random_bytes(32))
   end
 
   test "should require login to create message" do
@@ -29,17 +46,38 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @channel, message.channel
   end
 
-  test "should create message in private channel for member" do
+  test "should create e2ee message in private channel for member" do
     sign_in_as(@user)
 
     assert_difference("Message.count") do
-      post channel_messages_path(@private_channel), params: { message: { content: "Private message" } }
+      post channel_messages_path(@private_channel), params: {
+        message: {
+          content: "ignored",
+          content_encoding: "e2ee",
+          encrypted_content: "{\"v\":\"1\",\"iv\":\"abc\",\"ciphertext\":\"def\"}",
+          content_hmac: "hmac-private",
+          e2ee_version: "1",
+          sender_device_id: @device_id,
+          sender_key_fingerprint: @device_fingerprint
+        }
+      }
     end
 
     assert_redirected_to channel_path(@private_channel)
     message = Message.last
-    assert_equal "Private message", message.content
+    assert_equal E2eePolicy::PLACEHOLDER_CONTENT, message.content
+    assert_equal "e2ee", message.content_encoding
     assert_equal @private_channel, message.channel
+  end
+
+  test "should reject plaintext message in private channel for member" do
+    sign_in_as(@user)
+
+    assert_no_difference("Message.count") do
+      post channel_messages_path(@private_channel), params: { message: { content: "Private plaintext" } }
+    end
+
+    assert_response :upgrade_required
   end
 
   test "should not create message in private channel for non-member" do
@@ -185,6 +223,78 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     end
 
     message = Message.last
+    # Content is stored as-is; XSS protection happens at render time via html_escape
     assert_equal xss_content, message.content
+  end
+
+  test "should require login to edit message" do
+    message = @channel.messages.create!(content: "Edit me", user: @user)
+    get edit_channel_message_path(@channel, message)
+    assert_redirected_to signin_path
+  end
+
+  test "should render edit form for author" do
+    sign_in_as(@user)
+    message = @channel.messages.create!(content: "Edit me", user: @user)
+
+    get edit_channel_message_path(@channel, message)
+    assert_response :success
+    assert_includes response.body, "Save"
+  end
+
+  test "should allow author to edit plaintext message" do
+    sign_in_as(@user)
+    message = @channel.messages.create!(content: "Original", user: @user)
+
+    patch channel_message_path(@channel, message), params: { message: { content: "Updated" } }
+    assert_redirected_to channel_path(@channel)
+
+    message.reload
+    assert_equal "Updated", message.content
+  end
+
+  test "should not allow non-author to edit message" do
+    sign_in_as(@other_user)
+    message = @channel.messages.create!(content: "Original", user: @user)
+    @channel.add_member(@other_user)
+
+    get edit_channel_message_path(@channel, message)
+    assert_redirected_to channel_path(@channel)
+    assert_equal "You can only edit your own messages.", flash[:alert]
+
+    patch channel_message_path(@channel, message), params: { message: { content: "Hacked" } }
+    assert_redirected_to channel_path(@channel)
+
+    message.reload
+    assert_equal "Original", message.content
+  end
+
+  test "should not allow editing e2ee message" do
+    sign_in_as(@user)
+    message = @private_channel.messages.create!(
+      content: E2eePolicy::PLACEHOLDER_CONTENT,
+      content_encoding: "e2ee",
+      encrypted_content: '{"v":"1","iv":"abc","ciphertext":"def"}',
+      content_hmac: "hmac",
+      e2ee_version: "1",
+      sender_device_id: "device-web-test",
+      user: @user
+    )
+
+    patch channel_message_path(@private_channel, message), params: { message: { content: "Updated" } }
+    assert_redirected_to channel_path(@private_channel)
+    assert_equal "Encrypted messages cannot be edited.", flash[:alert]
+
+    message.reload
+    assert_equal E2eePolicy::PLACEHOLDER_CONTENT, message.content
+  end
+
+  test "should render edit form on invalid update" do
+    sign_in_as(@user)
+    message = @channel.messages.create!(content: "Original", user: @user)
+
+    patch channel_message_path(@channel, message), params: { message: { content: "" } }
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Save"
   end
 end

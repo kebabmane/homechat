@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation hub at `docs/index.md`
 - Security hardening guide
 - Development and testing guides
+- Signed E2EE channel key-share validation with per-recipient key epochs.
+- E2EE sender-device validation for private-channel and DM writes.
+
+### Changed
+- Blank API token scopes are now backfilled to explicit scopes instead of retaining legacy full-access behavior.
+- Private channels and DMs reject plaintext writes from legacy clients, bots, and Home Assistant automation integrations.
+- Two-factor model boot no longer queries the database schema, allowing production asset builds before add-on database setup.
 
 ## [1.0.0] - 2025-01-10
 

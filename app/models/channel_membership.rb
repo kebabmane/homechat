@@ -1,9 +1,9 @@
 class ChannelMembership < ApplicationRecord
   belongs_to :user
   belongs_to :channel
-  
+
   validates :user_id, uniqueness: { scope: :channel_id }
-  
+
   scope :for_user, ->(user) { where(user: user) }
   scope :for_channel, ->(channel) { where(channel: channel) }
 
@@ -13,10 +13,10 @@ class ChannelMembership < ApplicationRecord
     update!(last_read_at: Time.current)
   end
 
-  after_commit :broadcast_member_count, on: [:create, :destroy]
-  
+  after_commit :broadcast_member_count, on: [ :create, :destroy ]
+
   private
-  
+
   def set_joined_at
     self.joined_at ||= Time.current
   end
@@ -25,5 +25,7 @@ class ChannelMembership < ApplicationRecord
     channel.broadcast_replace_to channel,
       target: ActionView::RecordIdentifier.dom_id(channel, :member_count),
       html: channel.reload.member_count.to_s
+  rescue ActiveRecord::RecordNotFound
+    # Channel was destroyed in the same transaction; nothing to broadcast
   end
 end

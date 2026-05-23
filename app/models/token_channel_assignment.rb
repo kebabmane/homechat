@@ -9,7 +9,7 @@ class TokenChannelAssignment < ApplicationRecord
   PERMISSIONS = %w[read write manage].freeze
 
   validates :permission, presence: true, inclusion: { in: PERMISSIONS }
-  validates :channel_id, uniqueness: { scope: :api_token_id, message: 'already assigned to this token' }
+  validates :channel_id, uniqueness: { scope: :api_token_id, message: "already assigned to this token" }
 
   # Permission hierarchy helpers
   def can_read?
@@ -21,6 +21,6 @@ class TokenChannelAssignment < ApplicationRecord
   end
 
   def can_manage?
-    permission == 'manage'
+    permission == "manage"
   end
 end

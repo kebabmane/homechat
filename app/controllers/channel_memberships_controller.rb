@@ -4,9 +4,11 @@ class ChannelMembershipsController < ApplicationController
 
   def index
     authorize! :read, @channel
+    return if performed?
+
     respond_to do |format|
-      format.html { render partial: 'channel_memberships/list', locals: { channel: @channel } }
-      format.turbo_stream { render partial: 'channel_memberships/list', locals: { channel: @channel } }
+      format.html { render partial: "channel_memberships/list", locals: { channel: @channel } }
+      format.turbo_stream { render partial: "channel_memberships/list", locals: { channel: @channel } }
     end
   end
 

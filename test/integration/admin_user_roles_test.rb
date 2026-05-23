@@ -34,4 +34,3 @@ class AdminUserRolesTest < ActionDispatch::IntegrationTest
     assert_equal "admin", user.reload.role
   end
 end
-

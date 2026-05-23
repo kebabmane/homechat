@@ -100,7 +100,6 @@ aliases:
 # These volumes persist data across deployments and container restarts.
 volumes:
   - "homechat_storage:/rails/storage"   # File uploads and Active Storage
-  - "homechat_data:/rails/db"          # SQLite database files
   
 # IMPORTANT: For production, consider:
 # 1. Regular backups of these volumes
@@ -123,7 +122,7 @@ builder:
   
   # Build arguments passed to Docker
   args:
-    RUBY_VERSION: 3.3.0
+    RUBY_VERSION: 4.0.1
     
   # Secrets available during build (if needed)
   # secrets:

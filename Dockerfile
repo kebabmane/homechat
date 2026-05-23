@@ -8,7 +8,7 @@
 # For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
 
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version
-ARG RUBY_VERSION=3.3.0
+ARG RUBY_VERSION=4.0.1
 FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 
 # Rails app lives here
@@ -30,7 +30,11 @@ RUN apt-get update -qq && \
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development:test"
+    BUNDLE_WITHOUT="development:test" \
+    BUNDLE_JOBS="4" \
+    BUNDLE_RETRY="3" \
+    MALLOC_ARENA_MAX="2" \
+    RUBY_YJIT_ENABLE="1"
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
@@ -48,7 +52,8 @@ RUN apt-get update -qq && \
 
 # Install application gems
 COPY Gemfile Gemfile.lock ./
-RUN bundle install && \
+RUN --mount=type=cache,target=/usr/local/bundle/cache \
+    bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
     bundle exec bootsnap precompile --gemfile
 
@@ -58,8 +63,15 @@ COPY . .
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile app/ lib/
 
-# Precompiling assets for production without requiring secret RAILS_MASTER_KEY
-RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+# Precompiling assets for production without requiring secret RAILS_MASTER_KEY.
+# These dummy encryption values are build-only; runtime still requires real
+# credentials or AR_ENCRYPTION_* environment variables.
+RUN SECRET_KEY_BASE_DUMMY=1 \
+    RAILS_ASSUME_SSL=true \
+    AR_ENCRYPTION_PRIMARY_KEY=00000000000000000000000000000000 \
+    AR_ENCRYPTION_DETERMINISTIC_KEY=11111111111111111111111111111111 \
+    AR_ENCRYPTION_KEY_DERIVATION_SALT=22222222222222222222222222222222 \
+    ./bin/rails assets:precompile
 
 # Final stage for app image
 FROM base
@@ -71,6 +83,7 @@ COPY --from=build /rails /rails
 # Run and own only the runtime files as a non-root user for security
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
+    chmod -R u=rwX,go=rX /rails && \
     mkdir -p db log storage tmp && \
     chown -R rails:rails db log storage tmp
 USER 1000:1000

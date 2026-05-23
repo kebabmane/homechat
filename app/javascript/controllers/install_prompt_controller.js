@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Shows an install prompt toast when PWA is installable.
+// Shows an install prompt toast when explicitly requested and PWA is installable.
 export default class extends Controller {
   static targets = ["toast"]
 
@@ -12,7 +12,7 @@ export default class extends Controller {
       // Prevent the native mini-infobar on mobile
       e.preventDefault()
       this.deferredPrompt = e
-      this.show()
+      if (this._requested) this.show()
     }
     window.addEventListener('beforeinstallprompt', this._handler)
 

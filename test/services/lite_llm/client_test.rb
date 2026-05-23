@@ -77,7 +77,7 @@ class LiteLlm::ClientTest < ActiveSupport::TestCase
     stub_request(:get, "http://localhost:4000/v1/models")
       .to_return(
         status: 200,
-        body: { data: ["model-1", "model-2"] }.to_json,
+        body: { data: [ "model-1", "model-2" ] }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
 
@@ -92,7 +92,7 @@ class LiteLlm::ClientTest < ActiveSupport::TestCase
       .with(
         body: hash_including(
           model: "gpt-4",
-          messages: [{ role: "user", content: "Hello" }]
+          messages: [ { role: "user", content: "Hello" } ]
         ),
         headers: { "Authorization" => "Bearer test-api-key" }
       )
@@ -112,7 +112,7 @@ class LiteLlm::ClientTest < ActiveSupport::TestCase
       )
 
     result = @client.chat(
-      messages: [{ role: "user", content: "Hello" }],
+      messages: [ { role: "user", content: "Hello" } ],
       model: "gpt-4"
     )
 
@@ -131,12 +131,12 @@ class LiteLlm::ClientTest < ActiveSupport::TestCase
       )
       .to_return(
         status: 200,
-        body: { choices: [{ message: { content: "Response" } }] }.to_json,
+        body: { choices: [ { message: { content: "Response" } } ] }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
 
     @client.chat(
-      messages: [{ role: "user", content: "Test" }],
+      messages: [ { role: "user", content: "Test" } ],
       model: "gpt-4",
       temperature: 0.7,
       max_tokens: 100
@@ -154,7 +154,7 @@ class LiteLlm::ClientTest < ActiveSupport::TestCase
       )
 
     result = @client.chat(
-      messages: [{ role: "user", content: "Test" }],
+      messages: [ { role: "user", content: "Test" } ],
       model: "gpt-4"
     )
 
@@ -171,7 +171,7 @@ class LiteLlm::ClientTest < ActiveSupport::TestCase
 
     error = assert_raises(LiteLlm::RequestError) do
       @client.chat(
-        messages: [{ role: "user", content: "Test" }],
+        messages: [ { role: "user", content: "Test" } ],
         model: "gpt-4"
       )
     end

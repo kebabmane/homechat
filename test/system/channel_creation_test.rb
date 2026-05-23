@@ -1,7 +1,7 @@
 require "application_system_test_case"
 
 class ChannelCreationTest < ApplicationSystemTestCase
-  def sign_in(username: "maker", password: "secret")
+  def sign_in(username: "maker", password: "password123")
     User.find_or_create_by!(username: username) do |u|
       u.password = password
       u.password_confirmation = password
@@ -20,4 +20,3 @@ class ChannelCreationTest < ApplicationSystemTestCase
     assert_text "#family-room"
   end
 end
-

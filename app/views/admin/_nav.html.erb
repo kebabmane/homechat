@@ -4,16 +4,19 @@
   { label: 'Automations', path: admin_bots_path },
   { label: 'Settings', path: edit_admin_settings_path }
 ] %>
+<% danger_links = [
+  { label: 'Nuke', path: admin_nuke_path }
+] %>
 
 <!-- Mobile select -->
 <div class="md:hidden" data-controller="nav-switcher">
   <div class="flex items-center gap-4 mb-4">
-    <h1 class="text-xl font-semibold text-gray-900">Admin</h1>
+    <h1 class="text-xl font-semibold text-stone-900">Admin</h1>
     <div class="flex-1">
       <label for="admin-nav" class="sr-only">Admin section</label>
-      <select id="admin-nav" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <select id="admin-nav" class="block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
               data-action="change->nav-switcher#change">
-        <% links.each do |link| %>
+        <% (links + danger_links).each do |link| %>
           <option value="<%= link[:path] %>" <%= 'selected' if current_page?(link[:path]) %>><%= link[:label] %></option>
         <% end %>
       </select>
@@ -24,15 +27,24 @@
 <!-- Desktop pills -->
 <nav class="hidden md:block">
   <div class="flex items-center gap-6">
-    <h1 class="text-xl font-semibold text-gray-900">Admin</h1>
+    <h1 class="text-xl font-semibold text-stone-900">Admin</h1>
     <ul class="flex items-center gap-4 text-sm">
       <% links.each do |link| %>
         <% active = current_page?(link[:path]) %>
         <li>
           <%= link_to link[:label], link[:path],
                 class: class_names('inline-flex items-center rounded-full px-3 py-2 transition-colors duration-150',
-                                  'bg-blue-50 text-blue-700 shadow-sm' => active,
-                                  'text-gray-600 hover:text-gray-900 hover:bg-gray-100' => !active) %>
+                                  'bg-stone-900 text-white' => active,
+                                  'text-stone-600 hover:text-stone-900 hover:bg-stone-100' => !active) %>
+        </li>
+      <% end %>
+      <% danger_links.each do |link| %>
+        <% active = current_page?(link[:path]) %>
+        <li>
+          <%= link_to link[:label], link[:path],
+                class: class_names('inline-flex items-center rounded-full px-3 py-2 transition-colors duration-150',
+                                  'bg-red-100 text-red-700 shadow-sm' => active,
+                                  'text-red-600 hover:text-red-800 hover:bg-red-50' => !active) %>
         </li>
       <% end %>
     </ul>

@@ -1,15 +1,15 @@
 class Api::V1::SearchController < Api::V1::BaseController
   def index
     query = params[:q]&.strip
-    type = params[:type] || 'all' # 'users', 'channels', or 'all'
+    type = params[:type] || "all" # 'users', 'channels', or 'all'
 
     if query.blank?
-      render_error('Query parameter is required')
+      render_error("Query parameter is required")
       return
     end
 
     if query.length < 2
-      render_error('Query must be at least 2 characters')
+      render_error("Query must be at least 2 characters")
       return
     end
 
@@ -33,12 +33,12 @@ class Api::V1::SearchController < Api::V1::BaseController
     query = params[:q]&.strip
 
     if query.blank?
-      render_error('Query parameter is required')
+      render_error("Query parameter is required")
       return
     end
 
     if query.length < 2
-      render_error('Query must be at least 2 characters')
+      render_error("Query must be at least 2 characters")
       return
     end
 
@@ -58,8 +58,9 @@ class Api::V1::SearchController < Api::V1::BaseController
 
   def find_users(query, current_user)
     sanitized_query = sanitize_search_query(query)
-    User.where('LOWER(username) LIKE LOWER(?)', "%#{sanitized_query}%")
+    User.where("LOWER(username) LIKE LOWER(?)", "%#{sanitized_query}%")
         .where.not(id: current_user.id)
+        .with_attached_avatar
         .limit(10)
         .map do |user|
       {
@@ -78,8 +79,8 @@ class Api::V1::SearchController < Api::V1::BaseController
   def find_channels(query, current_user)
     sanitized_query = sanitize_search_query(query)
     channels = Channel.accessible_by(current_user)
-                      .where.not(channel_type: 'dm')
-                      .where('LOWER(name) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?)', "%#{sanitized_query}%", "%#{sanitized_query}%")
+                      .where.not(channel_type: "dm")
+                      .where("LOWER(name) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?)", "%#{sanitized_query}%", "%#{sanitized_query}%")
                       .order(:name)
                       .limit(10)
                       .load
@@ -90,7 +91,7 @@ class Api::V1::SearchController < Api::V1::BaseController
       ChannelMembership
         .where(channel_id: channel_ids, user_id: current_user.id)
         .pluck(:channel_id)
-        .each_with_object({}) { |channel_id, memo| memo[channel_id] = true }
+        .index_with { |channel_id| true }
     else
       {}
     end
@@ -100,11 +101,20 @@ class Api::V1::SearchController < Api::V1::BaseController
       ChannelMembership
         .joins(:user)
         .where(channel_id: channel_ids)
-        .where('users.updated_at > ?', cutoff)
+        .where("users.updated_at > ?", cutoff)
         .group(:channel_id)
         .count
     else
       {}
+    end
+
+    member_counts = if channel_ids.empty?
+      {}
+    else
+      ChannelMembership
+        .where(channel_id: channel_ids)
+        .group(:channel_id)
+        .count
     end
 
     channels.map do |channel|
@@ -113,7 +123,7 @@ class Api::V1::SearchController < Api::V1::BaseController
         name: channel.name,
         type: channel.channel_type,
         description: channel.description,
-        members: channel.member_count,
+        members: member_counts[channel.id] || 0,
         is_member: membership_lookup.key?(channel.id),
         online_members: online_counts[channel.id] || 0
       }
@@ -127,7 +137,8 @@ class Api::V1::SearchController < Api::V1::BaseController
 
     Message.joins(:channel)
            .where(channel_id: accessible_channels)
-           .where('LOWER(content) LIKE LOWER(?)', "%#{sanitized_query}%")
+           .where(content_encoding: [ "plaintext", nil ])
+           .where("LOWER(content) LIKE LOWER(?)", "%#{sanitized_query}%")
            .includes(:user, :channel)
            .order(created_at: :desc)
            .limit(10)

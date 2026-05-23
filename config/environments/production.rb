@@ -32,15 +32,45 @@ Rails.application.configure do
   # SSL Configuration based on environment
   # - RAILS_ASSUME_SSL=true: Assume behind SSL-terminating reverse proxy (HA Ingress, nginx, etc.)
   # - RAILS_FORCE_SSL=true: Force HTTPS redirects (for direct SSL termination)
-  # Note: HOME_ASSISTANT_ADDON sets RAILS_ASSUME_SSL based on access_mode in the run script
-  config.assume_ssl = ENV['RAILS_ASSUME_SSL'] == 'true'
+  # - RAILS_ALLOW_INSECURE_HTTP=true: Explicitly allow plain HTTP for local Docker/LAN deployments.
+  # In production, fail fast unless transport is explicitly secured or plain HTTP is explicitly acknowledged.
+  assume_ssl = ENV["RAILS_ASSUME_SSL"] == "true"
+  force_ssl_env = ENV["RAILS_FORCE_SSL"] == "true"
+  home_assistant_addon = ENV["HOME_ASSISTANT_ADDON"] == "true"
+  allow_insecure_http = ENV["RAILS_ALLOW_INSECURE_HTTP"] == "true" || home_assistant_addon
 
-  # Force SSL only when explicitly enabled and not using reverse proxy
-  config.force_ssl = ENV['RAILS_FORCE_SSL'] == 'true'
+  config.assume_ssl = assume_ssl
+  config.force_ssl = force_ssl_env
+
+  if !config.force_ssl && !config.assume_ssl && !allow_insecure_http
+    raise <<~MSG
+      Insecure transport configuration in production.
+      Set RAILS_FORCE_SSL=true for direct HTTPS deployments, RAILS_ASSUME_SSL=true behind an SSL-terminating proxy,
+      or RAILS_ALLOW_INSECURE_HTTP=true only for explicitly trusted local/LAN deployments.
+    MSG
+  end
 
   # ActionCable configuration - respect protocol from X-Forwarded-Proto header
   # This ensures WebSocket connections use the correct protocol (ws/wss)
-  config.action_cable.allowed_request_origins = [/.*/]  # Allow all origins in production (HA Ingress uses various origins)
+  # ActionCable origin allowlist — restricts WebSocket connections to LAN/localhost origins.
+  # HA Ingress mode strips the Origin header entirely; nil origin is handled by the cable connection layer.
+  config.action_cable.allowed_request_origins = [
+    /\Ahttps:\/\/localhost(:\d+)?\z/,
+    /\Ahttps:\/\/127\.0\.0\.1(:\d+)?\z/,
+    /\Ahttps:\/\/192\.168\.\d+\.\d+(:\d+)?\z/,
+    /\Ahttps:\/\/10\.\d+\.\d+\.\d+(:\d+)?\z/,
+    /\Ahttps:\/\/172\.(1[6-9]|2[0-9]|3[01])\.\d+\.\d+(:\d+)?\z/
+  ]
+
+  if allow_insecure_http
+    config.action_cable.allowed_request_origins += [
+      /\Ahttp:\/\/localhost(:\d+)?\z/,
+      /\Ahttp:\/\/127\.0\.0\.1(:\d+)?\z/,
+      /\Ahttp:\/\/192\.168\.\d+\.\d+(:\d+)?\z/,
+      /\Ahttp:\/\/10\.\d+\.\d+\.\d+(:\d+)?\z/,
+      /\Ahttp:\/\/172\.(1[6-9]|2[0-9]|3[01])\.\d+\.\d+(:\d+)?\z/
+    ]
+  end
 
   # Skip http-to-https redirect for the default health check endpoint.
   # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }

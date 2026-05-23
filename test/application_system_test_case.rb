@@ -5,7 +5,7 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # Fast default driver for non‑JS tests
   driven_by :rack_test
 
-  def sign_in(username: "webuser", password: "secret")
+  def sign_in(username: "webuser", password: "password123")
     User.find_or_create_by!(username: username) do |u|
       u.password = password
       u.password_confirmation = password
@@ -20,10 +20,10 @@ end
 
 class JsSystemTestCase < ApplicationSystemTestCase
   # Full browser for JS/Turbo/ActionCable interactions
-  driven_by :selenium, using: :headless_chrome, screen_size: [1400, 1400]
+  driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ]
 end
 
 class MobileSystemTestCase < ApplicationSystemTestCase
   # Mobile viewport for responsive testing (iPhone SE size)
-  driven_by :selenium, using: :headless_chrome, screen_size: [375, 667]
+  driven_by :selenium, using: :headless_chrome, screen_size: [ 375, 667 ]
 end

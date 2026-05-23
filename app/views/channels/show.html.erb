@@ -1,90 +1,127 @@
 <% content_for :no_top_padding, true %>
 <% content_for :lock_main_scroll, true %>
-<div class="flex flex-col h-full min-h-0" data-controller="message-list" data-channel-id="<%= @channel.id %>" data-message-list-autoscroll-value="true" data-message-list-current-user-value="<%= current_user.username %>">
+<div class="flex flex-col h-full min-h-0"
+     data-controller="message-list e2ee"
+     data-channel-id="<%= @channel.id %>"
+     data-message-list-autoscroll-value="true"
+     data-message-list-current-user-value="<%= current_user.username %>"
+     data-message-list-channel-type-value="<%= @channel.channel_type %>"
+     data-e2ee-channel-id-value="<%= @channel.id %>"
+     data-e2ee-channel-type-value="<%= @channel.channel_type %>"
+     data-e2ee-current-user-id-value="<%= current_user.id %>">
+  <% e2ee_required = E2eePolicy.required_for_channel?(@channel) %>
+
   <!-- Channel Header -->
-  <div class="sticky top-0 z-20 px-4 sm:px-6 py-3 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm transition-all" data-message-list-target="header" role="region" aria-label="Channel header">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3 min-w-0">
-        <!-- Mobile: open sidebar -->
-        <button type="button" class="md:hidden -ml-2 mr-1 p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors" data-action="click->sidebar#open" aria-label="Open sidebar">
-          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        <% if @channel.dm? %>
-          <% other = @channel.members.where.not(id: current_user.id).first %>
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold text-gray-700">
-              <span><%= other&.username&.first&.upcase || '?' %></span>
-            </div>
-            <div class="min-w-0">
-              <h1 class="text-lg sm:text-xl font-semibold text-gray-900 truncate">@<%= other&.username || @channel.name.sub(/^dm-/, '').gsub('-', ' & ') %></h1>
-              <div class="text-xs text-gray-500 mt-1">
-                <% if other %>
-                  <% if user_online?(other) %>
-                    <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-green-500 mr-1"></span>Online</span>
-                  <% else %>
-                    <%= last_seen_text(other) %>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
+  <div class="channel-header" data-message-list-target="header" role="region" aria-label="Channel header">
+    <div class="flex items-center gap-2 min-w-0">
+      <!-- Mobile: open sidebar -->
+      <button type="button"
+              class="md:hidden -ml-1 p-2 rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors flex-shrink-0 min-w-11 min-h-11 inline-flex items-center justify-center"
+              data-action="click->sidebar#open"
+              aria-label="Open sidebar">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      <% if @channel.dm? %>
+        <% other = @channel.members.where.not(id: current_user.id).first %>
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="flex-shrink-0">
+            <%= avatar_for(other, size: 'h-9 w-9') %>
           </div>
-        <% else %>
           <div class="min-w-0">
-            <h1 class="text-lg sm:text-xl font-semibold text-gray-900 truncate">#<%= @channel.name %></h1>
-            <% if @channel.description.present? %>
-              <p class="text-sm text-gray-500 mt-1 line-clamp-2"><%= @channel.description %></p>
-            <% end %>
+            <h1 class="channel-name">@<%= other&.username || @channel.name.sub(/^dm-/, '').gsub('-', ' & ') %></h1>
+            <div class="channel-description flex items-center gap-2 flex-wrap">
+              <% if other %>
+                <% if user_online?(other) %>
+                  <span class="inline-flex items-center gap-1 text-green-600">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" aria-hidden="true"></span>Online
+                  </span>
+                <% else %>
+                  <%= last_seen_text(other) %>
+                <% end %>
+              <% end %>
+              <% if e2ee_required %>
+                <%= e2ee_badge(text: 'E2EE required') %>
+              <% end %>
+            </div>
           </div>
-        <% end %>
-      </div>
-      <div class="flex items-center gap-3 sm:gap-4">
-        <% unless @channel.dm? %>
-          <div class="relative" data-controller="channel-members" data-channel-members-url-value="<%= channel_channel_memberships_path(@channel) %>">
-            <button type="button" class="flex items-center gap-3 text-sm text-gray-600 hover:text-gray-900" data-action="channel-members#toggle">
-              <span class="flex items-center gap-1">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"></path>
-                </svg>
-                <span id="<%= dom_id(@channel, :member_count) %>"><%= @channel.member_count %></span>
-              </span>
-              <span class="hidden sm:inline text-gray-400">•</span>
-              <span class="flex items-center text-xs sm:text-sm text-gray-500">
-                <span class="w-2 h-2 rounded-full bg-green-500 mr-1"></span>
-                <%= @channel.online_members_count %> online
-              </span>
-            </button>
-            <div class="channel-members-panel hidden absolute right-0 mt-3 w-[calc(100vw-2rem)] sm:w-72 max-w-sm rounded-xl border border-gray-200 bg-white shadow-lg z-30" data-channel-members-target="panel" role="dialog" aria-label="Channel members"></div>
-          </div>
-        <% end %>
-        <% if (current_user.admin? || @channel.creator == current_user) && !@channel.dm? %>
-          <%= link_to edit_channel_path(@channel), class: "text-gray-500 hover:text-gray-700" do %>
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-9.9 9.9-3.536.354.354-3.536 9.9-9.9zM15 5l-1.414-1.414-9.9 9.9L5 15l.354-1.414 9.546-9.546z"></path>
+        </div>
+      <% else %>
+        <div class="min-w-0">
+          <h1 class="channel-name"><span class="channel-sigil">#</span><%= @channel.name %></h1>
+          <% if @channel.description.present? %>
+            <p class="channel-description"><%= @channel.description %></p>
+          <% end %>
+          <% if e2ee_required %>
+            <div class="mt-1">
+              <%= e2ee_badge(text: 'E2EE required') %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <% unless @channel.dm? %>
+        <div class="relative" data-controller="channel-members" data-channel-members-url-value="<%= channel_channel_memberships_path(@channel) %>">
+          <button type="button"
+                  class="channel-member-pill"
+                  data-channel-members-target="trigger"
+                  data-action="channel-members#toggle"
+                  aria-label="View channel members"
+                  aria-haspopup="dialog"
+                  aria-expanded="false">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"/>
             </svg>
-            <% end %>
+            <span id="<%= dom_id(@channel, :member_count) %>"><%= @channel.member_count %></span>
+            <span class="hidden sm:inline text-stone-300 mx-0.5">·</span>
+            <span class="hidden sm:inline-flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" aria-hidden="true"></span>
+              <%= @channel.online_members_count %> online
+            </span>
+          </button>
+          <div class="channel-members-panel hidden fixed inset-x-3 top-[5.25rem] bottom-3 w-auto max-w-none rounded-xl border border-stone-200 bg-white shadow-lg z-40 overflow-hidden sm:absolute sm:inset-x-auto sm:top-full sm:bottom-auto sm:right-0 sm:mt-3 sm:w-72 sm:max-w-sm"
+               data-channel-members-target="panel"
+               role="dialog"
+               aria-modal="true"
+               aria-label="Channel members"
+               aria-hidden="true"></div>
+        </div>
+      <% end %>
+
+      <% if (current_user.admin? || @channel.creator == current_user) && !@channel.dm? %>
+        <%= link_to edit_channel_path(@channel),
+            class: "channel-icon-btn",
+            aria: { label: "Edit channel" } do %>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+          </svg>
         <% end %>
-      </div>
+      <% end %>
     </div>
   </div>
 
   <!-- Messages Area -->
-  <div class="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6" data-message-list-target="container">
+  <div class="message-list-container" data-message-list-target="container">
     <%= turbo_stream_from @channel %>
+
+    <% if @has_unencrypted_visible_messages %>
+      <div class="mx-4 mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 sm:mx-6">
+        Some visible messages were sent before E2EE enforcement.
+      </div>
+    <% end %>
+
     <% if @messages.any? %>
       <div class="pt-6 pb-4" id="<%= dom_id(@channel, :messages) %>" aria-live="polite" aria-label="Chat messages">
         <% divider_rendered = false %>
         <% prev_message = nil %>
         <% @messages.reverse.each do |message| %>
           <% if !divider_rendered && @last_read_at && message.created_at > @last_read_at %>
-            <div>
-              <div class="relative my-4 text-center">
-                <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div class="w-full border-t border-gray-200"></div>
-                </div>
-                <span class="relative inline-block bg-white px-3 text-xs text-gray-500">Unread</span>
-              </div>
+            <div class="unread-divider" role="separator" aria-label="Unread messages below">
+              <span class="unread-divider-label">Unread</span>
             </div>
             <% divider_rendered = true %>
             <% prev_message = nil %>
@@ -97,79 +134,129 @@
         <% end %>
       </div>
     <% else %>
-      <div class="flex flex-col items-center justify-center h-full text-center py-12 px-4">
-        <div class="w-24 h-24 sm:w-32 sm:h-32 mb-6" aria-hidden="true">
-          <!-- Custom SVG illustration for empty chat -->
-          <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
-            <!-- Background circle -->
-            <circle cx="60" cy="60" r="56" fill="#EFF6FF" stroke="#DBEAFE" stroke-width="2"/>
-            <!-- Chat bubble 1 -->
-            <rect x="25" y="35" width="45" height="28" rx="8" fill="#3B82F6"/>
-            <path d="M25 55L20 65L32 55" fill="#3B82F6"/>
-            <!-- Lines in bubble 1 -->
-            <rect x="32" y="43" width="25" height="3" rx="1.5" fill="white" opacity="0.8"/>
-            <rect x="32" y="50" width="18" height="3" rx="1.5" fill="white" opacity="0.6"/>
-            <!-- Chat bubble 2 -->
-            <rect x="50" y="68" width="45" height="22" rx="8" fill="#E5E7EB"/>
-            <path d="M95 82L100 92L88 82" fill="#E5E7EB"/>
-            <!-- Lines in bubble 2 -->
-            <rect x="57" y="75" width="20" height="3" rx="1.5" fill="#9CA3AF"/>
-            <rect x="57" y="81" width="30" height="3" rx="1.5" fill="#9CA3AF" opacity="0.6"/>
-            <!-- Sparkle decorations -->
-            <circle cx="85" cy="30" r="3" fill="#FCD34D"/>
-            <circle cx="30" cy="85" r="2" fill="#A5B4FC"/>
-            <circle cx="100" cy="55" r="2.5" fill="#86EFAC"/>
+      <div class="empty-chat-state">
+        <div class="empty-chat-icon" aria-hidden="true">
+          <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
         </div>
-        <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">Start the conversation</h2>
-        <p class="text-gray-500 max-w-sm sm:max-w-md mx-auto">This is the beginning of <strong class="text-gray-700">#<%= @channel.name %></strong>. Say hello!</p>
+        <h2 class="empty-chat-title">Start the conversation</h2>
+        <p class="empty-chat-subtitle">
+          This is the very beginning of
+          <% if @channel.dm? %>
+            your direct message history.
+          <% else %>
+            <strong class="text-stone-800">#<%= @channel.name %></strong>.
+          <% end %>
+          Say hello!
+        </p>
       </div>
     <% end %>
 
+    <div data-message-list-target="typingIndicator"
+         class="space-y-3 pb-5"
+         role="status"
+         aria-live="polite"
+         aria-label="Typing indicators"></div>
   </div>
 
-  <!-- Message Form -->
-  <div class="py-3 sm:py-4 bg-white/90 backdrop-blur border-t border-gray-200 z-20 transition-transform duration-150" data-message-list-target="composerArea" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);">
+  <!-- Composer -->
+  <div class="composer-area" data-message-list-target="composerArea">
+    <div data-message-list-target="offlineIndicator"
+         class="hidden composer-status-banner"
+         role="status"
+         aria-live="polite">
+      <% if e2ee_required %>
+        You are offline. Encrypted messages can be sent when you reconnect.
+      <% else %>
+        You are offline. Messages will send automatically when you reconnect.
+      <% end %>
+    </div>
+
     <% if @channel.private? && (current_user.admin? || @channel.creator == current_user) %>
-      <div class="px-4 sm:px-6 pb-3">
-        <%= form_with url: invite_channel_path(@channel), method: :post, local: true, class: "flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 text-sm" do |f| %>
-          <%= f.text_field :username, name: :username, placeholder: "Invite by username",
-                class: "flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" %>
-          <%= f.submit "Invite", class: "inline-flex items-center justify-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md" %>
+      <div class="composer-invite-form">
+        <%= form_with url: invite_channel_path(@channel), method: :post, local: true do |f| %>
+          <%= f.text_field :username, name: :username, placeholder: "Invite by username…",
+              class: "composer-invite-input flex-1" %>
+          <%= f.submit "Invite", class: "composer-invite-btn" %>
         <% end %>
       </div>
     <% end %>
-    <%= form_with model: [ @channel, Message.new ], local: true, class: "px-4 sm:px-6", data: { controller: "mentions upload", mentions_users_value: @channel.members.order(:username).pluck(:username).to_json, action: "turbo:submit-end->message-list#afterSubmit" } do |form| %>
-      <div class="relative flex flex-wrap items-end gap-2 sm:flex-nowrap sm:gap-3">
-        <% message_placeholder = @channel.dm? ? "Message @#{@channel.members.where.not(id: current_user.id).first&.username || 'user'}" : "Message ##{@channel.name}" %>
-        <%= form.text_area :content,
-            placeholder: message_placeholder,
-            "aria-label": message_placeholder,
-            rows: 1,
-            class: "flex-1 min-w-[220px] pl-4 pr-4 py-3 border border-gray-300 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none",
-            style: "min-height: 44px;",
-            data: { message_list_target: "textarea", mentions_target: "textarea", upload_target: "textarea", action: "input->message-list#autoResize input->mentions#onInput keydown.enter->mentions#maybeAccept keydown.enter->message-list#submit" } %>
 
-        <label class="cursor-pointer text-gray-500 hover:text-gray-700 p-3 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors focus-within:ring-2 focus-within:ring-blue-500" title="Attach files" aria-label="Attach files" style="min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center;">
-          <svg class="w-6 h-6 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15a4 4 0 01-4 4H7a5 5 0 010-10h12a3 3 0 110 6H9" />
-          </svg>
-          <%= form.file_field :files, multiple: true, class: "hidden", direct_upload: true, "aria-label": "Choose files to attach", data: { upload_target: 'input', action: 'change->upload#change' } %>
-        </label>
+    <%= form_with model: [ @channel, Message.new ],
+        local: true,
+        class: "space-y-2",
+        data: {
+          controller: "mentions upload",
+          mentions_users_value: @channel.members.order(:username).pluck(:username).to_json,
+          action: "#{e2ee_required ? '' : 'submit->message-list#submitOffline '}submit->e2ee#beforeSubmit submit->message-list#beforeSubmit turbo:submit-end->message-list#afterSubmit"
+        } do |form| %>
+      <div class="relative">
+        <div class="composer-shell">
+          <% message_placeholder = @channel.dm? ? "Message @#{@channel.members.where.not(id: current_user.id).first&.username || 'user'}" : "Message ##{@channel.name}" %>
+          <%= form.text_area :content,
+              placeholder: message_placeholder,
+              "aria-label": message_placeholder,
+              rows: 1,
+              class: "composer-textarea",
+              data: {
+                message_list_target: "textarea",
+                mentions_target: "textarea",
+                upload_target: "textarea",
+                action: "input->message-list#autoResize input->mentions#onInput keydown.enter->mentions#maybeAccept keydown.enter->message-list#submit keydown.arrow_up->mentions#navigate keydown.arrow_up->message-list#editLastMessage keydown.arrow_down->mentions#navigate keydown.escape->mentions#navigate keydown.escape->message-list#escape"
+              } %>
 
-        <%= form.submit "Send", class: "btn-press inline-flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all cursor-pointer", style: "min-height: 44px;", data: { message_list_target: "sendButton" } %>
+          <% unless @channel.private? || @channel.dm? %>
+            <label class="composer-attach-btn" title="Attach files" aria-label="Attach files" style="min-width: 44px; min-height: 44px;">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+              <%= form.file_field :files, multiple: true, class: "hidden", direct_upload: true,
+                  "aria-label": "Choose files to attach",
+                  data: { upload_target: 'input', action: 'change->upload#change' } %>
+            </label>
+          <% end %>
+
+          <%= form.hidden_field :content_encoding, value: '', data: { e2ee_target: 'contentEncoding' } %>
+          <%= form.hidden_field :encrypted_content, value: '', data: { e2ee_target: 'encryptedContent' } %>
+          <%= form.hidden_field :content_hmac, value: '', data: { e2ee_target: 'contentHmac' } %>
+          <%= form.hidden_field :sender_device_id, value: '', data: { e2ee_target: 'deviceId' } %>
+          <%= form.hidden_field :e2ee_version, value: '', data: { e2ee_target: 'version' } %>
+          <%= form.hidden_field :sender_key_fingerprint, value: '', data: { e2ee_target: 'senderKeyFingerprint' } %>
+
+          <%= form.submit "Send",
+              class: "composer-send-btn btn-press",
+              data: { message_list_target: "sendButton" } %>
+        </div>
+
+        <div data-mentions-target="menu"
+             class="composer-mentions-menu hidden"></div>
       </div>
 
-      <div data-mentions-target="menu" class="absolute left-4 sm:left-6 bottom-16 z-10 bg-white border border-gray-200 rounded-md shadow-sm hidden"></div>
-      <div data-upload-target="previews" class="px-0 pt-2 flex flex-wrap gap-2"></div>
+      <div data-upload-target="previews" class="pt-2 flex flex-wrap gap-2"></div>
+
+      <div class="composer-helper-row">
+        <% if e2ee_required %>
+          <%= e2ee_inline(text: 'E2EE required for new messages') %>
+          <span class="hidden sm:inline" aria-hidden="true">·</span>
+        <% end %>
+        <span class="hidden sm:inline">Enter to send</span>
+        <span class="hidden sm:inline" aria-hidden="true">·</span>
+        <span class="hidden sm:inline">Shift+Enter for a new line</span>
+      </div>
     <% end %>
   </div>
 
-  <!-- Scroll to latest button -->
-  <button type="button" class="hidden items-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm shadow-lg fixed bottom-24 right-4 sm:right-6 z-20" data-message-list-target="scrollButton" data-action="click->message-list#scrollToBottom" aria-label="Scroll to newest messages">
-    <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+  <!-- Scroll to latest -->
+  <button type="button"
+          class="hidden scroll-latest-btn"
+          data-message-list-target="scrollButton"
+          data-action="click->message-list#scrollToBottom"
+          aria-label="Scroll to newest messages">
+    <span class="new-messages-dot" aria-hidden="true"></span>
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
     </svg>
-    <span class="hidden sm:inline">Newest</span>
+    <span class="hidden sm:inline">Latest</span>
   </button>
 </div>

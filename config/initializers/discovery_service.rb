@@ -2,10 +2,10 @@
 # - local: mDNS/Bonjour discovery on local network (default)
 # - cloud: Manual URL configuration, mDNS disabled
 # - disabled: No discovery service
-DISCOVERY_MODE = ENV.fetch('DISCOVERY_MODE', 'local').freeze
+DISCOVERY_MODE = ENV.fetch("DISCOVERY_MODE", "local").freeze
 
 # Home Assistant addon mode - mDNS cannot work due to Docker network isolation
-HA_ADDON_MODE = ENV['HOME_ASSISTANT_ADDON'] == 'true'
+HA_ADDON_MODE = ENV["HOME_ASSISTANT_ADDON"] == "true"
 
 # Start discovery service after Rails initialization
 Rails.application.config.after_initialize do
@@ -23,7 +23,7 @@ Rails.application.config.after_initialize do
     # Start discovery service for LAN discovery (only in 'local' mode)
     # Cloud deployments (VPS, EC2, etc.) should set DISCOVERY_MODE=cloud
     should_start_mdns = Rails.application.config.discovery.enabled &&
-                        DISCOVERY_MODE == 'local'
+                        DISCOVERY_MODE == "local"
 
     if should_start_mdns
       discovery_service = DiscoveryService.new(
@@ -38,7 +38,7 @@ Rails.application.config.after_initialize do
         discovery_service.start
         Rails.logger.info "Discovery mode: local (mDNS enabled)"
       rescue => e
-        Rails.logger.warn "Could not start discovery service: #{e.message}"
+        Rails.logger.warn "Could not start discovery service: #{e.class}"
         Rails.logger.warn "HomeChat will continue without LAN discovery"
       end
     else

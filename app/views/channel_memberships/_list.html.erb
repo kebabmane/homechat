@@ -1,6 +1,12 @@
-<div class="max-h-64 overflow-y-auto">
-  <div class="px-4 py-3 border-b border-gray-100">
+<div class="max-h-[70vh] sm:max-h-64 overflow-y-auto overscroll-contain">
+  <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
     <h3 class="text-sm font-semibold text-gray-900">Members (<%= channel.member_count %>)</h3>
+    <button type="button"
+            class="sm:hidden inline-flex items-center rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            data-action="channel-members#hide"
+            aria-label="Close members list">
+      Close
+    </button>
   </div>
   <ul class="divide-y divide-gray-100 text-sm">
     <% channel.members.includes(:avatar_attachment).order(:username).each do |member| %>
@@ -10,7 +16,7 @@
           <p class="font-medium text-gray-900 truncate"><%= member.username %></p>
           <p class="text-xs text-gray-500">
             <% if user_online?(member) %>
-              <span class="inline-flex items-center text-emerald-600"><span class="inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1"></span>Online</span>
+              <%= status_with_dot('Online', kind: :ok, class_name: 'text-emerald-600') %>
             <% else %>
               <%= last_seen_text(member) %>
             <% end %>

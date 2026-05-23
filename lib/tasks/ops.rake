@@ -1,8 +1,8 @@
 namespace :ops do
   desc "Backup SQLite database and storage (usage: rake ops:backup[dest_dir])"
-  task :backup, [:dest] => :environment do |t, args|
-    require 'fileutils'
-    dest = args[:dest] || "backups/#{Time.now.strftime('%Y-%m-%d_%H%M%S')}"
+  task :backup, [ :dest ] => :environment do |t, args|
+    require "fileutils"
+    dest = args[:dest] || "backups/#{Time.zone.now.strftime('%Y-%m-%d_%H%M%S')}"
     FileUtils.mkdir_p(dest)
 
     db = ActiveRecord::Base.connection_db_config.database
@@ -11,15 +11,14 @@ namespace :ops do
     puts "Backing up DB: #{db} -> #{dest}"
     FileUtils.cp(db, File.join(dest, File.basename(db)))
 
-    storage = Rails.root.join('storage')
+    storage = Rails.root.join("storage")
     if Dir.exist?(storage)
       puts "Backing up storage -> #{dest}/storage"
-      FileUtils.mkdir_p(File.join(dest, 'storage'))
-      FileUtils.cp_r(Dir[storage.join('**', '*')], File.join(dest, 'storage'))
+      FileUtils.mkdir_p(File.join(dest, "storage"))
+      FileUtils.cp_r(Dir[storage.join("**", "*")], File.join(dest, "storage"))
     else
       puts "No storage directory; skipping"
     end
     puts "Backup complete at #{dest}"
   end
 end
-

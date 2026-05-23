@@ -9,12 +9,6 @@
 
 <%= form_with url: signin_path, local: true, class: "space-y-6" do |form| %>
   <div class="bg-white py-8 px-6 shadow-xl rounded-lg">
-    <% if flash[:alert] %>
-      <div class="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded" role="alert">
-        <%= flash[:alert] %>
-      </div>
-    <% end %>
-
     <div class="space-y-6">
       <div>
         <%= form.label :username, "Username", class: "block text-sm font-medium text-gray-700" %>
@@ -40,6 +34,6 @@
 <div class="text-center mt-6">
   <p class="text-sm text-gray-600">
     Don't have an account?
-    <%= link_to "Sign up here", signup_path, class: "font-medium text-blue-600 hover:text-blue-500 transition duration-150 ease-in-out" %>
+    <%= link_to "Sign up", signup_path, class: "font-medium text-blue-600 hover:text-blue-500 transition duration-150 ease-in-out" %>
   </p>
 </div>

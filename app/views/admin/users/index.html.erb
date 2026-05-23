@@ -2,7 +2,7 @@
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pb-24 space-y-8">
   <% if @pending_users.any? %>
-    <section class="rounded-xl border border-orange-200 bg-orange-50 shadow-sm overflow-hidden">
+    <section class="rounded-2xl border border-orange-200 bg-orange-50 shadow-sm overflow-hidden">
       <header class="px-6 py-4 border-b border-orange-200 flex items-center justify-between">
         <h2 class="text-lg font-semibold text-orange-900">Pending Approval</h2>
         <span class="inline-flex items-center rounded-full bg-orange-100 px-3 py-1 text-sm font-medium text-orange-800">
@@ -25,8 +25,8 @@
                 <td class="px-5 py-3"><%= user.created_at.strftime('%Y-%m-%d %H:%M') %></td>
                 <td class="px-5 py-3">
                   <div class="flex justify-end gap-2">
-                    <%= button_to "Approve", approve_admin_user_path(user), method: :post, class: "inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-green-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500" %>
-                    <%= button_to "Reject", reject_admin_user_path(user), method: :delete, data: { turbo_confirm: "Are you sure you want to reject and delete #{user.username}?" }, class: "inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500" %>
+                    <%= button_to "Approve", approve_admin_user_path(user), method: :post, class: "inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" %>
+                    <%= button_to "Reject", reject_admin_user_path(user), method: :delete, data: { turbo_confirm: "Are you sure you want to reject and delete #{user.username}?" }, class: "inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500" %>
                   </div>
                 </td>
               </tr>
@@ -37,57 +37,63 @@
     </section>
   <% end %>
 
-  <section class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-    <header class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-gray-900">User directory</h2>
-      <span class="text-sm text-gray-500"><%= @users.size %> members</span>
+  <section class="rounded-2xl border border-stone-200 bg-white/90 shadow-sm overflow-hidden">
+    <header class="px-4 py-4 sm:px-6 sm:py-5 border-b border-stone-200/80 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-stone-900">User directory</h2>
+      <span class="text-sm text-stone-500"><%= @users.size %> members</span>
     </header>
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50 text-xs uppercase text-gray-500">
-          <tr>
-            <th scope="col" class="px-5 py-3 text-left">Username</th>
-            <th scope="col" class="px-5 py-3 text-left">Role</th>
-            <th scope="col" class="px-5 py-3 text-left">Messages</th>
-            <th scope="col" class="px-5 py-3 text-left">Channels</th>
-            <th scope="col" class="px-5 py-3 text-left">Created</th>
-            <th scope="col" class="px-5 py-3 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 text-sm text-gray-700">
-          <% @users.each do |user| %>
-            <tr class="hover:bg-gray-50 transition-colors">
-              <td class="px-5 py-3 font-medium text-gray-900"><%= user.username %></td>
-              <td class="px-5 py-3">
-                <span class="status-dot <%= user.admin? ? 'status-dot--ok' : 'status-dot--warn' %> mr-2"></span>
-                <span><%= user.admin? ? 'Admin' : 'User' %></span>
-              </td>
-              <td class="px-5 py-3"><%= user.messages_count %></td>
-              <td class="px-5 py-3"><%= user.channels_count %></td>
-              <td class="px-5 py-3"><%= user.created_at.strftime('%Y-%m-%d %H:%M') %></td>
-              <td class="px-5 py-3">
-                <div class="flex flex-wrap justify-end gap-2">
-                  <%= form_with url: admin_user_path(user), method: :patch, local: true, class: "flex items-center gap-2" do |f| %>
-                    <label for="user_role_<%= user.id %>" class="sr-only">Role for <%= user.username %></label>
-                    <select id="user_role_<%= user.id %>" name="user[role]" aria-label="Role for <%= user.username %>" class="rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                      <option value="user" <%= 'selected' if user.role == 'user' %>>User</option>
-                      <option value="admin" <%= 'selected' if user.role == 'admin' %>>Admin</option>
-                    </select>
-                    <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="Update role for <%= user.username %>">Update</button>
-                  <% end %>
-                  <%= button_to generate_reset_link_admin_user_path(user), method: :post, class: "inline-flex items-center rounded-md bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500", title: "Generate password reset link" do %>
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-                    </svg>
-                    Reset
-                  <% end %>
-                </div>
-                <div id="reset-link-<%= user.id %>" class="mt-2"></div>
-              </td>
+    <% if @users.any? %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-stone-200">
+          <thead class="bg-stone-50 text-xs uppercase text-stone-500">
+            <tr>
+              <th scope="col" class="px-5 py-3 text-left">Username</th>
+              <th scope="col" class="px-5 py-3 text-left">Role</th>
+              <th scope="col" class="px-5 py-3 text-left">Messages</th>
+              <th scope="col" class="px-5 py-3 text-left">Channels</th>
+              <th scope="col" class="px-5 py-3 text-left">Created</th>
+              <th scope="col" class="px-5 py-3 text-right">Actions</th>
             </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody class="divide-y divide-stone-200 text-sm text-stone-700">
+            <% @users.each do |user| %>
+              <tr class="hover:bg-stone-50/60 transition-colors">
+                <td class="px-5 py-3 font-medium text-stone-900"><%= user.username %></td>
+                <td class="px-5 py-3">
+                  <span class="status-dot <%= user.admin? ? 'status-dot--ok' : 'status-dot--warn' %> mr-2"></span>
+                  <span><%= user.admin? ? 'Admin' : 'User' %></span>
+                </td>
+                <td class="px-5 py-3"><%= user.messages_count %></td>
+                <td class="px-5 py-3"><%= user.channels_count %></td>
+                <td class="px-5 py-3"><%= user.created_at.strftime('%Y-%m-%d %H:%M') %></td>
+                <td class="px-5 py-3">
+                  <div class="flex flex-wrap justify-end gap-2">
+                    <%= form_with url: admin_user_path(user), method: :patch, local: true, class: "flex items-center gap-2" do |f| %>
+                      <label for="user_role_<%= user.id %>" class="sr-only">Role for <%= user.username %></label>
+                      <select id="user_role_<%= user.id %>" name="user[role]" aria-label="Role for <%= user.username %>" class="rounded-md border-stone-300 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500/20">
+                        <option value="user" <%= 'selected' if user.role == 'user' %>>User</option>
+                        <option value="admin" <%= 'selected' if user.role == 'admin' %>>Admin</option>
+                      </select>
+                      <button type="submit" class="inline-flex items-center rounded-lg bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-500" aria-label="Update role for <%= user.username %>">Update</button>
+                    <% end %>
+                    <%= button_to generate_reset_link_admin_user_path(user), method: :post, class: "inline-flex items-center rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400", title: "Generate password reset link" do %>
+                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                      </svg>
+                      Reset
+                    <% end %>
+                  </div>
+                  <div id="reset-link-<%= user.id %>" class="mt-2"></div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="px-6 py-12 text-center">
+        <p class="text-sm text-stone-500">No users found.</p>
+      </div>
+    <% end %>
   </section>
 </div>

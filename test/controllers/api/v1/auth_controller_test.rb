@@ -2,6 +2,8 @@ require "test_helper"
 
 class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
   def setup
+    Setting.set(:allow_signups, true)
+    Setting.set(:require_signup_approval, false)
     @existing_user = create_user(username: "existing_user", password: "password123")
   end
 
@@ -40,7 +42,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unauthorized
     json = JSON.parse(response.body)
-    refute json["success"]
+    assert_not json["success"]
     assert_match /invalid/i, json["error"]
   end
 
@@ -52,13 +54,10 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unauthorized
     json = JSON.parse(response.body)
-    refute json["success"]
+    assert_not json["success"]
   end
 
-  test "should create new token for user without existing token" do
-    # Clear any existing tokens for this user
-    ApiToken.where(name: "Mobile App - #{@existing_user.username}").destroy_all
-
+  test "should create new token for user on signin" do
     assert_difference("ApiToken.count") do
       post api_v1_signin_path, params: {
         username: @existing_user.username,
@@ -69,23 +68,27 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "should reuse existing active token" do
-    # Create initial token via signin
+  test "should create independent tokens per signin for multi-device support" do
+    # First signin
     post api_v1_signin_path, params: {
       username: @existing_user.username,
       password: "password123"
     }
     first_response = JSON.parse(response.body)
 
-    # Sign in again
-    post api_v1_signin_path, params: {
-      username: @existing_user.username,
-      password: "password123"
-    }
+    # Second signin (e.g., another device)
+    assert_difference("ApiToken.count") do
+      post api_v1_signin_path, params: {
+        username: @existing_user.username,
+        password: "password123"
+      }
+    end
     second_response = JSON.parse(response.body)
 
-    # Token should be regenerated but use same ApiToken record
+    # Both tokens should be different and both active
     assert_not_equal first_response["token"], second_response["token"]
+    assert ApiToken.valid_token?(first_response["token"]).present?
+    assert ApiToken.valid_token?(second_response["token"]).present?
   end
 
   test "should not require authentication for signin" do
@@ -101,7 +104,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
   # Signup tests
   test "should sign up new user with valid data" do
-    assert_difference(["User.count", "ApiToken.count"]) do
+    assert_difference([ "User.count", "ApiToken.count" ]) do
       post api_v1_signup_path, params: {
         username: "new_api_user",
         password: "securepassword",
@@ -127,7 +130,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     json = JSON.parse(response.body)
-    refute json["success"]
+    assert_not json["success"]
     assert json["errors"].any? { |e| e.match?(/confirmation/i) }
   end
 
@@ -142,7 +145,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     json = JSON.parse(response.body)
-    refute json["success"]
+    assert_not json["success"]
     assert json["errors"].any? { |e| e.match?(/taken/i) }
   end
 
@@ -180,6 +183,57 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Should not get 401 even without Authorization header
     assert_not_equal 401, response.status
+  end
+
+  test "should reject signup when registration disabled" do
+    Setting.set(:allow_signups, false)
+
+    assert_no_difference([ "User.count", "ApiToken.count" ]) do
+      post api_v1_signup_path, params: {
+        username: "blocked_api_user",
+        password: "password123",
+        password_confirmation: "password123"
+      }
+    end
+
+    assert_response :forbidden
+    json = JSON.parse(response.body)
+    assert_not json["success"]
+    assert_match /disabled/i, json["error"]
+  end
+
+  test "api signup makes first user an admin" do
+    User.destroy_all
+
+    post api_v1_signup_path, params: {
+      username: "first_api_user",
+      password: "password123",
+      password_confirmation: "password123"
+    }
+
+    assert_response :created
+    assert User.find_by!(username: "first_api_user").admin?
+  end
+
+  test "api signup returns pending approval without token when approval required" do
+    Setting.set(:require_signup_approval, true)
+
+    assert_difference("User.count", 1) do
+      assert_no_difference("ApiToken.count") do
+        post api_v1_signup_path, params: {
+          username: "pending_api_user",
+          password: "password123",
+          password_confirmation: "password123"
+        }
+      end
+    end
+
+    assert_response :created
+    json = JSON.parse(response.body)
+    assert json["success"]
+    assert_equal true, json["pending_approval"]
+    assert_nil json["token"]
+    assert User.find_by!(username: "pending_api_user").pending_approval?
   end
 
   # Signout tests

@@ -1,6 +1,7 @@
 class Api::V1::BotsController < Api::V1::BaseController
-  before_action :find_bot, only: [:show, :update, :destroy, :status, :activate, :deactivate]
-  
+  before_action :require_admin_token
+  before_action :find_bot, only: [ :show, :update, :destroy, :status, :activate, :deactivate ]
+
   def index
     bots = Bot.all.order(:name)
     render json: {
@@ -17,7 +18,7 @@ class Api::V1::BotsController < Api::V1::BaseController
       end
     }
   end
-  
+
   def show
     render json: {
       bot: {
@@ -32,7 +33,7 @@ class Api::V1::BotsController < Api::V1::BaseController
       }
     }
   end
-  
+
   def create
     Rails.logger.info "Bot creation params: #{params.inspect}"
 
@@ -49,14 +50,15 @@ class Api::V1::BotsController < Api::V1::BaseController
           description: existing_bot.description,
           active: existing_bot.active,
           bot_type: existing_bot.bot_type,
-          webhook_id: existing_bot.webhook_id
+          webhook_id: existing_bot.webhook_id,
+          webhook_secret: existing_bot.webhook_secret
         }
-      }, 'Bot already exists')
+      }, "Bot already exists")
     end
 
     bot = Bot.new(bot_params)
     bot.webhook_id = params[:webhook_id] || bot_params[:webhook_id]
-    bot.bot_type = params[:type] || bot_params[:bot_type] || 'webhook'
+    bot.bot_type = params[:type] || bot_params[:bot_type] || "webhook"
     bot.active = true
 
     Rails.logger.info "Bot attributes before save: #{bot.attributes}"
@@ -69,15 +71,16 @@ class Api::V1::BotsController < Api::V1::BaseController
           description: bot.description,
           active: bot.active,
           bot_type: bot.bot_type,
-          webhook_id: bot.webhook_id
+          webhook_id: bot.webhook_id,
+          webhook_secret: bot.webhook_secret
         }
-      }, 'Bot created successfully')
+      }, "Bot created successfully")
     else
       Rails.logger.error "Bot creation failed: #{bot.errors.full_messages}"
       render_error("Failed to create bot: #{bot.errors.full_messages.join(', ')}")
     end
   end
-  
+
   def update
     if @bot.update(bot_params)
       render_success({
@@ -89,17 +92,17 @@ class Api::V1::BotsController < Api::V1::BaseController
           bot_type: @bot.bot_type,
           webhook_id: @bot.webhook_id
         }
-      }, 'Bot updated successfully')
+      }, "Bot updated successfully")
     else
       render_error("Failed to update bot: #{@bot.errors.full_messages.join(', ')}")
     end
   end
-  
+
   def destroy
     @bot.destroy
-    render_success({}, 'Bot deleted successfully')
+    render_success({}, "Bot deleted successfully")
   end
-  
+
   def status
     render json: {
       bot_id: @bot.id,
@@ -107,28 +110,36 @@ class Api::V1::BotsController < Api::V1::BaseController
       active: @bot.active,
       last_activity: @bot.updated_at.iso8601,
       message_count: @bot.messages.count,
-      status: @bot.active? ? 'active' : 'inactive'
+      status: @bot.active? ? "active" : "inactive"
     }
   end
-  
+
   def activate
     @bot.update(active: true)
-    render_success({}, 'Bot activated')
+    render_success({}, "Bot activated")
   end
-  
+
   def deactivate
     @bot.update(active: false)
-    render_success({}, 'Bot deactivated')
+    render_success({}, "Bot deactivated")
   end
-  
+
   private
-  
+
+  def require_admin_token
+    unless current_api_user&.admin?
+      render json: { error: "Admin access required" }, status: :forbidden
+      return false
+    end
+    true
+  end
+
   def find_bot
     @bot = Bot.find(params[:id])
   rescue ActiveRecord::RecordNotFound
-    render_error('Bot not found', :not_found)
+    render_error("Bot not found", :not_found)
   end
-  
+
   def bot_params
     # Handle both nested bot params and direct params
     if params[:bot].present?

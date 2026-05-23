@@ -15,7 +15,7 @@ class AuthenticationFlowTest < ApplicationSystemTestCase
   end
 
   test "sign in with existing account" do
-    user = User.create!(username: "syslogin", password: "secret", password_confirmation: "secret")
+    user = User.create!(username: "syslogin", password: "password123", password_confirmation: "password123")
     visit signin_path
     fill_in "Username", with: user.username
     fill_in "Password", with: "secret"
@@ -23,4 +23,3 @@ class AuthenticationFlowTest < ApplicationSystemTestCase
     assert_text "Dashboard"
   end
 end
-

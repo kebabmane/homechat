@@ -2,22 +2,22 @@
 
 Rails.application.config.action_dispatch.default_headers = {
   # Prevent MIME type sniffing
-  'X-Content-Type-Options' => 'nosniff',
+  "X-Content-Type-Options" => "nosniff",
 
   # Enable XSS protection (legacy browsers)
-  'X-XSS-Protection' => '1; mode=block',
+  "X-XSS-Protection" => "1; mode=block",
 
   # Prevent clickjacking (overridden for Home Assistant)
-  'X-Frame-Options' => ENV['HOME_ASSISTANT_ADDON'] == 'true' ? 'ALLOWALL' : 'SAMEORIGIN',
+  "X-Frame-Options" => ENV["HOME_ASSISTANT_ADDON"] == "true" ? "ALLOWALL" : "SAMEORIGIN",
 
   # Control referrer information
-  'Referrer-Policy' => 'strict-origin-when-cross-origin',
+  "Referrer-Policy" => "strict-origin-when-cross-origin",
 
   # Permissions Policy (formerly Feature Policy)
-  'Permissions-Policy' => 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+  "Permissions-Policy" => "camera=(), microphone=(), geolocation=(), interest-cohort=()",
 
   # Strict Transport Security (HSTS) - 1 year
-  'Strict-Transport-Security' => 'max-age=31536000; includeSubDomains'
+  "Strict-Transport-Security" => "max-age=31536000; includeSubDomains"
 }
 
 # Configure Content Security Policy with nonce-based script loading
@@ -32,9 +32,9 @@ Rails.application.config.content_security_policy do |policy|
   # When nonce is provided via content_security_policy_nonce_generator, scripts with
   # matching nonce will be allowed. The 'strict-dynamic' directive propagates trust.
   if Rails.env.production?
-    # Production: use nonces with strict-dynamic for better security
-    # Note: unsafe-inline is ignored when nonces are present in supporting browsers
-    policy.script_src :self, :unsafe_inline, :strict_dynamic
+    # Production: nonce + strict-dynamic. unsafe-inline is redundant when nonces are present
+    # (strict-dynamic propagates trust to dynamically added scripts in supporting browsers).
+    policy.script_src :self, :strict_dynamic
   else
     # Development: more permissive for easier debugging
     policy.script_src :self, :unsafe_inline
@@ -42,11 +42,11 @@ Rails.application.config.content_security_policy do |policy|
 
   # Style sources: unsafe-inline needed for Tailwind's runtime styles
   # Allow Google Fonts stylesheets
-  policy.style_src :self, :unsafe_inline, 'https://fonts.googleapis.com'
+  policy.style_src :self, :unsafe_inline, "https://fonts.googleapis.com"
 
   # Allow ActionCable WebSocket connections
   if Rails.env.development?
-    policy.connect_src :self, :https, 'ws://localhost:*', 'wss://localhost:*', 'http://localhost:*'
+    policy.connect_src :self, :https, "ws://localhost:*", "wss://localhost:*", "http://localhost:*"
   else
     policy.connect_src :self, :https, :wss
   end
@@ -57,8 +57,10 @@ Rails.application.config.content_security_policy do |policy|
   # Form action restriction
   policy.form_action :self
 
-  # Specify URI for violation reports (uncomment to enable)
-  # policy.report_uri "/api/v1/csp-reports"
+  # 2.5: CSP violation reporting — logged server-side for monitoring.
+  # After a stable monitoring period with no violations, remove :unsafe_inline from
+  # script_src and disable report-only mode to enforce CSP fully.
+  policy.report_uri "/api/v1/csp_reports"
 end
 
 # Generate session nonces for permitted importmap and inline scripts
@@ -72,33 +74,32 @@ Rails.application.config.content_security_policy_nonce_generator = ->(request) {
 # Apply nonces to script-src directive
 Rails.application.config.content_security_policy_nonce_directives = %w[script-src]
 
-# Report-Only mode for testing CSP changes without breaking functionality
-# Uncomment to test CSP changes before enforcing
-# Rails.application.config.content_security_policy_report_only = true
+# M3: CSP enforcement enabled. report_uri remains active so violations are still logged.
+Rails.application.config.content_security_policy_report_only = false
 
 # Configure secure session cookies based on access mode
 # RAILS_ASSUME_SSL=true means we're behind a reverse proxy (HA Ingress) that handles SSL
 # RAILS_ASSUME_SSL=false means direct access (HTTP or direct SSL)
-if ENV['HOME_ASSISTANT_ADDON'] == 'true'
-  if ENV['RAILS_ASSUME_SSL'] == 'true'
+if ENV["HOME_ASSISTANT_ADDON"] == "true"
+  if ENV["RAILS_ASSUME_SSL"] == "true"
     # Home Assistant Ingress mode: accessed through HA's SSL-terminating proxy
     # Requires SameSite=None for cross-origin iframe, and Secure for SameSite=None
     Rails.application.config.session_store :cookie_store,
-      key: '_homechat_session',
+      key: "_homechat_session",
       secure: true,
       httponly: true,
       same_site: :none
   else
     # Direct access mode (HTTP or direct SSL): standard cookie settings
     Rails.application.config.session_store :cookie_store,
-      key: '_homechat_session',
+      key: "_homechat_session",
       secure: false,
       httponly: true,
       same_site: :lax
   end
 else
   Rails.application.config.session_store :cookie_store,
-    key: '_homechat_session',
+    key: "_homechat_session",
     secure: Rails.env.production?,
     httponly: true,
     same_site: :lax

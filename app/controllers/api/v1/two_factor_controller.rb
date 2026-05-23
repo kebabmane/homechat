@@ -40,19 +40,12 @@ class Api::V1::TwoFactorController < Api::V1::BaseController
     # Verify the code using the pending secret
     totp = ROTP::TOTP.new(current_api_user.otp_secret, issuer: Setting.fetch("site_name", "HomeChat"))
     if totp.verify(code.to_s.gsub(/[\s-]/, ""), drift_behind: 30, drift_ahead: 30)
-      # Code is valid, enable 2FA
-      current_api_user.otp_backup_codes = generate_backup_codes
-      current_api_user.otp_required_for_login = true
-      current_api_user.save!
-
-      AuditLog.log(
-        action: AuditLog::ACTIONS[:two_factor_enabled],
-        resource: current_api_user
-      )
+      # Code is valid, enable 2FA and persist only BCrypt digests.
+      backup_codes = current_api_user.enable_two_factor_with_existing_secret!
 
       render json: {
         success: true,
-        backup_codes: current_api_user.otp_backup_codes,
+        backup_codes: backup_codes,
         message: "Two-factor authentication has been enabled. Save your backup codes!"
       }
     else
@@ -100,7 +93,7 @@ class Api::V1::TwoFactorController < Api::V1::BaseController
     end
 
     render json: {
-      backup_codes: current_api_user.otp_backup_codes,
+      success: true,
       remaining_count: current_api_user.otp_backup_codes&.length || 0
     }
   end
@@ -125,11 +118,5 @@ class Api::V1::TwoFactorController < Api::V1::BaseController
       backup_codes: new_codes,
       message: "Backup codes have been regenerated. Save your new codes!"
     }
-  end
-
-  private
-
-  def generate_backup_codes
-    10.times.map { SecureRandom.alphanumeric(8).upcase }
   end
 end

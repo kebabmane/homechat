@@ -1,14 +1,5 @@
 <%= form_with model: [:admin, @bot], local: true, class: "space-y-6" do |f| %>
-  <% if @bot.errors.any? %>
-    <div class="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-      <p class="font-semibold">We could not save this bot:</p>
-      <ul class="mt-2 list-disc list-inside space-y-1">
-        <% @bot.errors.full_messages.each do |msg| %>
-          <li><%= msg %></li>
-        <% end %>
-      </ul>
-    </div>
-  <% end %>
+  <%= render 'shared/form_errors', model: @bot %>
 
   <div class="grid gap-6 sm:grid-cols-2">
     <div class="space-y-4">
@@ -69,6 +60,6 @@
 
   <div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
     <%= link_to 'Cancel', @bot.persisted? ? admin_bot_path(@bot) : admin_bots_path, class: 'inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50' %>
-    <%= f.submit (@bot.persisted? ? 'Update bot' : 'Create bot'), class: 'inline-flex items-center rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700' %>
+    <%= f.submit (@bot.persisted? ? 'Update Bot' : 'Create Bot'), class: 'inline-flex items-center rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700' %>
   </div>
 <% end %>

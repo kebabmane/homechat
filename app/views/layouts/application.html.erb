@@ -19,23 +19,34 @@
 
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
-    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
+    <% if logged_in? %>
+      <%= javascript_tag nonce: true, type: "module" do %>
+        import "channels"
+      <% end %>
+    <% end %>
     <meta name="theme-color" content="<%= Setting.fetch(:pwa_theme_color, '#2563eb') %>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   </head>
 
-  <body class="antialiased font-sans bg-white text-gray-900" data-controller="shortcuts">
+  <body class="antialiased font-sans bg-stone-50 text-stone-900" data-controller="shortcuts">
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:rounded-md focus:bg-white focus:text-blue-600 focus:shadow">Skip to main content</a>
-    <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
-      <div data-controller="install-prompt" data-install-prompt-target="toast" class="hidden fixed bottom-6 right-6 z-40">
-        <div class="flex items-center space-x-3 px-4 py-3 bg-gray-900 text-white rounded-lg shadow-lg">
-          <span>Install this app?</span>
-          <button class="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700" data-action="install-prompt#install">Install</button>
-          <button class="text-white/70 hover:text-white" aria-label="Dismiss" data-action="install-prompt#dismiss">✕</button>
+    <% pwa_enabled = ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
+    <% show_install_prompt = pwa_enabled && !content_for?(:lock_main_scroll) %>
+    <% if show_install_prompt %>
+      <div data-controller="install-prompt"
+           data-install-prompt-target="toast"
+           class="hidden fixed top-16 inset-x-3 sm:top-auto sm:inset-x-auto sm:bottom-6 sm:right-6 z-40">
+        <div class="flex items-center justify-between gap-2 px-3 py-2.5 bg-gray-900 text-white rounded-lg shadow-lg">
+          <span class="text-sm">Install this app?</span>
+          <button class="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-sm font-medium" data-action="install-prompt#install">Install</button>
+          <button class="text-white/70 hover:text-white leading-none" aria-label="Dismiss" data-action="install-prompt#dismiss">✕</button>
         </div>
       </div>
     <% end %>
-    <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
+    <% if pwa_enabled %>
       <%= javascript_tag nonce: true do %>
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('<%= pwa_service_worker_path %>') }
       <% end %>
@@ -45,7 +56,7 @@
 
       <%# Command Palette - Cmd+K quick switcher %>
       <% palette_channels = (@sidebar_my_channels || []).map { |c| { id: c.id, name: c.name, url: channel_path(c), type: c.channel_type } } +
-                            (@sidebar_dm_channels || []).map { |c| { id: c.id, name: c.other_user(current_user)&.username || c.name, url: channel_path(c), type: 'dm' } } %>
+                            (@sidebar_dm_channels || []).map { |c| { id: c.id, name: @sidebar_dm_names_by_channel_id&.[](c.id) || c.name, url: channel_path(c), type: 'dm' } } %>
       <div data-controller="command-palette" data-command-palette-channels-value="<%= palette_channels.to_json %>">
         <!-- Backdrop -->
         <div data-command-palette-target="backdrop" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50" data-action="click->command-palette#close"></div>
@@ -65,7 +76,11 @@
                        class="flex-1 text-base text-gray-900 placeholder-gray-500 bg-transparent border-0 focus:outline-none focus:ring-0"
                        placeholder="Search channels..."
                        autocomplete="off"
-                       spellcheck="false">
+                       spellcheck="false"
+                       role="combobox"
+                       aria-autocomplete="list"
+                       aria-controls="command-palette-results"
+                       aria-expanded="false">
                 <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-500 bg-gray-100 rounded">
                   esc
                 </kbd>
@@ -73,7 +88,11 @@
             </div>
 
             <!-- Results -->
-            <div data-command-palette-target="results" class="max-h-[50vh] overflow-y-auto">
+            <div id="command-palette-results"
+                 data-command-palette-target="results"
+                 class="max-h-[50vh] overflow-y-auto"
+                 role="listbox"
+                 aria-label="Channel search results">
               <!-- Results rendered dynamically -->
             </div>
 
@@ -98,12 +117,12 @@
     <% end %>
     <%# Global flashes removed from full-width; shown inside main content below %>
 
-    <div class="relative flex min-h-dvh md:h-dvh md:overflow-hidden bg-gray-100" data-controller="sidebar">
+    <div class="relative flex min-h-dvh md:h-dvh md:overflow-hidden bg-stone-50" data-controller="sidebar">
       <!-- Backdrop (mobile) - with blur effect -->
       <div class="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 hidden md:hidden transition-opacity duration-200" data-sidebar-target="backdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
 
       <!-- Sidebar - with spring animation -->
-      <aside class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full transition-transform duration-300 ease-spring bg-gray-50 border-r border-gray-200 text-gray-900 flex flex-col shadow-xl md:relative md:translate-x-0 md:transform-none md:flex-shrink-0 md:w-64 md:h-dvh md:overflow-y-auto md:shadow-none" data-sidebar-target="panel" data-sidebar-panel aria-label="Primary">
+      <aside class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full transition-transform duration-300 ease-spring bg-white border-r border-stone-200 flex flex-col shadow-2xl md:relative md:translate-x-0 md:transform-none md:flex-shrink-0 md:w-64 md:h-dvh md:overflow-y-auto md:shadow-none" data-sidebar-target="panel" data-sidebar-panel aria-label="Primary">
         <%= render "shared/channels_sidebar" %>
       </aside>
 
@@ -112,43 +131,40 @@
         <% top_pad = content_for?(:no_top_padding) ? '' : ' pt-6 sm:pt-8' %>
         <% scroll_class = content_for?(:lock_main_scroll) ? ' overflow-y-auto md:overflow-hidden' : ' overflow-y-auto' %>
         <% scroll_padding = content_for?(:scroll_padding) ? " #{content_for(:scroll_padding).strip}" : '' %>
-        <main id="main-content" class="flex-1 flex flex-col min-h-0 bg-white<%= scroll_class %><%= top_pad %><%= scroll_padding %>" tabindex="-1">
-          <% if flash[:notice] %>
-            <div role="status" aria-live="polite" data-controller="flash" data-flash-timeout-value="4000" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-green-200 bg-green-50 dark:bg-green-800 opacity-100">
-              <div class="flex items-center mx-auto">
-                <p class="flex items-center text-sm font-normal text-green-800 dark:text-green-300">
-                  <span class="inline-flex p-1 me-3 bg-green-200 rounded-full w-6 h-6 dark:bg-green-600">
-                    <svg class="w-3 h-3 text-green-500 dark:text-green-300" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>
+        <main id="main-content" class="flex-1 flex flex-col min-h-0 bg-[var(--main-bg)]<%= scroll_class %><%= top_pad %><%= scroll_padding %>" tabindex="-1">
+          <% if flash[:notice] || flash[:alert] %>
+            <div class="pointer-events-none fixed inset-x-0 top-3 z-50 flex flex-col items-center gap-2 px-3 sm:items-end sm:px-6">
+              <% if flash[:notice] %>
+                <div role="status" aria-live="polite" data-controller="flash" data-flash-timeout-value="4000" class="pointer-events-auto app-flash app-flash--notice">
+                  <span class="app-flash-icon" aria-hidden="true">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                     </svg>
                   </span>
-                  <span><%= flash[:notice] %></span>
-                </p>
-              </div>
-              <button type="button" aria-label="Dismiss" class="flex-shrink-0 inline-flex justify-center w-7 h-7 items-center text-green-400 hover:bg-green-200 hover:text-green-900 rounded-lg text-sm p-1.5 dark:hover:bg-green-600 dark:hover:text-green-300" data-action="click->flash#close">
-                <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                </svg>
-              </button>
-            </div>
-          <% end %>
-          <% if flash[:alert] %>
-            <div role="alert" aria-live="assertive" data-controller="flash" data-flash-timeout-value="5000" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-red-200 bg-red-50 dark:bg-red-800 opacity-100">
-              <div class="flex items-center mx-auto">
-                <p class="flex items-center text-sm font-normal text-red-800 dark:text-red-300">
-                  <span class="inline-flex p-1 me-3 bg-red-200 rounded-full w-6 h-6 dark:bg-red-600">
-                    <svg class="w-3 h-3 text-red-500 dark:text-red-300" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 11.793a1 1 0 1 1-1.414 1.414L10 11.414l-2.293 2.293a1 1 0 0 1-1.414-1.414L8.586 10 6.293 7.707a1 1 0 0 1 1.414-1.414L10 8.586l2.293-2.293a1 1 0 0 1 1.414 1.414L11.414 10l2.293 2.293Z"/>
+                  <p class="flex-1 min-w-0"><%= flash[:notice] %></p>
+                  <button type="button" aria-label="Dismiss" class="app-flash-close" data-action="click->flash#close">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              <% end %>
+
+              <% if flash[:alert] %>
+                <div role="alert" aria-live="assertive" data-controller="flash" data-flash-timeout-value="5500" class="pointer-events-auto app-flash app-flash--alert">
+                  <span class="app-flash-icon" aria-hidden="true">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v4m0 4h.01M10.29 3.86l-7.07 12.24A2 2 0 004.95 19h14.1a2 2 0 001.73-2.9L13.71 3.86a2 2 0 00-3.42 0z" />
                     </svg>
                   </span>
-                  <span><%= flash[:alert] %></span>
-                </p>
-              </div>
-              <button type="button" aria-label="Dismiss" class="flex-shrink-0 inline-flex justify-center w-7 h-7 items-center text-red-400 hover:bg-red-200 hover:text-red-900 rounded-lg text-sm p-1.5 dark:hover:bg-red-600 dark:hover:text-red-300" data-action="click->flash#close">
-                <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                </svg>
-              </button>
+                  <p class="flex-1 min-w-0"><%= flash[:alert] %></p>
+                  <button type="button" aria-label="Dismiss" class="app-flash-close" data-action="click->flash#close">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              <% end %>
             </div>
           <% end %>
           <%= yield %>

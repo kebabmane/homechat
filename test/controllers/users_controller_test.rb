@@ -1,6 +1,11 @@
 require "test_helper"
 
 class UsersControllerTest < ActionDispatch::IntegrationTest
+  def setup
+    Setting.set(:allow_signups, true)
+    Setting.set(:require_signup_approval, false)
+  end
+
   test "should get signup page" do
     get signup_path
     assert_response :success

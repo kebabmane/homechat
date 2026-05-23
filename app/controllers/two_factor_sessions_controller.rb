@@ -1,7 +1,7 @@
 class TwoFactorSessionsController < ApplicationController
-  layout 'authentication'
+  layout "authentication"
 
-  before_action :require_pending_2fa, only: [:new, :create]
+  before_action :require_pending_2fa, only: [ :new, :create ]
 
   def new
     @user = User.find_by(id: session[:pending_2fa_user_id])
@@ -11,7 +11,7 @@ class TwoFactorSessionsController < ApplicationController
     @user = User.find_by(id: session[:pending_2fa_user_id])
 
     unless @user
-      redirect_to signin_path, alert: 'Session expired. Please sign in again.'
+      redirect_to signin_path, alert: "Session expired. Please sign in again."
       return
     end
 
@@ -26,7 +26,7 @@ class TwoFactorSessionsController < ApplicationController
         metadata: { reason: "invalid_2fa_code" }
       )
 
-      flash.now[:alert] = 'Invalid verification code'
+      flash.now[:alert] = "Invalid verification code"
       render :new, status: :unprocessable_content
     end
   end
@@ -34,8 +34,8 @@ class TwoFactorSessionsController < ApplicationController
   private
 
   def require_pending_2fa
-    unless session[:pending_2fa_user_id].present?
-      redirect_to signin_path, alert: 'Please sign in first.'
+    if session[:pending_2fa_user_id].blank?
+      redirect_to signin_path, alert: "Please sign in first."
     end
   end
 

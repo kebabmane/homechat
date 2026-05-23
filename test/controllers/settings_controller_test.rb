@@ -2,7 +2,7 @@ require "test_helper"
 
 class SettingsControllerTest < ActionDispatch::IntegrationTest
   def setup
-    @user = create_user(username: "testuser", password: "secret")
+    @user = create_user(username: "testuser", password: "password123")
   end
 
   test "should require login to view settings" do
@@ -23,7 +23,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     patch settings_path, params: {
       user: {
         username: "newusername",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -39,14 +39,14 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
       user: {
         password: "newpassword",
         password_confirmation: "newpassword",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
     assert_redirected_to edit_settings_path
     @user.reload
     assert @user.authenticate("newpassword")
-    assert_not @user.authenticate("secret")
+    assert_not @user.authenticate("password123")
   end
 
   test "should update username and password together" do
@@ -57,7 +57,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
         username: "updateduser",
         password: "newpassword",
         password_confirmation: "newpassword",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -103,13 +103,13 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
       user: {
         password: "newpassword",
         password_confirmation: "differentpassword",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
     assert_response :unprocessable_content
     @user.reload
-    assert @user.authenticate("secret") # Password should remain unchanged
+    assert @user.authenticate("password123") # Password should remain unchanged
   end
 
   test "should not update to duplicate username" do
@@ -119,7 +119,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     patch settings_path, params: {
       user: {
         username: "taken",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -135,7 +135,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     patch settings_path, params: {
       user: {
         username: "x",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -145,7 +145,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     patch settings_path, params: {
       user: {
         username: "x" * 100,
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -160,7 +160,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     patch settings_path, params: {
       user: {
         username: "",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -175,7 +175,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     patch settings_path, params: {
       user: {
         username: "user@domain.com",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -191,7 +191,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     patch settings_path, params: {
       user: {
         username: "newname",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -208,7 +208,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
       user: {
         password: "newpassword",
         password_confirmation: "newpassword",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -227,7 +227,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     patch settings_path, params: {
       user: {
         username: "concurrent1",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -267,7 +267,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
       user: {
         username: "hacker",
         role: "admin",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -281,7 +281,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     patch settings_path, params: {
       user: {
         timezone: "Eastern Time (US & Canada)",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 
@@ -296,7 +296,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     patch settings_path, params: {
       user: {
         timezone: "Invalid/Timezone",
-        current_password: "secret"
+        current_password: "password123"
       }
     }
 

@@ -98,7 +98,7 @@
           <p class="text-xs text-gray-500 mb-3">Restrict this token to specific channels. Leave unchecked for access based on scopes above.</p>
           <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             <% @channels.each do |channel| %>
-              <% assignment = @token.token_channel_assignments.find_by(channel: channel) %>
+              <% assignment = @token_assignments_by_channel_id&.[](channel.id) %>
               <div class="flex items-center gap-2 p-2 rounded border border-gray-100 bg-gray-50">
                 <%= check_box_tag 'channel_ids[]', channel.id, assignment.present?, class: "rounded border-gray-300 text-blue-600 focus:ring-blue-500" %>
                 <span class="text-sm font-medium text-gray-700">#<%= channel.name %></span>

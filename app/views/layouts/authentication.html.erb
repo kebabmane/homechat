@@ -24,16 +24,19 @@
   </head>
 
   <body class="antialiased font-sans bg-gray-50 min-h-screen flex flex-col">
-    <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
-      <div data-controller="install-prompt" data-install-prompt-target="toast" class="hidden fixed bottom-6 right-6 z-40">
-        <div class="flex items-center space-x-3 px-4 py-3 bg-gray-900 text-white rounded-lg shadow-lg">
-          <span>Install this app?</span>
-          <button class="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700" data-action="install-prompt#install">Install</button>
-          <button class="text-white/70 hover:text-white" aria-label="Dismiss" data-action="install-prompt#dismiss">✕</button>
+    <% pwa_enabled = ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
+    <% if pwa_enabled %>
+      <div data-controller="install-prompt"
+           data-install-prompt-target="toast"
+           class="hidden fixed top-16 inset-x-3 sm:top-auto sm:inset-x-auto sm:bottom-6 sm:right-6 z-40">
+        <div class="flex items-center justify-between gap-2 px-3 py-2.5 bg-gray-900 text-white rounded-lg shadow-lg">
+          <span class="text-sm">Install this app?</span>
+          <button class="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-sm font-medium" data-action="install-prompt#install">Install</button>
+          <button class="text-white/70 hover:text-white leading-none" aria-label="Dismiss" data-action="install-prompt#dismiss">✕</button>
         </div>
       </div>
     <% end %>
-    <% if ActiveModel::Type::Boolean.new.cast(Setting.fetch(:pwa_enabled, true)) %>
+    <% if pwa_enabled %>
       <%= javascript_tag nonce: true do %>
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('<%= pwa_service_worker_path %>') }
       <% end %>

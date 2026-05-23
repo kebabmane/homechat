@@ -58,7 +58,6 @@ env:
 # Production volumes with backup considerations
 volumes:
   - "homechat_production_storage:/rails/storage"
-  - "homechat_production_data:/rails/db"
 
 # Production health checks
 healthcheck:

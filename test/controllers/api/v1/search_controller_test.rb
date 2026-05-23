@@ -86,7 +86,7 @@ class Api::V1::SearchControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     json = JSON.parse(response.body)
-    refute json["users"].any? { |u| u["username"] == "searcher" }
+    assert_not json["users"].any? { |u| u["username"] == "searcher" }
   end
 
   test "should exclude DM channels from search results" do
@@ -103,7 +103,7 @@ class Api::V1::SearchControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     json = JSON.parse(response.body)
-    refute json["channels"].any? { |c| c["type"] == "dm" }
+    assert_not json["channels"].any? { |c| c["type"] == "dm" }
   end
 
   test "should only search accessible channels" do
@@ -120,7 +120,7 @@ class Api::V1::SearchControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     json = JSON.parse(response.body)
-    refute json["messages"].any? { |m| m["content"].include?("secret") }
+    assert_not json["messages"].any? { |m| m["content"].include?("secret") }
   end
 
   # Validation tests
@@ -160,8 +160,8 @@ class Api::V1::SearchControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     json = JSON.parse(response.body)
     assert json.key?("users")
-    refute json.key?("channels")
-    refute json.key?("messages")
+    assert_not json.key?("channels")
+    assert_not json.key?("messages")
   end
 
   test "should return user details in search results" do
@@ -256,5 +256,38 @@ class Api::V1::SearchControllerTest < ActionDispatch::IntegrationTest
     assert message["user"].key?("username")
     assert message["channel"].key?("id")
     assert message["channel"].key?("name")
+  end
+
+  # E2EE exclusion test
+  test "should exclude E2EE-encoded messages from search results" do
+    # Plaintext message that matches the search term
+    plaintext_msg = Message.create!(
+      content: "findme plaintext",
+      content_encoding: "plaintext",
+      channel: @channel,
+      user: @user
+    )
+    # E2EE message whose stored content is just a placeholder — must never appear in search
+    e2ee_msg = Message.create!(
+      content: "[Encrypted]",
+      content_encoding: "e2ee",
+      encrypted_content: "base64payload==",
+      content_hmac: "hmac==",
+      channel: @channel,
+      user: @user
+    )
+
+    get api_v1_search_path,
+        params: { q: "findme" },
+        headers: { "Authorization" => "Bearer #{@raw_token}" }
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    ids = json["messages"].map { |m| m["id"] }
+
+    assert_includes ids, plaintext_msg.id,
+      "Plaintext message matching the query should be present in results"
+    assert_not_includes ids, e2ee_msg.id,
+      "E2EE-encoded message should be excluded from search results"
   end
 end

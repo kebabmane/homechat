@@ -35,7 +35,6 @@ env:
 # Staging volumes (separate from production)
 volumes:
   - "homechat_staging_storage:/rails/storage"
-  - "homechat_staging_data:/rails/db"
 
 # Use smaller resource limits for staging
 boot:

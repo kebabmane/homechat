@@ -1,7 +1,7 @@
 # Home Assistant Add-on Configuration
 # This initializer handles specific configuration for when HomeChat runs as a Home Assistant add-on
 
-if ENV['HOME_ASSISTANT_ADDON'] == 'true'
+if ENV["HOME_ASSISTANT_ADDON"] == "true"
   Rails.application.configure do
     # Log configuration for Home Assistant environment
     Rails.logger.info "HomeChat running in Home Assistant add-on mode"
@@ -19,12 +19,12 @@ if ENV['HOME_ASSISTANT_ADDON'] == 'true'
 
     def call(env)
       # Extract and log ingress path for debugging
-      ingress_path = env['HTTP_X_INGRESS_PATH']
+      ingress_path = env["HTTP_X_INGRESS_PATH"]
       if ingress_path
         Rails.logger.debug "Ingress Path: #{ingress_path}"
 
         # Store ingress path in request environment for use in controllers
-        env['homechat.ingress_path'] = ingress_path
+        env["homechat.ingress_path"] = ingress_path
       end
 
       # Log relevant headers for debugging

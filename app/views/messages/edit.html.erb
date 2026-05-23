@@ -1,0 +1,40 @@
+<%= turbo_frame_tag dom_id(@message) do %>
+  <div class="message-bubble group msg-row msg-row-start"
+       data-message-id="<%= @message.id %>"
+       data-message-username="<%= @message.user.username.downcase %>">
+
+    <div class="msg-avatar">
+      <%= avatar_for(@message.user, size: 'h-8 w-8') %>
+    </div>
+
+    <div class="msg-body" style="max-width: min(88%, 700px);">
+      <div class="msg-header">
+        <span class="msg-username"><%= @message.user.username %></span>
+        <span class="msg-timestamp">Editing…</span>
+      </div>
+
+      <%= form_with model: [ @channel, @message ],
+          class: "mt-1",
+          data: { controller: "mentions", mentions_users_value: @channel.members.order(:username).pluck(:username).to_json } do |form| %>
+        <div class="relative">
+          <%= form.text_area :content,
+              rows: 1,
+              class: "composer-textarea",
+              style: "min-height: 44px; padding: 0.5rem 0.75rem; border: 1px solid #ddd5c8; border-radius: 0.75rem; background: #fff; width: 100%;",
+              data: { mentions_target: "textarea", action: "input->mentions#onInput keydown.enter->mentions#maybeAccept" } %>
+          <div data-mentions-target="menu"
+               class="composer-mentions-menu hidden"
+               style="bottom: auto; top: 100%; margin-top: 0.5rem; margin-bottom: 0;"></div>
+        </div>
+        <div class="flex items-center gap-3 mt-2">
+          <%= form.submit "Save",
+              class: "composer-send-btn",
+              style: "padding: 0.375rem 0.875rem; font-size: 0.875rem;" %>
+          <%= link_to "Cancel", @channel,
+              class: "text-sm text-stone-500 hover:text-stone-700 transition-colors",
+              data: { turbo_frame: dom_id(@message) } %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

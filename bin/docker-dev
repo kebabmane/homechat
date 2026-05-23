@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -e
+
+# docker-dev — Convenience wrapper for containerized development.
+#
+# Usage:
+#   bin/docker-dev setup   Build image and prepare the database (first-time)
+#   bin/docker-dev up        Start the dev server on http://localhost:3000
+#   bin/docker-dev build     Rebuild the image (after Dockerfile/Gemfile changes)
+#   bin/docker-dev rebuild   Rebuild the image from scratch without Docker cache
+#   bin/docker-dev bash      Drop into a shell inside the running container
+#   bin/docker-dev down      Stop and remove containers
+#   bin/docker-dev logs      Tail container logs
+#   bin/docker-dev exec      Run a one-off command (e.g., bin/rails console)
+#   bin/docker-dev test      Run the test suite inside the container
+#
+# The SQLite database at storage/development.sqlite3 is persisted on the host
+# via the .:/rails volume mount, so it survives container rebuilds.
+
+COMPOSE="docker compose -f docker-compose.yml"
+
+case "${1:-up}" in
+  setup)
+    echo "== Building development image =="
+    $COMPOSE build
+    echo "== Preparing database =="
+    $COMPOSE run --rm web ./bin/rails db:prepare
+    echo "== Setup complete. Run 'bin/docker-dev up' to start the server =="
+    ;;
+
+  up)
+    echo "== Starting development server (http://localhost:3000) =="
+    $COMPOSE up --remove-orphans
+    ;;
+
+  build)
+    echo "== Rebuilding development image =="
+    $COMPOSE build
+    ;;
+
+  rebuild)
+    echo "== Rebuilding development image without cache =="
+    $COMPOSE build --no-cache
+    ;;
+
+  bash)
+    echo "== Opening shell in container =="
+    $COMPOSE exec web bash
+    ;;
+
+  down)
+    echo "== Stopping containers =="
+    $COMPOSE down
+    ;;
+
+  logs)
+    $COMPOSE logs -f
+    ;;
+
+  exec)
+    shift
+    if [ $# -eq 0 ]; then
+      echo "Usage: bin/docker-dev exec <command>"
+      echo "  e.g. bin/docker-dev exec bin/rails console"
+      exit 1
+    fi
+    $COMPOSE exec web "$@"
+    ;;
+
+  test)
+    echo "== Running test suite =="
+    $COMPOSE exec web ./bin/rails test
+    ;;
+
+  *)
+    echo "Unknown command: $1"
+    echo ""
+    echo "Usage: bin/docker-dev [command]"
+    echo ""
+    echo "Commands:"
+    echo "  setup   Build image and prepare the database (first-time)"
+    echo "  up      Start the dev server on http://localhost:3000"
+    echo "  build   Rebuild the image (after Dockerfile/Gemfile changes)"
+    echo "  rebuild Rebuild the image from scratch without Docker cache"
+    echo "  bash    Drop into a shell inside the running container"
+    echo "  down    Stop and remove containers"
+    echo "  logs    Tail container logs"
+    echo "  exec    Run a one-off command (e.g., bin/rails console)"
+    echo "  test    Run the test suite inside the container"
+    exit 1
+    ;;
+esac

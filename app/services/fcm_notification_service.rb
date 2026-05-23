@@ -1,10 +1,10 @@
-require 'net/http'
-require 'json'
-require 'googleauth'
+require "net/http"
+require "json"
+require "googleauth"
 
 class FcmNotificationService
-  FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging'.freeze
-  FCM_API_URL = 'https://fcm.googleapis.com/v1/projects/%s/messages:send'.freeze
+  FCM_SCOPE = "https://www.googleapis.com/auth/firebase.messaging".freeze
+  FCM_API_URL = "https://fcm.googleapis.com/v1/projects/%s/messages:send".freeze
 
   class << self
     def send_message_notification(message, exclude_user: nil)
@@ -13,27 +13,27 @@ class FcmNotificationService
       # Get all users in the channel with FCM tokens, excluding the sender
       channel_users = message.channel.members
                              .where.not(fcm_token: nil)
-                             .where.not(fcm_token: '')
+                             .where.not(fcm_token: "")
 
       channel_users = channel_users.where.not(id: exclude_user.id) if exclude_user
 
       if channel_users.empty?
-        Rails.logger.debug "FCM: No users with tokens found for channel #{message.channel.name}"
+        Rails.logger.debug "FCM: No users with tokens found for channel_id=#{message.channel_id}"
         return
       end
 
       fcm_tokens = channel_users.pluck(:fcm_token)
 
       notification_data = {
-        title: message.channel.name,
-        body: "#{message.user.username}: #{truncate_message(message.content)}",
+        title: "HomeChat",
+        body: "New message",
         data: {
-          type: 'new_message',
-          channel_id: message.channel.id.to_s,
-          message_id: message.id.to_s,
-          username: message.user.username,
-          content: message.content,
-          channel_name: message.channel.name
+          type: "message",
+          channel_id: message.channel_id,
+          message_id: message.id,
+          title: "HomeChat",
+          body: "New message",
+          notification_privacy: "generic"
         }
       }
 
@@ -45,17 +45,18 @@ class FcmNotificationService
       return if user.fcm_token.blank?
 
       notification_data = {
-        title: 'Channel Invitation',
-        body: "#{inviter.username} invited you to join #{channel.name}",
+        title: "HomeChat",
+        body: "New invitation",
         data: {
-          type: 'channel_invite',
-          channel_id: channel.id.to_s,
-          channel_name: channel.name,
-          inviter: inviter.username
+          type: "channel_invite",
+          channel_id: channel.id,
+          title: "HomeChat",
+          body: "New invitation",
+          notification_privacy: "generic"
         }
       }
 
-      send_to_tokens([user.fcm_token], notification_data)
+      send_to_tokens([ user.fcm_token ], notification_data)
     end
 
     def send_direct_message_notification(message, recipient)
@@ -63,18 +64,19 @@ class FcmNotificationService
       return if recipient.fcm_token.blank?
 
       notification_data = {
-        title: message.user.username,
-        body: truncate_message(message.content),
+        title: "HomeChat",
+        body: "New direct message",
         data: {
-          type: 'direct_message',
-          channel_id: message.channel.id.to_s,
-          message_id: message.id.to_s,
-          username: message.user.username,
-          content: message.content
+          type: "direct_message",
+          channel_id: message.channel_id,
+          message_id: message.id,
+          title: "HomeChat",
+          body: "New direct message",
+          notification_privacy: "generic"
         }
       }
 
-      send_to_tokens([recipient.fcm_token], notification_data)
+      send_to_tokens([ recipient.fcm_token ], notification_data)
     end
 
     def send_mention_notification(message, mentioned_user)
@@ -82,19 +84,19 @@ class FcmNotificationService
       return if mentioned_user.fcm_token.blank?
 
       notification_data = {
-        title: "#{message.user.username} mentioned you",
-        body: "in ##{message.channel.name}: #{truncate_message(message.content)}",
+        title: "HomeChat",
+        body: "New mention",
         data: {
-          type: 'mention',
-          channel_id: message.channel.id.to_s,
-          message_id: message.id.to_s,
-          username: message.user.username,
-          channel_name: message.channel.name,
-          content: message.content
+          type: "mention",
+          channel_id: message.channel_id,
+          message_id: message.id,
+          title: "HomeChat",
+          body: "New mention",
+          notification_privacy: "generic"
         }
       }
 
-      send_to_tokens([mentioned_user.fcm_token], notification_data)
+      send_to_tokens([ mentioned_user.fcm_token ], notification_data)
     end
 
     def fcm_configured?
@@ -117,57 +119,54 @@ class FcmNotificationService
       uri = URI(format(FCM_API_URL, project_id))
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
+      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
       http.open_timeout = 10
       http.read_timeout = 10
 
       request = Net::HTTP::Post.new(uri)
-      request['Authorization'] = "Bearer #{access_token}"
-      request['Content-Type'] = 'application/json'
+      request["Authorization"] = "Bearer #{access_token}"
+      request["Content-Type"] = "application/json"
       request.body = { message: message_payload }.to_json
 
       response = http.request(request)
 
       case response.code.to_i
       when 200
-        Rails.logger.info "FCM: Notification sent successfully to token #{token[0..10]}..."
+        Rails.logger.info "FCM: Notification sent successfully"
       when 400
-        Rails.logger.error "FCM: Invalid request - #{response.body}"
+        Rails.logger.error "FCM: Invalid request"
       when 401
         Rails.logger.error "FCM: Authentication failed - check service account credentials"
         @access_token = nil # Force token refresh
       when 404
         # Token is invalid/unregistered - remove it from user
-        Rails.logger.warn "FCM: Token invalid, removing from user: #{token[0..10]}..."
+        Rails.logger.warn "FCM: Token invalid, removing from user"
         remove_invalid_token(token)
       when 429
         Rails.logger.warn "FCM: Rate limited, will retry later"
       else
-        Rails.logger.error "FCM: Unexpected response #{response.code} - #{response.body}"
+        Rails.logger.error "FCM: Unexpected response #{response.code}"
       end
     rescue StandardError => e
-      Rails.logger.error "FCM: Error sending notification - #{e.message}"
+      Rails.logger.error "FCM: Error sending notification - #{e.class}"
       Rails.logger.error e.backtrace.first(5).join("\n")
     end
 
     def build_message_payload(token, notification_data)
       {
         token: token,
-        notification: {
-          title: notification_data[:title],
-          body: notification_data[:body]
-        },
         data: notification_data[:data].transform_values(&:to_s),
         android: {
-          priority: 'high',
-          notification: {
-            sound: 'default',
-            click_action: 'OPEN_CHANNEL'
-          }
+          priority: "high"
         },
         apns: {
           payload: {
             aps: {
-              sound: 'default',
+              alert: {
+                title: notification_data[:title],
+                body: notification_data[:body]
+              },
+              sound: "default",
               badge: 1,
               'mutable-content': 1
             }
@@ -186,18 +185,18 @@ class FcmNotificationService
         json_key_io: StringIO.new(service_account_json),
         scope: FCM_SCOPE
       )
-      credentials.fetch_access_token!['access_token']
+      credentials.fetch_access_token!["access_token"]
     rescue StandardError => e
-      Rails.logger.error "FCM: Failed to get access token - #{e.message}"
+      Rails.logger.error "FCM: Failed to get access token - #{e.class}"
       nil
     end
 
     def project_id
-      @project_id ||= fcm_config['project_id']
+      @project_id ||= fcm_config["project_id"]
     end
 
     def service_account_json
-      @service_account_json ||= fcm_config['service_account_json']&.to_json
+      @service_account_json ||= fcm_config["service_account_json"]&.to_json
     end
 
     def credentials_available?
@@ -206,17 +205,31 @@ class FcmNotificationService
 
     def fcm_config
       @fcm_config ||= begin
-        config = Rails.application.credentials.fcm || {}
+        settings_credentials = Setting.fcm_credentials
+        config = if settings_credentials.present?
+          {
+            "project_id" => settings_credentials[:project_id],
+            "service_account_json" => {
+              "type" => "service_account",
+              "project_id" => settings_credentials[:project_id],
+              "private_key" => settings_credentials[:private_key],
+              "client_email" => settings_credentials[:client_email],
+              "token_uri" => "https://oauth2.googleapis.com/token"
+            }
+          }
+        else
+          Rails.application.credentials.fcm || {}
+        end
 
         # Also check environment variables as fallback
         if config.empty?
-          project_id = ENV['FCM_PROJECT_ID']
-          service_account = ENV['FCM_SERVICE_ACCOUNT_JSON']
+          project_id = ENV["FCM_PROJECT_ID"]
+          service_account = ENV["FCM_SERVICE_ACCOUNT_JSON"]
 
           if project_id.present? && service_account.present?
             config = {
-              'project_id' => project_id,
-              'service_account_json' => JSON.parse(service_account)
+              "project_id" => project_id,
+              "service_account_json" => JSON.parse(service_account)
             }
           end
         end

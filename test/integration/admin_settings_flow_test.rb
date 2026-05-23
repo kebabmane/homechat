@@ -89,6 +89,6 @@ class AdminSettingsFlowTest < ActionDispatch::IntegrationTest
     assert_response :redirect
 
     # Setting should not have changed
-    refute_equal "Hacked", Setting.fetch(:site_name)
+    assert_not_equal "Hacked", Setting.fetch(:site_name)
   end
 end

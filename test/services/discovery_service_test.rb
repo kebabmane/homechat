@@ -21,7 +21,7 @@ class DiscoveryServiceTest < ActiveSupport::TestCase
 
     assert_not_nil service.server_name
     assert_not_nil service.port
-    assert_includes [3000, 80], service.port # Development or production default
+    assert_includes [ 3000, 80 ], service.port # Development or production default
   end
 
   test "running? returns false initially" do

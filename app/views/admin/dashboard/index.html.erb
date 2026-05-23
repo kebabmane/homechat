@@ -44,12 +44,10 @@
           <p class="text-sm font-medium text-emerald-700">Integration Status</p>
           <div class="mt-3 space-y-2 text-sm text-emerald-800">
             <div class="flex items-center gap-2">
-              <span class="status-dot <%= @api_enabled ? 'status-dot--ok' : 'status-dot--warn' %>"></span>
-              <span>API <%= @api_enabled ? 'enabled' : 'disabled' %></span>
+              <%= status_with_dot("API #{@api_enabled ? 'enabled' : 'disabled'}", kind: (@api_enabled ? :ok : :warn)) %>
             </div>
             <div class="flex items-center gap-2">
-              <span class="status-dot <%= @ha_enabled ? 'status-dot--ok' : 'status-dot--warn' %>"></span>
-              <span>Home Assistant <%= @ha_enabled ? 'linked' : 'offline' %></span>
+              <%= status_with_dot("Home Assistant #{@ha_enabled ? 'linked' : 'offline'}", kind: (@ha_enabled ? :ok : :warn)) %>
             </div>
           </div>
         </div>
@@ -66,49 +64,49 @@
   </div>
 
   <div class="grid gap-6 lg:grid-cols-3">
-    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
+    <div class="rounded-2xl border border-stone-200 bg-white/90 p-6 shadow-sm lg:col-span-2">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-900">System checklist</h2>
-        <%= link_to 'API Settings', edit_admin_settings_path(anchor: 'api'), class: 'text-sm text-blue-600 hover:text-blue-700' %>
+        <h2 class="text-lg font-semibold text-stone-900">System checklist</h2>
+        <%= link_to 'API Settings', edit_admin_settings_path(anchor: 'api'), class: 'text-sm text-emerald-600 hover:text-emerald-700' %>
       </div>
-      <ul class="space-y-3 text-sm text-gray-700">
+      <ul class="space-y-3 text-sm text-stone-700">
         <li class="flex items-start gap-3">
-          <span class="status-dot <%= @api_enabled ? 'status-dot--ok' : 'status-dot--warn' %> mt-1"></span>
+          <%= status_dot(kind: (@api_enabled ? :ok : :warn), class_name: 'mt-1') %>
           <div>
             <p class="font-medium">API access <%= @api_enabled ? 'enabled' : 'disabled' %></p>
-            <p class="text-xs text-gray-500">Toggle API availability under Server Settings when exposing HomeChat externally.</p>
+            <p class="text-xs text-stone-500">Toggle API availability under Server Settings when exposing HomeChat externally.</p>
           </div>
         </li>
         <li class="flex items-start gap-3">
-          <span class="status-dot <%= @ha_enabled ? 'status-dot--ok' : 'status-dot--warn' %> mt-1"></span>
+          <%= status_dot(kind: (@ha_enabled ? :ok : :warn), class_name: 'mt-1') %>
           <div>
             <p class="font-medium">Home Assistant connection <%= @ha_enabled ? 'active' : 'pending' %></p>
-            <p class="text-xs text-gray-500">Ensure the integration token is valid to keep automations in sync.</p>
+            <p class="text-xs text-stone-500">Ensure the integration token is valid to keep automations in sync.</p>
           </div>
         </li>
         <% if @admin_credentials_available %>
           <li class="flex items-start gap-3">
-            <span class="status-dot status-dot--warn mt-1"></span>
+            <%= status_dot(kind: :warn, class_name: 'mt-1') %>
             <div>
               <p class="font-medium">Default admin credentials detected</p>
-              <p class="text-xs text-gray-500">Rotate the bootstrap password and delete the credentials file for security.</p>
-              <%= link_to 'View credentials file', admin_credentials_path, class: 'mt-2 inline-flex text-sm text-blue-600 hover:text-blue-700' %>
+              <p class="text-xs text-stone-500">Rotate the bootstrap password and delete the credentials file for security.</p>
+              <%= link_to 'View credentials file', admin_credentials_path, class: 'mt-2 inline-flex text-sm text-emerald-600 hover:text-emerald-700' %>
             </div>
           </li>
         <% else %>
           <li class="flex items-start gap-3">
-            <span class="status-dot status-dot--ok mt-1"></span>
+            <%= status_dot(kind: :ok, class_name: 'mt-1') %>
             <div>
               <p class="font-medium">Admin password rotated</p>
-              <p class="text-xs text-gray-500">No default credential file present. Keep storing passwords securely.</p>
+              <p class="text-xs text-stone-500">No default credential file present. Keep storing passwords securely.</p>
             </div>
           </li>
         <% end %>
       </ul>
     </div>
 
-    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick actions</h2>
+    <div class="rounded-2xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+      <h2 class="text-lg font-semibold text-stone-900 mb-4">Quick actions</h2>
       <div class="space-y-3 text-sm">
         <%= link_to admin_bots_path(tab: 'tokens'), class: 'quick-action-link' do %>
           <span>Generate API token</span>
@@ -126,13 +124,17 @@
           <span>Update server settings</span>
           <span class="quick-action-icon">→</span>
         <% end %>
+        <%= link_to admin_nuke_path, class: 'flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 hover:bg-red-100 transition-colors duration-150' do %>
+          <span class="font-medium">Nuke all data</span>
+          <span class="text-red-500">⚠</span>
+        <% end %>
       </div>
     </div>
   </div>
 
-  <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-    <h2 class="text-lg font-semibold text-gray-900 mb-4">Helpful links</h2>
-    <div class="flex flex-wrap gap-3 text-sm text-gray-600">
+  <div class="rounded-2xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+    <h2 class="text-lg font-semibold text-stone-900 mb-4">Helpful links</h2>
+    <div class="flex flex-wrap gap-3 text-sm text-stone-600">
       <%= link_to 'User directory', admin_users_path, class: 'chip-link' %>
       <%= link_to 'Automations', admin_bots_path, class: 'chip-link' %>
       <%= link_to 'Server settings', edit_admin_settings_path, class: 'chip-link' %>

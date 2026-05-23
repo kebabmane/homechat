@@ -41,17 +41,17 @@ module Homechat
 
     # Discovery service configuration
     config.discovery = ActiveSupport::OrderedOptions.new
-    config.discovery.enabled = ENV.fetch('DISCOVERY_ENABLED', 'true') == 'true'
-    config.discovery.server_name = ENV['DISCOVERY_SERVER_NAME']
-    config.discovery.port = ENV['DISCOVERY_PORT']&.to_i
+    config.discovery.enabled = ENV.fetch("DISCOVERY_ENABLED", "true") == "true"
+    config.discovery.server_name = ENV["DISCOVERY_SERVER_NAME"]
+    config.discovery.port = ENV["DISCOVERY_PORT"]&.to_i
 
     # Home Assistant add-on configuration
-    if ENV['HOME_ASSISTANT_ADDON'] == 'true'
+    if ENV["HOME_ASSISTANT_ADDON"] == "true"
       # Configure for Home Assistant ingress environment
       config.force_ssl = false  # SSL termination handled by HA ingress
 
       # Allow iframe embedding in Home Assistant
-      config.action_dispatch.default_headers['X-Frame-Options'] = 'ALLOWALL'
+      config.action_dispatch.default_headers["X-Frame-Options"] = "ALLOWALL"
 
       # Clear host restrictions when behind HA ingress
       config.hosts.clear
@@ -63,20 +63,20 @@ module Homechat
       # Configure trusted proxies based on user configuration
       trusted_ranges = [
         ActionDispatch::RemoteIp::TRUSTED_PROXIES,
-        IPAddr.new('172.30.0.0/16'),   # Home Assistant Docker networks
-        IPAddr.new('127.0.0.1'),       # Localhost
-        IPAddr.new('::1')              # IPv6 localhost
+        IPAddr.new("172.30.0.0/16"),   # Home Assistant Docker networks
+        IPAddr.new("127.0.0.1"),       # Localhost
+        IPAddr.new("::1")              # IPv6 localhost
       ]
 
       # Add user-configured network range
-      if ENV['NETWORK_RANGE'].present?
+      if ENV["NETWORK_RANGE"].present?
         begin
-          user_range = IPAddr.new(ENV['NETWORK_RANGE'])
+          user_range = IPAddr.new(ENV["NETWORK_RANGE"])
           trusted_ranges << user_range
-          puts "[INFO] Added user-configured network range: #{ENV['NETWORK_RANGE']}"
+          Rails.logger.debug "[INFO] Added user-configured network range"
         rescue IPAddr::InvalidAddressError => e
-          puts "[WARN] Invalid network range configured: #{ENV['NETWORK_RANGE']} - #{e.message}"
-          puts "[WARN] Using default ranges only"
+          Rails.logger.debug "[WARN] Invalid network range configured: #{e.class}"
+          Rails.logger.debug "[WARN] Using default ranges only"
         end
       end
 
@@ -91,10 +91,10 @@ module Homechat
 
     # Session configuration
     config.session_store :cookie_store,
-      key: '_homechat_session',
+      key: "_homechat_session",
       expire_after: 30.days,
-      secure: ENV['HOME_ASSISTANT_ADDON'] == 'true' ? false : Rails.env.production?,
+      secure: ENV["HOME_ASSISTANT_ADDON"] == "true" ? false : Rails.env.production?,
       httponly: true,
-      same_site: ENV['HOME_ASSISTANT_ADDON'] == 'true' ? :none : :lax
+      same_site: ENV["HOME_ASSISTANT_ADDON"] == "true" ? :none : :lax
   end
 end

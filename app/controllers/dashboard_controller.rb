@@ -1,6 +1,6 @@
 class DashboardController < ApplicationController
   before_action :require_login
-  
+
   def index
     @public_channels = Channel.public_channels.includes(:created_by).limit(10)
     @my_channels = current_user.channels.includes(:created_by).limit(10)

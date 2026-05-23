@@ -49,15 +49,14 @@ class SettingTest < ActiveSupport::TestCase
   end
 
   test "should handle array values" do
-    Setting.set("array_key", ["a", "b", "c"])
-    assert_equal ["a", "b", "c"], Setting.fetch("array_key")
+    Setting.set("array_key", [ "a", "b", "c" ])
+    assert_equal [ "a", "b", "c" ], Setting.fetch("array_key")
   end
 
   test "should handle hash values" do
-    Setting.set("hash_key", { foo: "bar", nested: { key: "value" } })
+    Setting.set("hash_key", { "foo" => "bar", "nested" => { "key" => "value" } })
     result = Setting.fetch("hash_key")
-    # YAML parsing may preserve symbols or convert them to strings
-    assert result[:foo] == "bar" || result["foo"] == "bar"
+    assert_equal "bar", result["foo"]
     assert result.is_a?(Hash)
   end
 
@@ -78,5 +77,39 @@ class SettingTest < ActiveSupport::TestCase
   test "should handle color hex values" do
     Setting.set("theme_color", "#123456")
     assert_equal "#123456", Setting.fetch("theme_color")
+  end
+
+  test "encrypts secret values at rest" do
+    secret = "super-secret-api-key-12345"
+    Setting.set("litellm_api_key", secret)
+
+    # Fetch should return plaintext (transparent decryption)
+    assert_equal secret, Setting.fetch("litellm_api_key")
+
+    # Direct DB read (before type cast) should show ciphertext, not plaintext
+    raw = Setting.find_by(key: "litellm_api_key")
+    ciphertext = raw.read_attribute_before_type_cast("value")
+    assert_not_equal secret, ciphertext
+    assert ciphertext.length > secret.length || ciphertext.start_with?("{")
+  end
+
+  test "encrypts fcm_private_key at rest" do
+    secret = "private-key-content-here"
+    Setting.set("fcm_private_key", secret)
+
+    assert_equal secret, Setting.fetch("fcm_private_key")
+
+    raw = Setting.find_by(key: "fcm_private_key")
+    ciphertext = raw.read_attribute_before_type_cast("value")
+    assert_not_equal secret, ciphertext
+  end
+
+  test "non-secret settings are also encrypted but remain readable" do
+    Setting.set("site_name", "My HomeChat")
+    assert_equal "My HomeChat", Setting.fetch("site_name")
+
+    raw = Setting.find_by(key: "site_name")
+    ciphertext = raw.read_attribute_before_type_cast("value")
+    assert_not_equal "My HomeChat", ciphertext
   end
 end

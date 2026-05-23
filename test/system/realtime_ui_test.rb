@@ -2,7 +2,7 @@ require "application_system_test_case"
 
 class RealtimeUiTest < JsSystemTestCase
   def setup
-    @owner = User.create!(username: "ownerjs", password: "secret", password_confirmation: "secret")
+    @owner = User.create!(username: "ownerjs", password: "password123", password_confirmation: "password123")
     @channel = Channel.create!(name: "jsroom", created_by: @owner, channel_type: "public")
   end
 
@@ -43,4 +43,3 @@ class RealtimeUiTest < JsSystemTestCase
     assert_selector("[data-message-list-target='scrollButton']", visible: :hidden, wait: 2)
   end
 end
-

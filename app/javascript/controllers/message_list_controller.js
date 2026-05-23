@@ -10,11 +10,13 @@ export default class extends Controller {
     autoscroll: { type: Boolean, default: true },
     autofocus: { type: Boolean, default: true },
     currentUser: String,
-    channelId: String
+    channelId: String,
+    channelType: String
   }
 
   connect() {
     this._typingTimers = new Map()
+    this._typingUsers = new Map()
     this._typingContainerEl = this.hasTypingIndicatorTarget ? this.typingIndicatorTarget : null
     this._draftSaveTimer = null
     this._isOnline = navigator.onLine
@@ -39,6 +41,9 @@ export default class extends Controller {
 
     // Update offline indicator on connect
     this._updateOfflineIndicator()
+
+    // Track new messages that arrive while scrolled up
+    this._newMessagesBelow = false
 
     // Style existing messages on page load
     this._styleAllMessages()
@@ -80,6 +85,7 @@ export default class extends Controller {
           if (this.autoscrollValue) {
             this._scrollToBottom(true)
           } else {
+            this._setNewMessagesBelow(true)
             this.updateScrollButton()
           }
         }
@@ -98,7 +104,7 @@ export default class extends Controller {
     if (this.hasTextareaTarget) {
       this._restoreDraft()
       this.autoResize()
-      if (this.autofocusValue) {
+      if (this.autofocusValue && this._shouldAutofocus()) {
         this.textareaTarget.focus()
       }
       this._onTextareaBlur = () => {
@@ -149,6 +155,11 @@ export default class extends Controller {
 
   _isDesktop() {
     return window.matchMedia('(min-width: 768px)').matches
+  }
+
+  _shouldAutofocus() {
+    // Avoid forcing the software keyboard open on mobile.
+    return this._isDesktop()
   }
 
   _onKeyboardShow(keyboardHeight) {
@@ -218,6 +229,10 @@ export default class extends Controller {
       this._typingTimers.forEach((timer) => clearTimeout(timer))
       this._typingTimers.clear()
     }
+    if (this._typingUsers) {
+      this._typingUsers.clear()
+      this._updateHeaderTypingStatus()
+    }
     if (this._draftSaveTimer) {
       clearTimeout(this._draftSaveTimer)
       this._draftSaveTimer = null
@@ -253,6 +268,23 @@ export default class extends Controller {
     this._typingContainerEl = null
   }
 
+  // Called before form submission to show loading state
+  beforeSubmit(event) {
+    if (event.defaultPrevented) return
+    if (!this.hasSendButtonTarget) return
+    const btn = this.sendButtonTarget
+    btn.disabled = true
+    this._sendButtonOriginalHTML = btn.innerHTML
+    this._sendButtonOriginalClasses = btn.className
+    btn.innerHTML = `
+      <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+    `
+    btn.classList.add('opacity-80', 'cursor-not-allowed')
+  }
+
   // Called on turbo:submit-end from the form
   afterSubmit(event) {
     // Check if submission was successful (Turbo provides detail.success)
@@ -263,6 +295,9 @@ export default class extends Controller {
       this.autoResize()
       this.textareaTarget.focus()
     }
+
+    // Restore button from loading state before showing confirmation
+    this._restoreSendButton()
 
     // Show send confirmation feedback
     if (success) {
@@ -280,17 +315,32 @@ export default class extends Controller {
     requestAnimationFrame(() => this._scrollToBottom(true))
   }
 
+  _restoreSendButton() {
+    if (!this.hasSendButtonTarget) return
+    const btn = this.sendButtonTarget
+    btn.disabled = false
+    if (this._sendButtonOriginalHTML) {
+      btn.innerHTML = this._sendButtonOriginalHTML
+      this._sendButtonOriginalHTML = null
+    }
+    if (this._sendButtonOriginalClasses) {
+      btn.className = this._sendButtonOriginalClasses
+      this._sendButtonOriginalClasses = null
+    }
+    btn.classList.remove('opacity-80', 'cursor-not-allowed')
+  }
+
   // Show brief visual feedback after sending a message
   _showSendConfirmation() {
     if (!this.hasSendButtonTarget) return
 
     const btn = this.sendButtonTarget
-    const originalText = btn.textContent
+    const originalHTML = btn.innerHTML
     const originalClasses = btn.className
 
     // Briefly show checkmark with success styling
     btn.innerHTML = `
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
       </svg>
     `
@@ -302,7 +352,7 @@ export default class extends Controller {
 
     // Restore original state after brief delay
     setTimeout(() => {
-      btn.textContent = originalText
+      btn.innerHTML = originalHTML
       btn.className = originalClasses
       btn.style.transition = ''
     }, 600)
@@ -331,6 +381,36 @@ export default class extends Controller {
     this.textareaTarget.blur()
   }
 
+  editLastMessage(event) {
+    if (event.defaultPrevented) return
+    if (!this.hasTextareaTarget) return
+    if (this.textareaTarget.value.trim() !== '') return
+
+    event.preventDefault()
+
+    const lastOwn = this._findLastOwnMessage()
+    if (!lastOwn) return
+
+    const messageId = lastOwn.dataset.messageId
+    const frame = document.getElementById(`message_${messageId}`)
+    if (!frame) return
+
+    // Skip encrypted messages
+    if (lastOwn.dataset.messageContentEncoding === 'e2ee') return
+
+    const channelId = this.hasChannelIdValue ? this.channelIdValue : this.element?.dataset.channelId
+    if (!channelId) return
+
+    frame.src = `/channels/${channelId}/messages/${messageId}/edit`
+  }
+
+  _findLastOwnMessage() {
+    if (!this._currentUsername || !this.hasContainerTarget) return null
+    const ownMessages = this.containerTarget.querySelectorAll(`[data-message-username="${this._currentUsername}"]`)
+    if (ownMessages.length === 0) return null
+    return ownMessages[ownMessages.length - 1]
+  }
+
   autoResize() {
     if (!this.hasTextareaTarget) return
     const ta = this.textareaTarget
@@ -344,9 +424,11 @@ export default class extends Controller {
     if (arg instanceof Event) {
       arg.preventDefault()
       this._scrollToBottom(true)
+      this._setNewMessagesBelow(false)
       return
     }
     this._scrollToBottom(Boolean(arg))
+    this._setNewMessagesBelow(false)
   }
 
   updateHeaderShadow() {
@@ -362,6 +444,15 @@ export default class extends Controller {
     this.scrollButtonTarget.classList.toggle("hidden", nearBottom)
     this.scrollButtonTarget.classList.toggle("inline-flex", !nearBottom)
     this.autoscrollValue = nearBottom
+    if (nearBottom) {
+      this._setNewMessagesBelow(false)
+    }
+  }
+
+  _setNewMessagesBelow(hasNew) {
+    if (!this.hasScrollButtonTarget) return
+    this._newMessagesBelow = hasNew
+    this.scrollButtonTarget.classList.toggle("has-new-messages", hasNew)
   }
 
   showTyping({ username, typing }) {
@@ -375,6 +466,9 @@ export default class extends Controller {
       this._removeTypingIndicator(key)
       return
     }
+
+    this._typingUsers.set(key, username)
+    this._updateHeaderTypingStatus()
 
     let indicator = container.querySelector(`[data-typing-username="${key}"]`)
     if (!indicator) {
@@ -502,6 +596,10 @@ export default class extends Controller {
       clearTimeout(this._typingTimers.get(key))
       this._typingTimers.delete(key)
     }
+    if (this._typingUsers) {
+      this._typingUsers.delete(key)
+      this._updateHeaderTypingStatus()
+    }
     const container = this._typingContainer(false)
     if (!container) return
     const indicator = container.querySelector(`[data-typing-username="${key}"]`)
@@ -512,6 +610,29 @@ export default class extends Controller {
         this._typingContainerEl = null
       }
     }
+  }
+
+  _updateHeaderTypingStatus() {
+    if (!this.hasHeaderTarget) return
+
+    let status = this.headerTarget.querySelector('[data-message-list-header-typing]')
+    const names = Array.from(this._typingUsers?.values() || []).filter(Boolean)
+
+    if (names.length === 0) {
+      status?.remove()
+      return
+    }
+
+    if (!status) {
+      status = document.createElement('span')
+      status.dataset.messageListHeaderTyping = 'true'
+      status.className = 'hidden shrink-0 text-xs font-medium text-amber-700 sm:inline'
+      this.headerTarget.appendChild(status)
+    }
+
+    const visibleNames = names.slice(0, 2).join(', ')
+    const suffix = names.length > 2 ? ` and ${names.length - 2} more are typing` : `${names.length === 1 ? ' is' : ' are'} typing`
+    status.textContent = `${visibleNames}${suffix}`
   }
 
   _handleNewMessageNode(node) {
@@ -541,50 +662,32 @@ export default class extends Controller {
     const isGrouped = bubble.dataset.messageGrouped === 'true'
 
     if (isOwn) {
-      // Own message: align right, blue bubble, hide avatar/name
-      bubble.classList.add('flex-row-reverse')
+      // Own message: align right
+      bubble.classList.add('msg-row-self')
 
-      const avatar = bubble.querySelector('.message-avatar')
+      // Hide avatar and spacer
+      const avatar = bubble.querySelector('.msg-avatar')
       if (avatar) avatar.classList.add('hidden')
-
-      // Also hide the spacer for grouped messages
-      const avatarSpacer = bubble.querySelector('.message-avatar-spacer')
+      const avatarSpacer = bubble.querySelector('.msg-avatar-spacer')
       if (avatarSpacer) avatarSpacer.classList.add('hidden')
 
-      const header = bubble.querySelector('.message-header')
+      // Hide name header
+      const header = bubble.querySelector('.msg-header')
       if (header) header.classList.add('hidden')
 
-      const content = bubble.querySelector('.message-content')
-      if (content) {
-        content.classList.remove('items-start')
-        content.classList.add('items-end')
+      // Right-align the body content
+      const body = bubble.querySelector('.msg-body')
+      if (body) body.classList.add('msg-body-self')
+
+      // Style the bubble
+      const msgBubble = bubble.querySelector('.msg-bubble')
+      if (msgBubble) {
+        msgBubble.classList.add('msg-bubble-self')
+        msgBubble.style.removeProperty('border-radius')
       }
 
-      const text = bubble.querySelector('.message-text')
-      if (text) {
-        text.classList.remove('bg-gray-100', 'text-gray-900', 'rounded-bl-md', 'rounded-l-md')
-        text.classList.add('bg-blue-500', 'text-white')
-        // Apply appropriate corner rounding for own messages
-        text.classList.add(isGrouped ? 'rounded-r-md' : 'rounded-br-md')
-        // Style links in own messages
-        const body = text.querySelector('.message-body')
-        if (body) {
-          body.querySelectorAll('a').forEach(a => {
-            a.classList.add('text-blue-100', 'underline')
-          })
-        }
-      }
-
-      const time = bubble.querySelector('.message-time')
-      if (time) {
-        time.classList.remove('ml-1')
-        time.classList.add('mr-1')
-      }
-
-      const attachments = bubble.querySelector('.message-attachments')
+      const attachments = bubble.querySelector('.mt-2')
       if (attachments) {
-        attachments.classList.remove('pl-1')
-        attachments.classList.add('pr-1')
         const filesContainer = attachments.querySelector('.flex-wrap')
         if (filesContainer) filesContainer.classList.add('justify-end')
       }
@@ -753,6 +856,8 @@ export default class extends Controller {
   _showSyncNotification(message) {
     const notification = document.createElement('div')
     notification.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg z-50 animate-pulse'
+    notification.setAttribute('role', 'status')
+    notification.setAttribute('aria-live', 'polite')
     notification.textContent = message
     document.body.appendChild(notification)
     setTimeout(() => notification.remove(), 3000)
@@ -764,6 +869,12 @@ export default class extends Controller {
 
     event.preventDefault()
     event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+
+    if (this._e2eeRequiredChannel()) {
+      this._showSyncNotification('Offline queue is disabled for encrypted channels')
+      return
+    }
 
     const channelId = this.element?.dataset.channelId || this.channelIdValue
     const content = this.hasTextareaTarget ? this.textareaTarget.value.trim() : ''
@@ -787,19 +898,20 @@ export default class extends Controller {
   _showPendingMessage(content) {
     if (!this.hasContainerTarget) return
 
+    const username = this._currentUsername || 'you'
     const pendingHtml = `
-      <div class="group message-bubble flex items-end gap-2 px-2 py-1 flex-row-reverse opacity-70" data-pending="true">
-        <div class="message-content flex flex-col items-end max-w-[85%] sm:max-w-[75%] min-w-0">
-          <div class="message-text bg-blue-400 text-white rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm text-[15px] leading-relaxed break-words">
+      <div class="message-bubble group msg-row msg-row-start msg-row-self opacity-75" data-pending="true" data-message-username="${this._escapeHtml(username)}">
+        <div class="msg-body msg-body-self">
+          <div class="msg-bubble msg-bubble-self">
             <div class="message-body">${this._escapeHtml(content)}</div>
           </div>
-          <div class="message-time flex items-center gap-1 mt-0.5 mr-1">
-            <span class="text-[10px] text-gray-400 flex items-center gap-1">
+          <div class="mt-1 flex items-center gap-1 text-[10px] text-stone-400">
+            <span class="inline-flex items-center gap-1">
               <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
               </svg>
-              Sending...
+              Queued
             </span>
           </div>
         </div>
@@ -816,5 +928,10 @@ export default class extends Controller {
     const div = document.createElement('div')
     div.textContent = text
     return div.innerHTML
+  }
+
+  _e2eeRequiredChannel() {
+    const type = this.hasChannelTypeValue ? this.channelTypeValue : this.element?.dataset?.channelType
+    return type === 'private' || type === 'dm'
   }
 }

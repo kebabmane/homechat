@@ -2,12 +2,12 @@ require "test_helper"
 
 class MessagingFlowTest < ActionDispatch::IntegrationTest
   test "user can sign in, join public channel, and send a message" do
-    user = create_user(username: "flowuser", password: "secret")
+    user = create_user(username: "flowuser", password: "password123")
     owner = create_user(username: "flowowner")
     channel = Channel.create!(name: "flow", created_by: owner, channel_type: "public")
 
     # Sign in
-    sign_in_as(user, password: "secret")
+    sign_in_as(user, password: "password123")
 
     # Visit channel and post a message
     get channel_path(channel)
@@ -20,4 +20,3 @@ class MessagingFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 end
-

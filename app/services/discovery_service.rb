@@ -1,8 +1,8 @@
-require 'dnssd'
+require "dnssd"
 
 class DiscoveryService
-  SERVICE_TYPE = '_homechat._tcp.'
-  SERVICE_DOMAIN = 'local.'
+  SERVICE_TYPE = "_homechat._tcp."
+  SERVICE_DOMAIN = "local."
 
   attr_reader :server_name, :port, :txt_record
 
@@ -28,7 +28,7 @@ class DiscoveryService
       @running = true
       Rails.logger.info "HomeChat discovery service started: #{@server_name} on port #{@port}"
     rescue => e
-      Rails.logger.error "Failed to start discovery service: #{e.message}"
+      Rails.logger.error "Failed to start discovery service: #{e.class}"
       raise
     end
   end
@@ -49,7 +49,7 @@ class DiscoveryService
       @running = false
       Rails.logger.info "HomeChat discovery service stopped"
     rescue => e
-      Rails.logger.error "Error stopping discovery service: #{e.message}"
+      Rails.logger.error "Error stopping discovery service: #{e.class}"
       # Force cleanup even if there's an error
       @service = nil
       @running = false
@@ -79,10 +79,10 @@ class DiscoveryService
 
   def build_txt_record
     DNSSD::TextRecord.new(
-      'version' => '1.0',
-      'platform' => 'rails',
-      'features' => 'chat,api,webhooks',
-      'secure' => Rails.env.production? ? 'true' : 'false'
+      "version" => "1.0",
+      "platform" => "rails",
+      "features" => "chat,api,webhooks",
+      "secure" => Rails.env.production? ? "true" : "false"
     )
   end
 end

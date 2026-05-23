@@ -1,0 +1,43 @@
+name: iOS UI Smoke (Non-blocking)
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  ios_ui_smoke:
+    name: HomeChat iOS UI Smoke
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout iOS repo
+        uses: actions/checkout@v4
+        with:
+          repository: kebabmane/homechat-ios
+          path: homechat-ios
+          token: ${{ secrets.CROSS_REPO_PAT || github.token }}
+
+      - name: Run HomeChat iOS UI tests (non-blocking)
+        working-directory: homechat-ios
+        continue-on-error: true
+        run: |
+          mkdir -p TestResults
+          xcodebuild \
+            -project HomeChatIOS.xcodeproj \
+            -scheme HomeChatIOS \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+            test \
+            -only-testing:HomeChatIOSUITests \
+            -resultBundlePath TestResults/HomeChatIOSUI.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Upload iOS UI test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ui-smoke-xcresult
+          path: homechat-ios/TestResults/HomeChatIOSUI.xcresult
+          if-no-files-found: ignore
