@@ -111,9 +111,6 @@ jobs:
       - name: Prepare database
         run: bin/rails db:prepare
 
-      - name: Run tests
-        run: bin/rails test
-
       - name: Run tests with coverage
         run: COVERAGE=1 bin/rails test
         
