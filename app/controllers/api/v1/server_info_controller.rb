@@ -16,7 +16,7 @@ class Api::V1::ServerInfoController < Api::V1::BaseController
       websocket_path: config.websocket_path,
       ha_ingress: config.home_assistant_mode?,
       nabu_casa_url: config.nabu_casa_url,
-      push_enabled: Setting.fcm_configured?,
+      push_enabled: FcmNotificationService.fcm_configured?,
       api_version: "1.0.0",
       min_client_version: "1.0.0",
       e2ee_enabled: true,

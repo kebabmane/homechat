@@ -11,6 +11,8 @@
 #
 # Optional environment variables:
 #   - API_TOKEN_PEPPER: Additional security for API tokens
+#   - FCM_PROJECT_ID: Firebase project ID for push notifications
+#   - FCM_SERVICE_ACCOUNT_JSON: Firebase service account JSON for FCM HTTP v1
 #
 # This compose file publishes plain HTTP on localhost/LAN. Put it behind a TLS
 # reverse proxy for internet-facing use, or switch RAILS_ALLOW_INSECURE_HTTP off
@@ -42,6 +44,9 @@ services:
       - DISCOVERY_MODE=${DISCOVERY_MODE:-cloud}
       # Optional: API token security
       - API_TOKEN_PEPPER=${API_TOKEN_PEPPER:-}
+      # Optional: Firebase Cloud Messaging push notifications
+      - FCM_PROJECT_ID=${FCM_PROJECT_ID:-}
+      - FCM_SERVICE_ACCOUNT_JSON=${FCM_SERVICE_ACCOUNT_JSON:-}
       # Optional: Enable structured logging
       - LOGRAGE_ENABLED=true
     restart: unless-stopped

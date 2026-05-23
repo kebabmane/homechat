@@ -9,7 +9,7 @@ class Api::V1::HealthController < Api::V1::BaseController
       api_version: "1.0.0",
       min_client_version: "1.0.0",
       service: "HomeChat",
-      push_enabled: Setting.fcm_configured?
+      push_enabled: FcmNotificationService.fcm_configured?
     }
   end
 end
