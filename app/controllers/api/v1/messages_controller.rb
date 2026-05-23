@@ -461,11 +461,14 @@ class Api::V1::MessagesController < Api::V1::BaseController
   private
 
   def validate_channel_write(channel, payload, allow_files:)
-    if E2eePolicy.required_for_channel?(channel) && current_api_token&.bot_token?
+    return nil unless E2eePolicy.required_for_channel?(channel)
+
+    if current_api_token&.bot_token?
       return E2eePolicy.bot_forbidden_error
     end
 
-    E2eePolicy.validate_enforced_write(channel:, payload:, request:, allow_files:)
+    E2eePolicy.validate_enforced_write(channel:, payload:, request:, allow_files:) ||
+      E2eePolicy.validate_sender_device(user: current_api_user, payload:, request:)
   end
 
   PERMITTED_MESSAGE_FIELDS = %i[

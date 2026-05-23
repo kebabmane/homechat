@@ -8,5 +8,6 @@ class ChannelKeyShare < ApplicationRecord
   validates :sender_key_fingerprint, presence: true
   validates :encrypted_channel_key, presence: true
   validates :signature, presence: true
+  validates :key_epoch, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :recipient_user_id, uniqueness: { scope: [ :channel_id, :recipient_device_id ] }
 end

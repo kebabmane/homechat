@@ -88,6 +88,15 @@ cd /Users/rhysevans/Projects/homeChat/homechat
 
 Check which mobile clients consume the changed fields or endpoints.
 
+### E2EE contract notes
+
+E2EE request/response schemas must stay aligned across web, iOS, Android, and macOS:
+
+- Device keys are raw 32-byte Base64 public keys: X25519 for encryption and Ed25519 for signing.
+- Key-share responses include `key_epoch`, `recipient_key_fingerprint`, sender device identity, and signature metadata.
+- Encrypted private/DM messages carry encrypted content, content HMAC, sender device id, sender key fingerprint, and E2EE version.
+- Bots, webhooks, and Home Assistant integrations are not E2EE clients unless their contracts explicitly add device-key publication, key-share handling, local encryption, and signed sender metadata.
+
 ### 2. Update the spec first
 
 Always edit `api-contracts/openapi.yaml` **before** modifying controllers (or in the same PR). This makes the contract change visible to reviewers.

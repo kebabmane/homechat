@@ -58,6 +58,9 @@ gem "rack-attack"
 gem "rotp"
 gem "rqrcode"
 
+# Verify Ed25519 signatures used by mobile E2EE device/key-share envelopes.
+gem "ed25519"
+
 # Structured JSON logging for production
 gem "lograge"
 

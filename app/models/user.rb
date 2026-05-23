@@ -7,6 +7,9 @@ class User < ApplicationRecord
   has_secure_password
   has_one_attached :avatar
 
+  encrypts :otp_secret
+  encrypts :fcm_token, deterministic: true, downcase: false, ignore_case: false
+
   validates :username, presence: true, uniqueness: true, length: { minimum: 3, maximum: 50 }
   validates :password, length: { minimum: 8 }, if: -> { password.present? }
   validates :role, inclusion: { in: %w[user admin] }

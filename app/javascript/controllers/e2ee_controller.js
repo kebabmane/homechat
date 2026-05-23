@@ -1,9 +1,16 @@
 import { Controller } from "@hotwired/stimulus"
 
-const DEVICE_BUNDLE_KEY = "homechat_e2ee_device_bundle_v1"
-const TOFU_PINS_KEY = "homechat_e2ee_tofu_pins_v1"
-const CHANNEL_KEY_PREFIX = "homechat_e2ee_channel_key_"
+const LEGACY_DEVICE_BUNDLE_KEY = "homechat_e2ee_device_bundle_v1"
+const DEVICE_BUNDLE_KEY = "homechat_e2ee_device_bundle_v2"
+const TOFU_PINS_KEY = "homechat_e2ee_tofu_pins_v2"
+const LEGACY_CHANNEL_KEY_PREFIX = "homechat_e2ee_channel_key_"
+const CHANNEL_KEY_PREFIX = "homechat_e2ee_channel_key_v2_"
+const KEY_DB_NAME = "homechat_e2ee_key_store_v2"
+const KEY_DB_VERSION = 1
+const KEY_STORE_NAME = "keys"
 const E2EE_VERSION = "1"
+const KEY_SHARE_PREFIX = "homechat-key-share-v2"
+const KEY_SHARE_WRAP_SALT = "homechat-e2ee-channel-key"
 const PLACEHOLDER = "[Encrypted message]"
 
 export default class extends Controller {
@@ -20,8 +27,10 @@ export default class extends Controller {
     this._submitting = false
     this._blockedFingerprints = new Set()
     this._memberKeyMap = new Map()
+    this._keyEpoch = 0
 
     try {
+      this._removeLegacyKeyMaterial()
       await this._loadOrCreateDeviceBundle()
       await this._publishKeyBundle()
       await this._refreshMemberKeys()
@@ -100,84 +109,64 @@ export default class extends Controller {
   }
 
   async _loadOrCreateDeviceBundle() {
-    const existing = localStorage.getItem(DEVICE_BUNDLE_KEY)
+    localStorage.removeItem(DEVICE_BUNDLE_KEY)
+
+    const existing = await this._idbGet(DEVICE_BUNDLE_KEY)
     if (existing) {
-      const parsed = JSON.parse(existing)
-      this._deviceBundle = await this._importDeviceBundle(parsed)
-      return
+      try {
+        this._deviceBundle = await this._importDeviceBundle(existing)
+        return
+      } catch (error) {
+        console.warn("Stored E2EE device bundle is invalid; generating a new device key.", error)
+        await this._idbDelete(DEVICE_BUNDLE_KEY)
+      }
     }
 
-    const encryptionKeys = await crypto.subtle.generateKey(
-      { name: "ECDH", namedCurve: "P-256" },
-      true,
-      ["deriveBits"]
-    )
+    const encryptionKeys = await this._generateKeyPair("X25519", ["deriveBits"])
+    const signingKeys = await this._generateKeyPair("Ed25519", ["sign", "verify"])
 
-    const signingKeys = await crypto.subtle.generateKey(
-      { name: "ECDSA", namedCurve: "P-256" },
-      true,
-      ["sign", "verify"]
-    )
+    const encryptionPublicKey = this._bytesToBase64(new Uint8Array(await crypto.subtle.exportKey("raw", encryptionKeys.publicKey)))
+    const signingPublicKey = this._bytesToBase64(new Uint8Array(await crypto.subtle.exportKey("raw", signingKeys.publicKey)))
 
-    const encryptionPrivateJwk = await crypto.subtle.exportKey("jwk", encryptionKeys.privateKey)
-    const encryptionPublicJwk = await crypto.subtle.exportKey("jwk", encryptionKeys.publicKey)
-    const signingPrivateJwk = await crypto.subtle.exportKey("jwk", signingKeys.privateKey)
-    const signingPublicJwk = await crypto.subtle.exportKey("jwk", signingKeys.publicKey)
+    const fingerprint = await this._fingerprint(encryptionPublicKey, signingPublicKey)
 
-    const fingerprint = await this._fingerprint(encryptionPublicJwk, signingPublicJwk)
-
-    const serializable = {
+    const stored = {
       deviceId: (crypto.randomUUID ? crypto.randomUUID() : `device-${Date.now()}`),
-      encryptionPrivateJwk,
-      encryptionPublicJwk,
-      signingPrivateJwk,
-      signingPublicJwk,
-      keyFingerprint: fingerprint
+      encryptionPublicKey,
+      signingPublicKey,
+      keyFingerprint: fingerprint,
+      encryptionPrivateCryptoKey: encryptionKeys.privateKey,
+      signingPrivateCryptoKey: signingKeys.privateKey
     }
 
-    localStorage.setItem(DEVICE_BUNDLE_KEY, JSON.stringify(serializable))
-    this._deviceBundle = await this._importDeviceBundle(serializable)
+    await this._idbSet(DEVICE_BUNDLE_KEY, stored)
+    this._deviceBundle = await this._importDeviceBundle(stored)
   }
 
   async _importDeviceBundle(serialized) {
-    const encryptionPrivateKey = await crypto.subtle.importKey(
-      "jwk",
-      serialized.encryptionPrivateJwk,
-      { name: "ECDH", namedCurve: "P-256" },
-      true,
-      ["deriveBits"]
-    )
+    if (!serialized?.deviceId || !serialized?.encryptionPublicKey || !serialized?.signingPublicKey) {
+      throw new Error("Stored E2EE device bundle metadata is incomplete")
+    }
 
-    const encryptionPublicKey = await crypto.subtle.importKey(
-      "jwk",
-      serialized.encryptionPublicJwk,
-      { name: "ECDH", namedCurve: "P-256" },
-      true,
-      []
-    )
+    const encryptionPrivateCryptoKey = serialized.encryptionPrivateCryptoKey
+    const signingPrivateCryptoKey = serialized.signingPrivateCryptoKey
+    if (!(encryptionPrivateCryptoKey instanceof CryptoKey) || !(signingPrivateCryptoKey instanceof CryptoKey)) {
+      throw new Error("Stored E2EE private keys are not non-extractable CryptoKeys")
+    }
 
-    const signingPrivateKey = await crypto.subtle.importKey(
-      "jwk",
-      serialized.signingPrivateJwk,
-      { name: "ECDSA", namedCurve: "P-256" },
-      true,
-      ["sign"]
-    )
-
-    const signingPublicKey = await crypto.subtle.importKey(
-      "jwk",
-      serialized.signingPublicJwk,
-      { name: "ECDSA", namedCurve: "P-256" },
-      true,
-      ["verify"]
-    )
+    const encryptionPublicCryptoKey = await this._importX25519Public(serialized.encryptionPublicKey)
+    const signingPublicCryptoKey = await this._importEd25519Public(serialized.signingPublicKey, ["verify"])
+    const fingerprint = await this._fingerprint(serialized.encryptionPublicKey, serialized.signingPublicKey)
 
     return {
-      ...serialized,
-      encryptionPrivateKey,
-      encryptionPublicKey,
-      signingPrivateKey,
-      signingPublicKey
+      deviceId: serialized.deviceId,
+      encryptionPublicKey: serialized.encryptionPublicKey,
+      signingPublicKey: serialized.signingPublicKey,
+      keyFingerprint: fingerprint,
+      encryptionPrivateCryptoKey,
+      encryptionPublicCryptoKey,
+      signingPrivateCryptoKey,
+      signingPublicCryptoKey
     }
   }
 
@@ -186,8 +175,8 @@ export default class extends Controller {
       method: "PUT",
       body: JSON.stringify({
         device_id: this._deviceBundle.deviceId,
-        encryption_public_key: JSON.stringify(this._deviceBundle.encryptionPublicJwk),
-        signing_public_key: JSON.stringify(this._deviceBundle.signingPublicJwk),
+        encryption_public_key: this._deviceBundle.encryptionPublicKey,
+        signing_public_key: this._deviceBundle.signingPublicKey,
         key_fingerprint: this._deviceBundle.keyFingerprint,
         key_version: E2EE_VERSION
       })
@@ -199,20 +188,26 @@ export default class extends Controller {
       method: "GET"
     })
 
+    this._keyEpoch = Number.isInteger(result.key_epoch) ? result.key_epoch : 0
+    this._memberKeyMap.clear()
+
     const pins = this._loadPins()
     const members = Array.isArray(result.members) ? result.members : []
 
-    members.forEach((member) => {
+    for (const member of members) {
+      if (!member.device_id || !member.encryption_public_key || !member.signing_public_key) continue
+
+      const fingerprint = member.key_fingerprint || await this._fingerprint(member.encryption_public_key, member.signing_public_key)
       const pinKey = `${member.user_id}:${member.device_id}`
       const existingFingerprint = pins[pinKey]
       if (!existingFingerprint) {
-        pins[pinKey] = member.key_fingerprint
-      } else if (existingFingerprint !== member.key_fingerprint) {
-        this._blockedFingerprints.add(member.key_fingerprint)
+        pins[pinKey] = fingerprint
+      } else if (existingFingerprint !== fingerprint) {
+        this._blockedFingerprints.add(fingerprint)
       }
 
-      this._memberKeyMap.set(pinKey, member)
-    })
+      this._memberKeyMap.set(pinKey, { ...member, key_fingerprint: fingerprint })
+    }
 
     localStorage.setItem(TOFU_PINS_KEY, JSON.stringify(pins))
   }
@@ -220,9 +215,9 @@ export default class extends Controller {
   async _ensureChannelKey() {
     if (this._channelKey) return
 
-    const stored = localStorage.getItem(this._channelStorageKey())
+    const stored = await this._idbGet(this._channelStorageKey())
     if (stored) {
-      const raw = this._base64ToBytes(stored)
+      const raw = this._bytesFromStoredValue(stored)
       this._channelKey = await crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"])
       this._channelKeyRaw = raw
       return
@@ -234,41 +229,49 @@ export default class extends Controller {
       if (decryptedRaw) {
         this._channelKeyRaw = decryptedRaw
         this._channelKey = await crypto.subtle.importKey("raw", decryptedRaw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"])
-        localStorage.setItem(this._channelStorageKey(), this._bytesToBase64(decryptedRaw))
+        await this._idbSet(this._channelStorageKey(), decryptedRaw)
         return
       }
     }
 
     this._channelKeyRaw = crypto.getRandomValues(new Uint8Array(32))
     this._channelKey = await crypto.subtle.importKey("raw", this._channelKeyRaw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"])
-    localStorage.setItem(this._channelStorageKey(), this._bytesToBase64(this._channelKeyRaw))
+    await this._idbSet(this._channelStorageKey(), this._channelKeyRaw)
     await this._shareChannelKeyWithMembers()
   }
 
   async _shareChannelKeyWithMembers() {
     const shares = []
+    const keyEpoch = Number.isInteger(this._keyEpoch) ? this._keyEpoch : 0
 
     for (const member of this._memberKeyMap.values()) {
       if (member.user_id === this.currentUserIdValue && member.device_id === this._deviceBundle.deviceId) {
         continue
       }
 
+      const recipientFingerprint = member.key_fingerprint || await this._fingerprint(member.encryption_public_key, member.signing_public_key)
       const encrypted_channel_key = await this._encryptForRecipient(member.encryption_public_key, this._channelKeyRaw)
-      const signaturePayload = JSON.stringify({
-        channel_id: this.channelIdValue,
-        recipient_user_id: member.user_id,
-        recipient_device_id: member.device_id,
-        encrypted_channel_key
+      const signaturePayload = this._keySharePayload({
+        keyEpoch,
+        recipientUserId: member.user_id,
+        recipientDeviceId: member.device_id,
+        recipientKeyFingerprint: recipientFingerprint,
+        encryptedChannelKey: encrypted_channel_key,
+        senderDeviceId: this._deviceBundle.deviceId,
+        senderKeyFingerprint: this._deviceBundle.keyFingerprint,
+        keyVersion: E2EE_VERSION
       })
       const signature = await this._sign(signaturePayload)
 
       shares.push({
         recipient_user_id: member.user_id,
         recipient_device_id: member.device_id,
+        recipient_key_fingerprint: recipientFingerprint,
         encrypted_channel_key,
         sender_device_id: this._deviceBundle.deviceId,
         sender_key_fingerprint: this._deviceBundle.keyFingerprint,
         signature,
+        key_epoch: keyEpoch,
         key_version: E2EE_VERSION
       })
     }
@@ -292,10 +295,32 @@ export default class extends Controller {
   }
 
   async _decryptChannelShare(share) {
-    const senderKey = this._memberKeyMap.get(`${share.sender_user_id}:${share.sender_device_id}`)
-    if (!senderKey) return null
+    if (share.recipient_device_id && share.recipient_device_id !== this._deviceBundle.deviceId) return null
+    if (share.recipient_key_fingerprint && share.recipient_key_fingerprint !== this._deviceBundle.keyFingerprint) return null
 
-    return this._decryptFromSender(senderKey.encryption_public_key, share.encrypted_channel_key)
+    const senderKey = this._memberKeyMap.get(`${share.sender_user_id}:${share.sender_device_id}`)
+    if (!senderKey || !senderKey.signing_public_key || !share.signature) return null
+
+    const senderFingerprint = senderKey.key_fingerprint || await this._fingerprint(senderKey.encryption_public_key, senderKey.signing_public_key)
+    if (senderFingerprint !== share.sender_key_fingerprint) return null
+
+    const keyEpoch = Number.isInteger(share.key_epoch) ? share.key_epoch : (Number.isInteger(this._keyEpoch) ? this._keyEpoch : 0)
+    const keyVersion = share.key_version || E2EE_VERSION
+    const payload = this._keySharePayload({
+      keyEpoch,
+      recipientUserId: share.recipient_user_id || this.currentUserIdValue,
+      recipientDeviceId: this._deviceBundle.deviceId,
+      recipientKeyFingerprint: share.recipient_key_fingerprint || this._deviceBundle.keyFingerprint,
+      encryptedChannelKey: share.encrypted_channel_key,
+      senderDeviceId: share.sender_device_id,
+      senderKeyFingerprint: share.sender_key_fingerprint,
+      keyVersion
+    })
+
+    const verified = await this._verifySignature(senderKey.signing_public_key, payload, share.signature)
+    if (!verified) return null
+
+    return this._decryptKeyShare(share.encrypted_channel_key)
   }
 
   async _encryptText(plaintext) {
@@ -364,18 +389,10 @@ export default class extends Controller {
         if (computed !== expectedHmac) throw new Error("HMAC verification failed")
       }
 
-      let iv
-      let ciphertext
-      if (encryptedPayload.trim().startsWith("{")) {
-        const parsed = JSON.parse(encryptedPayload)
-        iv = this._base64ToBytes(parsed.iv)
-        ciphertext = this._base64ToBytes(parsed.ciphertext)
-      } else {
-        const combined = this._base64ToBytes(encryptedPayload)
-        if (combined.length <= 12) throw new Error("Encrypted payload too short")
-        iv = combined.slice(0, 12)
-        ciphertext = combined.slice(12)
-      }
+      const combined = this._base64ToBytes(encryptedPayload)
+      if (combined.length <= 12) throw new Error("Encrypted payload too short")
+      const iv = combined.slice(0, 12)
+      const ciphertext = combined.slice(12)
       const plaintextBytes = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, this._channelKey, ciphertext)
       contentNode.textContent = new TextDecoder().decode(plaintextBytes)
     } catch (error) {
@@ -386,70 +403,110 @@ export default class extends Controller {
     node.dataset.e2eeDecrypted = "true"
   }
 
-  async _encryptForRecipient(recipientPublicKeyJson, rawChannelKey) {
-    const recipientPublicJwk = JSON.parse(recipientPublicKeyJson)
-    const recipientPublicKey = await crypto.subtle.importKey(
-      "jwk",
-      recipientPublicJwk,
-      { name: "ECDH", namedCurve: "P-256" },
-      true,
-      []
-    )
-
-    const sharedBits = await crypto.subtle.deriveBits({ name: "ECDH", public: recipientPublicKey }, this._deviceBundle.encryptionPrivateKey, 256)
-    const wrapKeyMaterial = await crypto.subtle.digest("SHA-256", sharedBits)
-    const wrapKey = await crypto.subtle.importKey("raw", wrapKeyMaterial, { name: "AES-GCM" }, false, ["encrypt"])
+  async _encryptForRecipient(recipientPublicKeyBase64, rawChannelKey) {
+    const recipientPublicKey = await this._importX25519Public(recipientPublicKeyBase64)
+    const ephemeralKeys = await this._generateKeyPair("X25519", ["deriveBits"])
+    const ephemeralPublic = new Uint8Array(await crypto.subtle.exportKey("raw", ephemeralKeys.publicKey))
+    const wrapKey = await this._deriveWrapKey(ephemeralKeys.privateKey, recipientPublicKey, ["encrypt"])
 
     const iv = crypto.getRandomValues(new Uint8Array(12))
-    const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, wrapKey, rawChannelKey)
+    const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, wrapKey, rawChannelKey))
+    const combined = new Uint8Array(ephemeralPublic.length + iv.length + ciphertext.length)
+    combined.set(ephemeralPublic, 0)
+    combined.set(iv, ephemeralPublic.length)
+    combined.set(ciphertext, ephemeralPublic.length + iv.length)
 
-    return JSON.stringify({ iv: this._bytesToBase64(iv), ciphertext: this._bytesToBase64(new Uint8Array(ciphertext)) })
+    return this._bytesToBase64(combined)
   }
 
-  async _decryptFromSender(senderPublicKeyJson, encryptedBlob) {
-    const senderPublicJwk = JSON.parse(senderPublicKeyJson)
-    const senderPublicKey = await crypto.subtle.importKey(
-      "jwk",
-      senderPublicJwk,
-      { name: "ECDH", namedCurve: "P-256" },
-      true,
-      []
+  async _decryptKeyShare(encryptedBlob) {
+    const combined = this._base64ToBytes(encryptedBlob)
+    if (combined.length < 32 + 12 + 16) throw new Error("Key share payload too short")
+
+    const ephemeralPublicBytes = combined.slice(0, 32)
+    const iv = combined.slice(32, 44)
+    const ciphertext = combined.slice(44)
+    const ephemeralPublicKey = await this._importX25519Public(this._bytesToBase64(ephemeralPublicBytes))
+    const wrapKey = await this._deriveWrapKey(this._deviceBundle.encryptionPrivateCryptoKey, ephemeralPublicKey, ["decrypt"])
+    return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv }, wrapKey, ciphertext))
+  }
+
+  async _deriveWrapKey(privateKey, publicKey, usages) {
+    const sharedBits = await crypto.subtle.deriveBits({ name: "X25519", public: publicKey }, privateKey, 256)
+    const keyMaterial = await crypto.subtle.importKey("raw", sharedBits, "HKDF", false, ["deriveKey"])
+    return crypto.subtle.deriveKey(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt: new TextEncoder().encode(KEY_SHARE_WRAP_SALT),
+        info: new Uint8Array()
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      usages
     )
-
-    const parsed = JSON.parse(encryptedBlob)
-    const iv = this._base64ToBytes(parsed.iv)
-    const ciphertext = this._base64ToBytes(parsed.ciphertext)
-
-    const sharedBits = await crypto.subtle.deriveBits({ name: "ECDH", public: senderPublicKey }, this._deviceBundle.encryptionPrivateKey, 256)
-    const wrapKeyMaterial = await crypto.subtle.digest("SHA-256", sharedBits)
-    const wrapKey = await crypto.subtle.importKey("raw", wrapKeyMaterial, { name: "AES-GCM" }, false, ["decrypt"])
-    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, wrapKey, ciphertext)
-
-    return new Uint8Array(decrypted)
   }
 
   async _sign(payload) {
     const signature = await crypto.subtle.sign(
-      { name: "ECDSA", hash: "SHA-256" },
-      this._deviceBundle.signingPrivateKey,
+      { name: "Ed25519" },
+      this._deviceBundle.signingPrivateCryptoKey,
       new TextEncoder().encode(payload)
     )
 
     return this._bytesToBase64(new Uint8Array(signature))
   }
 
-  async _fingerprint(encryptionPublicJwk, signingPublicJwk) {
-    const canonical = `${this._stableJson(encryptionPublicJwk)}|${this._stableJson(signingPublicJwk)}`
+  async _verifySignature(signingPublicKeyBase64, payload, signatureBase64) {
+    const publicKey = await this._importEd25519Public(signingPublicKeyBase64, ["verify"])
+    return crypto.subtle.verify(
+      { name: "Ed25519" },
+      publicKey,
+      this._base64ToBytes(signatureBase64),
+      new TextEncoder().encode(payload)
+    )
+  }
+
+  async _fingerprint(encryptionPublicKeyBase64, signingPublicKeyBase64) {
+    const canonical = `${encryptionPublicKeyBase64}|${signingPublicKeyBase64}`
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical))
     return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("")
   }
 
-  _stableJson(value) {
-    if (Array.isArray(value)) return `[${value.map((v) => this._stableJson(v)).join(",")}]`
-    if (value && typeof value === "object") {
-      return `{${Object.keys(value).sort().map((k) => `${JSON.stringify(k)}:${this._stableJson(value[k])}`).join(",")}}`
-    }
-    return JSON.stringify(value)
+  _keySharePayload({ keyEpoch, recipientUserId, recipientDeviceId, recipientKeyFingerprint, encryptedChannelKey, senderDeviceId, senderKeyFingerprint, keyVersion }) {
+    return [
+      KEY_SHARE_PREFIX,
+      this.channelIdValue,
+      keyEpoch,
+      recipientUserId,
+      recipientDeviceId,
+      recipientKeyFingerprint,
+      encryptedChannelKey,
+      senderDeviceId,
+      senderKeyFingerprint,
+      keyVersion
+    ].map((value) => value?.toString() || "").join(":")
+  }
+
+  async _generateKeyPair(name, usages) {
+    return crypto.subtle.generateKey({ name }, false, usages)
+  }
+
+  async _importX25519Private(privateKeyBase64) {
+    return crypto.subtle.importKey("pkcs8", this._base64ToBytes(privateKeyBase64), { name: "X25519" }, true, ["deriveBits"])
+  }
+
+  async _importX25519Public(publicKeyBase64) {
+    return crypto.subtle.importKey("raw", this._base64ToBytes(publicKeyBase64), { name: "X25519" }, true, [])
+  }
+
+  async _importEd25519Private(privateKeyBase64) {
+    return crypto.subtle.importKey("pkcs8", this._base64ToBytes(privateKeyBase64), { name: "Ed25519" }, true, ["sign"])
+  }
+
+  async _importEd25519Public(publicKeyBase64, usages = []) {
+    return crypto.subtle.importKey("raw", this._base64ToBytes(publicKeyBase64), { name: "Ed25519" }, true, usages)
   }
 
   _loadPins() {
@@ -492,6 +549,78 @@ export default class extends Controller {
 
   _required() {
     return this.channelTypeValue === "private" || this.channelTypeValue === "dm"
+  }
+
+  _removeLegacyKeyMaterial() {
+    localStorage.removeItem(LEGACY_DEVICE_BUNDLE_KEY)
+    localStorage.removeItem(DEVICE_BUNDLE_KEY)
+    const keys = []
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i)
+      if (key && (key.startsWith(LEGACY_CHANNEL_KEY_PREFIX) || key.startsWith(CHANNEL_KEY_PREFIX))) {
+        keys.push(key)
+      }
+    }
+    keys.forEach((key) => localStorage.removeItem(key))
+  }
+
+  async _openKeyDatabase() {
+    if (this._keyDbPromise) return this._keyDbPromise
+    if (!window.indexedDB) throw new Error("IndexedDB is required for E2EE key storage")
+
+    this._keyDbPromise = new Promise((resolve, reject) => {
+      const request = window.indexedDB.open(KEY_DB_NAME, KEY_DB_VERSION)
+      request.onupgradeneeded = () => {
+        const db = request.result
+        if (!db.objectStoreNames.contains(KEY_STORE_NAME)) {
+          db.createObjectStore(KEY_STORE_NAME)
+        }
+      }
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error || new Error("Could not open E2EE key store"))
+      request.onblocked = () => reject(new Error("E2EE key store upgrade was blocked"))
+    })
+
+    return this._keyDbPromise
+  }
+
+  async _idbGet(key) {
+    const db = await this._openKeyDatabase()
+    return new Promise((resolve, reject) => {
+      const request = db.transaction(KEY_STORE_NAME, "readonly").objectStore(KEY_STORE_NAME).get(key)
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error || new Error("Could not read E2EE key store"))
+    })
+  }
+
+  async _idbSet(key, value) {
+    const db = await this._openKeyDatabase()
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(KEY_STORE_NAME, "readwrite")
+      transaction.objectStore(KEY_STORE_NAME).put(value, key)
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error || new Error("Could not write E2EE key store"))
+      transaction.onabort = () => reject(transaction.error || new Error("E2EE key store write was aborted"))
+    })
+  }
+
+  async _idbDelete(key) {
+    const db = await this._openKeyDatabase()
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(KEY_STORE_NAME, "readwrite")
+      transaction.objectStore(KEY_STORE_NAME).delete(key)
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error || new Error("Could not delete E2EE key store entry"))
+      transaction.onabort = () => reject(transaction.error || new Error("E2EE key store delete was aborted"))
+    })
+  }
+
+  _bytesFromStoredValue(value) {
+    if (value instanceof Uint8Array) return value
+    if (value instanceof ArrayBuffer) return new Uint8Array(value)
+    if (Array.isArray(value)) return new Uint8Array(value)
+    if (typeof value === "string") return this._base64ToBytes(value)
+    throw new Error("Stored E2EE key material has an invalid format")
   }
 
   _bytesToBase64(bytes) {

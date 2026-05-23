@@ -4,8 +4,10 @@ class Api::V1::KeysController < Api::V1::BaseController
   class KeyShareValidationError < StandardError; end
 
   before_action :require_non_bot_token
+  before_action :verify_session_csrf_for_e2ee_keys, unless: -> { current_api_token.present? || request.get? || request.head? }
 
-  # Allow session-authenticated browser requests for web E2EE flows.
+  # Browser E2EE flows use same-origin session auth. Mutating session-authenticated
+  # key requests must still prove Rails CSRF authenticity.
   def allow_session_api_auth?
     true
   end
@@ -14,13 +16,13 @@ class Api::V1::KeysController < Api::V1::BaseController
   # Upsert the current user's device-scoped E2EE key bundle.
   def publish_e2ee_key
     device_id = E2eePolicy.device_id_from(request:, params: params)
-    encryption_public_key = params[:encryption_public_key].presence || params[:public_key]
-    signing_public_key = params[:signing_public_key].presence || params[:public_key]
-    key_fingerprint = params[:key_fingerprint].presence || fingerprint_for(encryption_public_key, signing_public_key)
+    encryption_public_key = E2eePolicy.canonical_public_key(params[:encryption_public_key].presence || params[:public_key])
+    signing_public_key = E2eePolicy.canonical_public_key(params[:signing_public_key].presence || params[:public_key])
+    key_fingerprint = E2eePolicy.bundle_fingerprint(encryption_public_key, signing_public_key)
     key_version = params[:key_version].presence || "1"
 
     if !E2eePolicy.valid_device_id?(device_id) || encryption_public_key.blank? || signing_public_key.blank? || key_fingerprint.blank?
-      return render json: { success: false, error: "device_id, encryption_public_key, signing_public_key and key_fingerprint are required" }, status: :unprocessable_entity
+      return render json: { success: false, error: "device_id, raw 32-byte X25519 encryption_public_key, and raw 32-byte Ed25519 signing_public_key are required" }, status: :unprocessable_entity
     end
 
     key_record = UserE2eeKey.find_or_initialize_by(user_id: current_api_user.id, device_id: device_id)
@@ -52,7 +54,9 @@ class Api::V1::KeysController < Api::V1::BaseController
   # GET /api/v1/users/:id/e2ee_key
   # Retrieve active E2EE device keys for a given user.
   def get_user_e2ee_key
-    key_records = UserE2eeKey.where(user_id: params[:id], revoked_at: nil).order(updated_at: :desc)
+    key_records = active_usable_device_keys(
+      UserE2eeKey.where(user_id: params[:id], revoked_at: nil).order(updated_at: :desc)
+    )
 
     if key_records.blank?
       return render json: { success: false, error: "E2EE key not found for this user" }, status: :not_found
@@ -77,11 +81,13 @@ class Api::V1::KeysController < Api::V1::BaseController
       return render json: { success: false, error: "Forbidden - You do not have access to this channel" }, status: :forbidden
     end
 
-    member_keys = UserE2eeKey
-                    .joins(:user)
-                    .joins("INNER JOIN channel_memberships ON channel_memberships.user_id = user_e2ee_keys.user_id AND channel_memberships.channel_id = #{channel.id.to_i}")
-                    .where(revoked_at: nil)
-                    .order("users.username ASC, user_e2ee_keys.updated_at DESC")
+    member_keys = active_usable_device_keys(
+      UserE2eeKey
+        .joins(:user)
+        .joins("INNER JOIN channel_memberships ON channel_memberships.user_id = user_e2ee_keys.user_id AND channel_memberships.channel_id = #{channel.id.to_i}")
+        .where(revoked_at: nil)
+        .order("users.username ASC, user_e2ee_keys.updated_at DESC")
+    )
 
     members = member_keys.map do |mk|
       {
@@ -100,7 +106,7 @@ class Api::V1::KeysController < Api::V1::BaseController
       }
     end
 
-    render json: { channel_id: channel.id, members: members }, status: :ok
+    render json: { channel_id: channel.id, key_epoch: channel.key_epoch.to_i, members: members }, status: :ok
   end
 
   # POST /api/v1/channels/:id/key_shares
@@ -152,9 +158,14 @@ class Api::V1::KeysController < Api::V1::BaseController
         sender_share_device_id = share[:sender_device_id].presence || sender_device_id
         sender_key_fingerprint = share[:sender_key_fingerprint].presence || sender_key.key_fingerprint
         key_version = share[:key_version].presence || "1"
+        key_epoch = share[:key_epoch].presence&.to_i || channel.key_epoch.to_i
 
         if recipient_user_id.zero? || recipient_device_id.blank? || encrypted_channel_key.blank? || signature.blank?
           raise KeyShareValidationError, "Each share must include recipient_user_id, recipient_device_id, encrypted_channel_key, and signature"
+        end
+
+        unless valid_key_share_ciphertext?(encrypted_channel_key)
+          raise KeyShareValidationError, "encrypted_channel_key must be Base64(ephemeral X25519 public key + AES-GCM sealed 32-byte channel key)"
         end
 
         unless sender_share_device_id == sender_device_id && sender_key_fingerprint == sender_key.key_fingerprint
@@ -168,6 +179,22 @@ class Api::V1::KeysController < Api::V1::BaseController
         recipient_key = UserE2eeKey.find_by(user_id: recipient_user_id, device_id: recipient_device_id, revoked_at: nil)
         unless recipient_key
           raise KeyShareValidationError, "recipient_device_id must belong to an active channel member device key"
+        end
+
+        unless valid_key_share_signature?(
+          channel:,
+          key_epoch:,
+          recipient_user_id:,
+          recipient_device_id:,
+          recipient_key:,
+          encrypted_channel_key:,
+          sender_device_id: sender_share_device_id,
+          sender_key_fingerprint:,
+          key_version:,
+          signature:,
+          sender_key:
+        )
+          raise KeyShareValidationError, "key share signature is invalid"
         end
 
         key_share = ChannelKeyShare.find_or_initialize_by(
@@ -186,7 +213,8 @@ class Api::V1::KeysController < Api::V1::BaseController
           sender_key_fingerprint: sender_key_fingerprint,
           encrypted_channel_key: encrypted_channel_key,
           signature: signature,
-          key_version: key_version
+          key_version: key_version,
+          key_epoch: key_epoch
         )
 
         key_share.save!
@@ -229,18 +257,29 @@ class Api::V1::KeysController < Api::V1::BaseController
       return render json: { success: false, error: "No key share found for this channel/device" }, status: :not_found
     end
 
+    recipient_key = UserE2eeKey.find_by(user_id: current_api_user.id, device_id: recipient_device_id, revoked_at: nil)
+
     render json: {
       encrypted_channel_key: key_share.encrypted_channel_key,
       signature: key_share.signature,
       sender_user_id: key_share.sender_user_id,
       sender_device_id: key_share.sender_device_id,
       sender_key_fingerprint: key_share.sender_key_fingerprint,
+      recipient_user_id: key_share.recipient_user_id,
       recipient_device_id: key_share.recipient_device_id,
-      key_version: key_share.key_version
+      recipient_key_fingerprint: recipient_key&.key_fingerprint,
+      key_version: key_share.key_version,
+      key_epoch: key_share.respond_to?(:key_epoch) ? key_share.key_epoch : channel.key_epoch
     }, status: :ok
   end
 
   private
+
+  def verify_session_csrf_for_e2ee_keys
+    return if verified_request?
+
+    render json: { success: false, error: "Forbidden - CSRF verification failed" }, status: :forbidden
+  end
 
   def serialize_device_key(key_record)
     {
@@ -258,7 +297,40 @@ class Api::V1::KeysController < Api::V1::BaseController
     }
   end
 
-  def fingerprint_for(encryption_public_key, signing_public_key)
-    Digest::SHA256.hexdigest("#{encryption_public_key}|#{signing_public_key}")
+  def active_usable_device_keys(scope)
+    scope.select do |key_record|
+      E2eePolicy.canonical_public_key(key_record.encryption_public_key).present? &&
+        E2eePolicy.canonical_public_key(key_record.signing_public_key).present?
+    end
+  end
+
+  def valid_key_share_signature?(channel:, key_epoch:, recipient_user_id:, recipient_device_id:, recipient_key:, encrypted_channel_key:, sender_device_id:, sender_key_fingerprint:, key_version:, signature:, sender_key:)
+    payloads = [
+      E2eeSignatureVerifier.key_share_payload(
+        channel:,
+        key_epoch:,
+        recipient_user_id:,
+        recipient_device_id:,
+        recipient_key_fingerprint: recipient_key.key_fingerprint,
+        encrypted_channel_key:,
+        sender_device_id:,
+        sender_key_fingerprint:,
+        key_version:
+      )
+    ]
+
+    payloads.any? do |payload|
+      E2eeSignatureVerifier.valid_key_share_signature?(
+        payload:,
+        signature:,
+        signing_public_key: sender_key.signing_public_key
+      )
+    end
+  end
+
+  def valid_key_share_ciphertext?(encrypted_channel_key)
+    Base64.strict_decode64(encrypted_channel_key.to_s).bytesize == 92
+  rescue ArgumentError
+    false
   end
 end

@@ -18,6 +18,7 @@ class ApiToken < ApplicationRecord
   validate :validate_scopes
   validate :validate_expiration, on: :create
 
+  before_validation :assign_default_scopes, on: :create
   before_validation :generate_token, on: :create
   before_validation :hash_token
   before_save :set_token_prefix
@@ -120,16 +121,10 @@ class ApiToken < ApplicationRecord
     expires_at.present? && expires_at <= Time.current
   end
 
-  # Legacy tokens (nil scopes or empty array) get full access for backward compatibility
-  # Tokens with explicit scopes have restricted access
+  # Blank scopes no longer imply full access. Existing blank-scope rows should be
+  # backfilled by migration to explicit scopes before this code is deployed.
   def legacy_full_access?
-    if scopes.blank?
-      Rails.logger.warn "[ApiToken] Token #{id} (#{name.inspect}) is using legacy nil-scope full access. " \
-                        "Run the assign_default_scopes_to_api_tokens migration to assign explicit scopes."
-      true
-    else
-      false
-    end
+    false
   end
 
   # Check if token has a specific scope
@@ -222,7 +217,10 @@ class ApiToken < ApplicationRecord
   end
 
   def validate_scopes
-    return if scopes.blank?
+    if scopes.blank?
+      errors.add(:scopes, "must include at least one explicit scope")
+      return
+    end
 
     scopes.each do |scope|
       next if scope == "*"
@@ -239,6 +237,23 @@ class ApiToken < ApplicationRecord
   def validate_expiration
     return if expires_at.blank?
     errors.add(:expires_at, "must be in the future") if expires_at <= Time.current
+  end
+
+  def assign_default_scopes
+    return if self[:scopes].present?
+
+    self.scopes = default_scopes_for_type
+  end
+
+  def default_scopes_for_type
+    case effective_token_type
+    when "admin"
+      [ "admin:*", *USER_SCOPES ]
+    when "bot"
+      BOT_SCOPES
+    else
+      user&.admin? ? [ "admin:*", *USER_SCOPES ] : USER_SCOPES
+    end
   end
 
   def self.hash_token_string(token)

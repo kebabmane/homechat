@@ -8,6 +8,23 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     @private_channel = Channel.create!(name: "private-channel", channel_type: "private", creator: @user)
     @channel.add_member(@user)
     @private_channel.add_member(@user)
+    @device_id = "device-web-test"
+    @encryption_public_key = raw_key
+    @signing_public_key = raw_key
+    @device_fingerprint = E2eePolicy.bundle_fingerprint(@encryption_public_key, @signing_public_key)
+    UserE2eeKey.create!(
+      user: @user,
+      device_id: @device_id,
+      encryption_public_key: @encryption_public_key,
+      signing_public_key: @signing_public_key,
+      key_fingerprint: @device_fingerprint,
+      key_version: "1",
+      published_at: Time.current
+    )
+  end
+
+  def raw_key
+    Base64.strict_encode64(SecureRandom.random_bytes(32))
   end
 
   test "should require login to create message" do
@@ -40,7 +57,8 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
           encrypted_content: "{\"v\":\"1\",\"iv\":\"abc\",\"ciphertext\":\"def\"}",
           content_hmac: "hmac-private",
           e2ee_version: "1",
-          sender_device_id: "device-web-test"
+          sender_device_id: @device_id,
+          sender_key_fingerprint: @device_fingerprint
         }
       }
     end

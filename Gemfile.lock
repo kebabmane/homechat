@@ -555,6 +555,7 @@ DEPENDENCIES
   capybara
   debug
   dnssd
+  ed25519
   erb_lint
   ffi
   flay

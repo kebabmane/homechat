@@ -16,6 +16,22 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
     @private_channel.add_member(@recipient)
 
     @device_id = "device-#{SecureRandom.hex(6)}"
+    @encryption_public_key = raw_key
+    @signing_public_key = raw_key
+    @device_fingerprint = E2eePolicy.bundle_fingerprint(@encryption_public_key, @signing_public_key)
+    UserE2eeKey.create!(
+      user: @user,
+      device_id: @device_id,
+      encryption_public_key: @encryption_public_key,
+      signing_public_key: @signing_public_key,
+      key_fingerprint: @device_fingerprint,
+      key_version: "1",
+      published_at: Time.current
+    )
+  end
+
+  def raw_key
+    Base64.strict_encode64(SecureRandom.random_bytes(32))
   end
 
   def auth_headers(device: nil)
@@ -64,7 +80,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
         content_encoding: "e2ee",
         encrypted_content: "{\"v\":\"1\",\"iv\":\"abc\",\"ciphertext\":\"def\"}",
         content_hmac: "hmac-123",
-        sender_key_fingerprint: "fp-123"
+        sender_key_fingerprint: @device_fingerprint
       }
     }
 
@@ -104,7 +120,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
                content_encoding: "e2ee",
                encrypted_content: "{\"v\":\"1\",\"iv\":\"abc\",\"ciphertext\":\"def\"}",
                content_hmac: "hmac-456",
-               sender_key_fingerprint: "fp-456"
+               sender_key_fingerprint: @device_fingerprint
              }
            },
            headers: auth_headers(device: @device_id)

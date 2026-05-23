@@ -104,13 +104,22 @@ class ApiTokenTest < ActiveSupport::TestCase
 
   # ===== Scoped Token Tests =====
 
-  test "legacy tokens have full access" do
-    # Legacy tokens have nil scopes (not empty array)
-    token = ApiToken.create!(name: "Legacy Token", user: create_user, scopes: nil)
-    assert token.legacy_full_access?
+  test "blank token scopes are replaced with explicit defaults" do
+    token = ApiToken.create!(name: "Default Scoped Token", user: create_user, scopes: nil)
+    assert_not token.legacy_full_access?
+    assert_equal ApiToken::USER_SCOPES, token.scopes
+    assert token.has_scope?("user:profile")
+    assert_not token.has_scope?("admin:users")
+    assert_not token.has_scope?("anything:at:all")
+  end
+
+  test "blank admin token scopes include admin and user defaults" do
+    admin = create_user(role: "admin")
+    token = ApiToken.create!(name: "Default Admin Scoped Token", user: admin, scopes: nil)
+
+    assert_equal [ "admin:*", *ApiToken::USER_SCOPES ], token.scopes
     assert token.has_scope?("admin:users")
     assert token.has_scope?("user:profile")
-    assert token.has_scope?("anything:at:all")
   end
 
   test "scoped token restricts access" do

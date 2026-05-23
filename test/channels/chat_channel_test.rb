@@ -112,12 +112,15 @@ class ChatChannelTest < ActionCable::Channel::TestCase
     private_channel.add_member(@user)
 
     # Register a device key so the sender identity check passes
+    encryption_public_key = Base64.strict_encode64(SecureRandom.bytes(32))
+    signing_public_key = Base64.strict_encode64(SecureRandom.bytes(32))
+    key_fingerprint = E2eePolicy.bundle_fingerprint(encryption_public_key, signing_public_key)
     UserE2eeKey.create!(
       user: @user,
       device_id: "device-chat-test",
-      encryption_public_key: Base64.strict_encode64(SecureRandom.bytes(32)),
-      signing_public_key: Base64.strict_encode64(SecureRandom.bytes(32)),
-      key_fingerprint: "fingerprint-1"
+      encryption_public_key: encryption_public_key,
+      signing_public_key: signing_public_key,
+      key_fingerprint: key_fingerprint
     )
 
     subscribe channel_id: private_channel.id
@@ -131,7 +134,7 @@ class ChatChannelTest < ActionCable::Channel::TestCase
               content_hmac: "hmac",
               device_id: "device-chat-test",
               e2ee_version: "1",
-              sender_key_fingerprint: "fingerprint-1"
+              sender_key_fingerprint: key_fingerprint
     end
 
     message = Message.last

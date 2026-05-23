@@ -25,5 +25,38 @@ class E2eePrivateChatTest < JsSystemTestCase
     assert_equal E2eePolicy::PLACEHOLDER_CONTENT, message.content
     assert message.encrypted_content.present?
     assert message.content_hmac.present?
+
+    assert_equal [], page.evaluate_script(<<~JS)
+      Object.keys(localStorage).filter((key) =>
+        key === "homechat_e2ee_device_bundle_v2" ||
+        key.startsWith("homechat_e2ee_channel_key_") ||
+        key.startsWith("homechat_e2ee_channel_key_v2_")
+      )
+    JS
+
+    stored_key_state = page.evaluate_async_script(<<~JS)
+      const done = arguments[0];
+      const request = indexedDB.open("homechat_e2ee_key_store_v2", 1);
+      request.onerror = () => done({ error: "open failed" });
+      request.onsuccess = () => {
+        const db = request.result;
+        const getRequest = db
+          .transaction("keys", "readonly")
+          .objectStore("keys")
+          .get("homechat_e2ee_device_bundle_v2");
+        getRequest.onerror = () => done({ error: "read failed" });
+        getRequest.onsuccess = () => {
+          const bundle = getRequest.result;
+          done({
+            encryptionPrivateExtractable: bundle?.encryptionPrivateCryptoKey?.extractable,
+            signingPrivateExtractable: bundle?.signingPrivateCryptoKey?.extractable
+          });
+        };
+      };
+    JS
+
+    assert_nil stored_key_state["error"]
+    assert_equal false, stored_key_state["encryptionPrivateExtractable"]
+    assert_equal false, stored_key_state["signingPrivateExtractable"]
   end
 end

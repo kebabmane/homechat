@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_14_000003) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000002) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -107,6 +107,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_14_000003) do
     t.integer "channel_id", null: false
     t.datetime "created_at", null: false
     t.text "encrypted_channel_key", null: false
+    t.integer "key_epoch", default: 0, null: false
     t.string "key_version", default: "1"
     t.string "recipient_device_id", null: false
     t.integer "recipient_user_id", null: false
@@ -115,6 +116,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_14_000003) do
     t.integer "sender_user_id", null: false
     t.text "signature", null: false
     t.datetime "updated_at", null: false
+    t.index ["channel_id", "key_epoch"], name: "index_channel_key_shares_on_channel_id_and_key_epoch"
     t.index ["channel_id", "recipient_user_id", "recipient_device_id"], name: "index_channel_key_shares_on_channel_user_device", unique: true
   end
 
@@ -146,6 +148,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_14_000003) do
     t.index ["created_by_id"], name: "index_channels_on_created_by_id"
     t.index ["last_message_at"], name: "index_channels_on_last_message_at"
     t.index ["name"], name: "index_channels_on_name", unique: true
+  end
+
+  create_table "encryption_tests", id: :integer, default: nil, force: :cascade do |t|
+    t.text "secret"
   end
 
   create_table "message_receipts", force: :cascade do |t|
@@ -188,6 +194,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_14_000003) do
     t.text "value"
     t.index ["key"], name: "index_settings_on_key", unique: true
   end
+
+# Could not dump table "sqlite_stat1" because of following StandardError
+#   Unknown type '' for column 'idx'
+
 
   create_table "token_channel_assignments", force: :cascade do |t|
     t.integer "api_token_id", null: false

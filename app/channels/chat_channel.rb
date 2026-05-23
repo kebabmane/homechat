@@ -60,14 +60,8 @@ class ChatChannel < ApplicationCable::Channel
         return
       end
 
-      # H1: Validate that the sender_device_id and sender_key_fingerprint match a registered
-      # device for this user. Prevents a compromised server from relaying messages under a
-      # device identity the user doesn't own.
-      sender_device_id = E2eePolicy.device_id_from(params: data) || data["sender_device_id"]
-      sender_fingerprint = data["sender_key_fingerprint"]
-      device = current_user.user_e2ee_keys.find_by(device_id: sender_device_id)
-      unless device && device.key_fingerprint == sender_fingerprint
-        transmit({ type: "error", error: "invalid_sender_device" })
+      if (error = E2eePolicy.validate_sender_device(user: current_user, payload: data))
+        transmit({ type: "error", code: error[:code], message: error[:message] })
         return
       end
     end
