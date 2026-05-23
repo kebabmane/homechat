@@ -123,12 +123,14 @@ The `api-contract-check.yml` workflow runs on PRs that modify:
 
 It validates the spec and runs a smoke-test generation to ensure the spec is parseable.
 
+Controller tests also validate selected live JSON responses against the committed OpenAPI schemas via `test/support/openapi_response_assertions.rb`. Add `assert_openapi_response` coverage whenever changing or adding response shapes.
+
 ## Gaps & TODOs
 
 - [ ] Add RSwag request specs under `homechat/spec/requests/api/v1/` to enable automatic spec generation.
 - [ ] Wire generated Kotlin DTOs into `homechat-android` networking layer.
 - [ ] Wire generated Swift models into `homechat-ios` networking layer.
-- [ ] Add schema validation tests that compare controller responses against the spec.
+- [x] Add schema validation tests that compare controller responses against the spec.
 - [ ] Consider adding `swagger-ui` route for browser-based API exploration.
 
 ## Endpoints Currently Documented
