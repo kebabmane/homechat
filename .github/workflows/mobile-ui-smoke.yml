@@ -20,7 +20,7 @@ jobs:
 
       - name: Checkout iOS repo
         if: ${{ env.CROSS_REPO_PAT != '' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: kebabmane/homechat-ios
           path: homechat-ios
@@ -44,7 +44,7 @@ jobs:
 
       - name: Upload iOS UI test results
         if: ${{ always() && env.CROSS_REPO_PAT != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ios-ui-smoke-xcresult
           path: homechat-ios/TestResults/HomeChatIOSUI.xcresult

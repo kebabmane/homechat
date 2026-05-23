@@ -67,12 +67,6 @@ detectors:
       - current_user
       - logger
       
-  LongMethod:
-    enabled: true
-    max_statements: 10
-    exclude:
-      - "initialize"
-
 # Exclude certain directories and files from analysis      
 exclude_paths:
   - vendor/

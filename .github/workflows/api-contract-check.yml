@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout Rails repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -58,7 +58,7 @@ jobs:
 
     steps:
       - name: Checkout Rails repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: homechat
 
@@ -68,7 +68,7 @@ jobs:
 
       - name: Checkout Android repo
         if: ${{ env.CROSS_REPO_PAT != '' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: kebabmane/homechat-android
           path: homechat-android
@@ -76,7 +76,7 @@ jobs:
 
       - name: Checkout iOS repo
         if: ${{ env.CROSS_REPO_PAT != '' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: kebabmane/homechat-ios
           path: homechat-ios
