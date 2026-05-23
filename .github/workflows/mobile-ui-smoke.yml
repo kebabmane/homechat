@@ -10,16 +10,24 @@ jobs:
     name: HomeChat iOS UI Smoke
     runs-on: macos-latest
     timeout-minutes: 30
+    env:
+      CROSS_REPO_PAT: ${{ secrets.CROSS_REPO_PAT }}
 
     steps:
+      - name: Skip when cross-repo token is unavailable
+        if: ${{ env.CROSS_REPO_PAT == '' }}
+        run: echo "::notice::Skipping iOS UI smoke because CROSS_REPO_PAT is not configured."
+
       - name: Checkout iOS repo
+        if: ${{ env.CROSS_REPO_PAT != '' }}
         uses: actions/checkout@v4
         with:
           repository: kebabmane/homechat-ios
           path: homechat-ios
-          token: ${{ secrets.CROSS_REPO_PAT || github.token }}
+          token: ${{ env.CROSS_REPO_PAT }}
 
       - name: Run HomeChat iOS UI tests (non-blocking)
+        if: ${{ env.CROSS_REPO_PAT != '' }}
         working-directory: homechat-ios
         continue-on-error: true
         run: |
@@ -35,7 +43,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO
 
       - name: Upload iOS UI test results
-        if: always()
+        if: ${{ always() && env.CROSS_REPO_PAT != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: ios-ui-smoke-xcresult
