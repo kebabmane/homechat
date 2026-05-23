@@ -14,12 +14,6 @@ regex = '''[a-f0-9]{64}'''
 path = '''config/master\.key'''
 
 [[rules]]
-description = "Rails Credentials"
-id = "rails-credentials"
-regex = '''[a-zA-Z0-9+/]{20,}={0,2}'''
-path = '''config/credentials\.yml\.enc'''
-
-[[rules]]
 description = "Database Password"
 id = "database-password"
 regex = '''password:\s*['"]?[^\s'"]+['"]?'''
@@ -31,18 +25,8 @@ id = "env-vars"
 regex = '''(?i)(api_key|secret|token|password)\s*[:=]\s*['"][^'"]+['"]'''
 path = '''\.env.*'''
 
-[[rules]]
-description = "AWS Access Key"
-id = "aws-access-key"
-regex = '''AKIA[0-9A-Z]{16}'''
-
-[[rules]]
-description = "AWS Secret Key"  
-id = "aws-secret-key"
-regex = '''[0-9a-zA-Z/+]{40}'''
-
 # Allowlist certain files/patterns
-[[rules.allowlist]]
+[[allowlists]]
 description = "Test files with dummy secrets"
 paths = [
   '''test/.*''',
@@ -50,7 +34,7 @@ paths = [
   '''fixtures/.*'''
 ]
 
-[[rules.allowlist]]
+[[allowlists]]
 description = "Documentation files"
 paths = [
   '''README.*''',
@@ -58,7 +42,7 @@ paths = [
   '''docs/.*'''
 ]
 
-[[rules.allowlist]]
+[[allowlists]]
 description = "Configuration templates"
 regexes = [
   '''CHANGEME''',

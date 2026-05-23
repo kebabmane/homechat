@@ -55,6 +55,9 @@ jobs:
   dockerfile_lint:
     name: Dockerfile Linting
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
 
     steps:
       - name: Checkout code
@@ -93,6 +96,8 @@ jobs:
   secrets_scan:
     name: Secret Detection
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
@@ -101,10 +106,11 @@ jobs:
           fetch-depth: 0  # Fetch all history for all branches
 
       - name: Run gitleaks scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        run: |
+          docker run --rm \
+            -v "${PWD}:/repo" \
+            zricethezav/gitleaks:latest \
+            detect --source=/repo --no-banner --redact
 
   semgrep_scan:
     name: Semgrep Security Scan
