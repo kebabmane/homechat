@@ -11,5 +11,6 @@ class Api::V1::HealthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "1.0.0", json["api_version"]
     assert json.key?("push_enabled")
     assert_nothing_raised { Time.iso8601(json["timestamp"]) }
+    assert_openapi_response "/health"
   end
 end

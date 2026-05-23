@@ -1576,6 +1576,14 @@ components:
   schemas:
     HealthResponse:
       type: object
+      required:
+        - status
+        - timestamp
+        - version
+        - api_version
+        - min_client_version
+        - service
+        - push_enabled
       properties:
         status:
           type: string
@@ -1586,6 +1594,12 @@ components:
         version:
           type: string
           example: "1.0.0"
+        api_version:
+          type: string
+          example: "1.0.0"
+        min_client_version:
+          type: string
+          example: "1.0.0"
         service:
           type: string
           example: HomeChat
@@ -1593,6 +1607,22 @@ components:
           type: boolean
     ServerInfoResponse:
       type: object
+      required:
+        - server_name
+        - version
+        - mode
+        - capabilities
+        - websocket_path
+        - ha_ingress
+        - push_enabled
+        - api_version
+        - min_client_version
+        - e2ee_enabled
+        - e2ee_required_private_dm
+        - min_e2ee_version
+        - e2ee_capabilities
+        - registration_enabled
+        - timestamp
       properties:
         server_name:
           type: string
@@ -1614,6 +1644,12 @@ components:
           nullable: true
         push_enabled:
           type: boolean
+        api_version:
+          type: string
+          example: "1.0.0"
+        min_client_version:
+          type: string
+          example: "1.0.0"
         e2ee_enabled:
           type: boolean
         e2ee_required_private_dm:
@@ -1622,6 +1658,12 @@ components:
           type: string
         e2ee_capabilities:
           type: object
+          required:
+            - channel_scope
+            - legacy_write_blocked
+            - bot_posting_blocked
+            - encrypted_attachments
+            - plaintext_attachments_blocked_in_e2ee
           properties:
             channel_scope:
               type: array
@@ -1630,6 +1672,10 @@ components:
             legacy_write_blocked:
               type: boolean
             bot_posting_blocked:
+              type: boolean
+            encrypted_attachments:
+              type: boolean
+            plaintext_attachments_blocked_in_e2ee:
               type: boolean
         registration_enabled:
           type: boolean

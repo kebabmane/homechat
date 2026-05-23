@@ -16,10 +16,14 @@
   ],
   "security": [
     {
-      "bearerAuth": []
+      "bearerAuth": [
+
+      ]
     },
     {
-      "apiKeyAuth": []
+      "apiKeyAuth": [
+
+      ]
     }
   ],
   "paths": {
@@ -27,7 +31,9 @@
       "get": {
         "summary": "Health check",
         "description": "Returns server health status. No authentication required.",
-        "security": [],
+        "security": [
+
+        ],
         "tags": [
           "Health"
         ],
@@ -49,7 +55,9 @@
       "get": {
         "summary": "Server information",
         "description": "Returns server capabilities and connection info for client discovery. No authentication required.",
-        "security": [],
+        "security": [
+
+        ],
         "tags": [
           "Server"
         ],
@@ -71,7 +79,9 @@
       "get": {
         "summary": "Basic health metrics",
         "description": "Basic health check without authentication.",
-        "security": [],
+        "security": [
+
+        ],
         "tags": [
           "Metrics"
         ],
@@ -142,7 +152,9 @@
       "post": {
         "summary": "Sign in",
         "description": "Authenticate with username and password. Returns API token or 2FA challenge.",
-        "security": [],
+        "security": [
+
+        ],
         "tags": [
           "Authentication"
         ],
@@ -194,7 +206,9 @@
       "post": {
         "summary": "Verify 2FA",
         "description": "Complete two-factor authentication with temporary token and TOTP code.",
-        "security": [],
+        "security": [
+
+        ],
         "tags": [
           "Authentication"
         ],
@@ -236,7 +250,9 @@
       "post": {
         "summary": "Sign up",
         "description": "Create a new user account.",
-        "security": [],
+        "security": [
+
+        ],
         "tags": [
           "Authentication"
         ],
@@ -1978,7 +1994,9 @@
       "post": {
         "summary": "Webhook receiver",
         "description": "Receive webhook events from external bots. Authenticated via webhook signature.",
-        "security": [],
+        "security": [
+
+        ],
         "tags": [
           "Webhooks"
         ],
@@ -2559,6 +2577,15 @@
     "schemas": {
       "HealthResponse": {
         "type": "object",
+        "required": [
+          "status",
+          "timestamp",
+          "version",
+          "api_version",
+          "min_client_version",
+          "service",
+          "push_enabled"
+        ],
         "properties": {
           "status": {
             "type": "string",
@@ -2569,6 +2596,14 @@
             "format": "date-time"
           },
           "version": {
+            "type": "string",
+            "example": "1.0.0"
+          },
+          "api_version": {
+            "type": "string",
+            "example": "1.0.0"
+          },
+          "min_client_version": {
             "type": "string",
             "example": "1.0.0"
           },
@@ -2583,6 +2618,23 @@
       },
       "ServerInfoResponse": {
         "type": "object",
+        "required": [
+          "server_name",
+          "version",
+          "mode",
+          "capabilities",
+          "websocket_path",
+          "ha_ingress",
+          "push_enabled",
+          "api_version",
+          "min_client_version",
+          "e2ee_enabled",
+          "e2ee_required_private_dm",
+          "min_e2ee_version",
+          "e2ee_capabilities",
+          "registration_enabled",
+          "timestamp"
+        ],
         "properties": {
           "server_name": {
             "type": "string"
@@ -2613,6 +2665,14 @@
           "push_enabled": {
             "type": "boolean"
           },
+          "api_version": {
+            "type": "string",
+            "example": "1.0.0"
+          },
+          "min_client_version": {
+            "type": "string",
+            "example": "1.0.0"
+          },
           "e2ee_enabled": {
             "type": "boolean"
           },
@@ -2624,6 +2684,13 @@
           },
           "e2ee_capabilities": {
             "type": "object",
+            "required": [
+              "channel_scope",
+              "legacy_write_blocked",
+              "bot_posting_blocked",
+              "encrypted_attachments",
+              "plaintext_attachments_blocked_in_e2ee"
+            ],
             "properties": {
               "channel_scope": {
                 "type": "array",
@@ -2635,6 +2702,12 @@
                 "type": "boolean"
               },
               "bot_posting_blocked": {
+                "type": "boolean"
+              },
+              "encrypted_attachments": {
+                "type": "boolean"
+              },
+              "plaintext_attachments_blocked_in_e2ee": {
                 "type": "boolean"
               }
             }

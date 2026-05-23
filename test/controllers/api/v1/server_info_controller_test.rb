@@ -16,6 +16,7 @@ class Api::V1::ServerInfoControllerTest < ActionDispatch::IntegrationTest
     assert_equal E2eePolicy::REQUIRED_VERSION, json["min_e2ee_version"]
     assert_equal true, json.dig("e2ee_capabilities", "legacy_write_blocked")
     assert_equal true, json.dig("e2ee_capabilities", "bot_posting_blocked")
+    assert_openapi_response "/server_info"
   end
 
   test "server_info reflects registration setting" do

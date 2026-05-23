@@ -39,6 +39,7 @@ end
 require_relative "../config/environment"
 require "rails/test_help"
 require "minitest/mock"
+require_relative "support/openapi_response_assertions"
 
 class ActiveSupport::TestCase
   # Run tests in parallel with specified workers
@@ -70,4 +71,8 @@ class ActiveSupport::TestCase
   def signout_path
     "/signout"
   end
+end
+
+class ActionDispatch::IntegrationTest
+  include OpenapiResponseAssertions
 end
