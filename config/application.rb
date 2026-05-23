@@ -68,15 +68,20 @@ module Homechat
         IPAddr.new("::1")              # IPv6 localhost
       ]
 
-      # Add user-configured network range
-      if ENV["NETWORK_RANGE"].present?
+      # Add user-configured network range. Home Assistant add-on options may
+      # arrive as "no"/"null" when left unset, so treat those as blank.
+      network_range = ENV["NETWORK_RANGE"].to_s.strip
+      network_range_unset = network_range.blank? || %w[no false none null nil].include?(network_range.downcase)
+
+      if !network_range_unset
         begin
-          user_range = IPAddr.new(ENV["NETWORK_RANGE"])
+          user_range = IPAddr.new(network_range)
           trusted_ranges << user_range
-          Rails.logger.debug "[INFO] Added user-configured network range"
-        rescue IPAddr::InvalidAddressError => e
-          Rails.logger.debug "[WARN] Invalid network range configured: #{e.class}"
-          Rails.logger.debug "[WARN] Using default ranges only"
+          config.after_initialize do
+            Rails.logger&.debug "[INFO] Added user-configured network range"
+          end
+        rescue IPAddr::InvalidAddressError, IPAddr::InvalidPrefixError => e
+          warn "[WARN] Invalid network range configured: #{e.class}. Using default ranges only."
         end
       end
 
