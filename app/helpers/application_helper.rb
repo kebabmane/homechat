@@ -1,6 +1,33 @@
 module ApplicationHelper
   AVATAR_COLORS = %w[bg-blue-500 bg-emerald-500 bg-fuchsia-500 bg-amber-500 bg-indigo-500 bg-rose-500 bg-cyan-500 bg-violet-500].freeze
 
+  def homechat_base_path
+    request.script_name.presence || Rails.application.config.relative_url_root.to_s.presence || ""
+  end
+
+  def homechat_action_cable_meta_tag
+    tag.meta name: "action-cable-url", content: "#{homechat_base_path}/cable"
+  end
+
+  def homechat_javascript_importmap_tags(entry_point = "application", importmap: Rails.application.importmap)
+    cache_key = [ entry_point, homechat_base_path.presence || "root" ].join(":")
+
+    safe_join [
+      javascript_inline_importmap_tag(importmap.to_json(resolver: self, cache_key: "json:#{cache_key}")),
+      homechat_javascript_importmap_module_preload_tags(importmap, entry_point:, cache_key: "preload:#{cache_key}"),
+      javascript_import_module_tag(entry_point)
+    ], "\n"
+  end
+
+  def homechat_javascript_importmap_module_preload_tags(importmap = Rails.application.importmap, entry_point: "application", cache_key: nil)
+    packages = importmap.preloaded_module_packages(resolver: self, entry_point:, cache_key: cache_key || entry_point)
+    content_security_policy_nonce = request&.content_security_policy_nonce
+
+    safe_join(packages.map do |path, package|
+      tag.link rel: "modulepreload", href: path, nonce: content_security_policy_nonce, integrity: package.integrity
+    end, "\n")
+  end
+
   def avatar_for(user, size: "h-10 w-10")
     username = user&.username.to_s.presence || "Unknown"
     initial = username[0]&.upcase || "?"

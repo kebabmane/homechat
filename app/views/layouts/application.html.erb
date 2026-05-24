@@ -7,19 +7,20 @@
     <meta name="mobile-web-app-capable" content="yes">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
-    <%= action_cable_meta_tag %>
+    <%= homechat_action_cable_meta_tag %>
 
     <%= yield :head %>
 
+    <meta name="homechat-base-path" content="<%= homechat_base_path %>">
     <%= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
 
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
+    <link rel="icon" href="<%= asset_path("icon.png", skip_pipeline: true) %>" type="image/png">
+    <link rel="icon" href="<%= asset_path("icon.svg", skip_pipeline: true) %>" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="<%= asset_path("icon.png", skip_pipeline: true) %>">
 
-    <%# application.css contains the compiled Tailwind output and app styles. %>
-    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
-    <%= javascript_importmap_tags %>
+    <%# tailwind.css contains the compiled Tailwind output and app styles. %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= homechat_javascript_importmap_tags %>
     <% if logged_in? %>
       <%= javascript_tag nonce: true, type: "module" do %>
         import "channels"

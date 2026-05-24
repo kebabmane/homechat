@@ -171,7 +171,7 @@ export default class extends Controller {
   }
 
   async _publishKeyBundle() {
-    await this._request("/api/v1/me/e2ee_key", {
+    await this._request(this._withBasePath("/api/v1/me/e2ee_key"), {
       method: "PUT",
       body: JSON.stringify({
         device_id: this._deviceBundle.deviceId,
@@ -184,7 +184,7 @@ export default class extends Controller {
   }
 
   async _refreshMemberKeys() {
-    const result = await this._request(`/api/v1/channels/${this.channelIdValue}/e2ee_keys`, {
+    const result = await this._request(this._withBasePath(`/api/v1/channels/${this.channelIdValue}/e2ee_keys`), {
       method: "GET"
     })
 
@@ -278,7 +278,7 @@ export default class extends Controller {
 
     if (shares.length === 0) return
 
-    await this._request(`/api/v1/channels/${this.channelIdValue}/key_shares`, {
+    await this._request(this._withBasePath(`/api/v1/channels/${this.channelIdValue}/key_shares`), {
       method: "POST",
       body: JSON.stringify({ key_shares: shares })
     })
@@ -286,7 +286,7 @@ export default class extends Controller {
 
   async _fetchMyKeyShare() {
     try {
-      return await this._request(`/api/v1/channels/${this.channelIdValue}/key_shares/me?device_id=${encodeURIComponent(this._deviceBundle.deviceId)}`, {
+      return await this._request(this._withBasePath(`/api/v1/channels/${this.channelIdValue}/key_shares/me?device_id=${encodeURIComponent(this._deviceBundle.deviceId)}`), {
         method: "GET"
       })
     } catch (_error) {
@@ -545,6 +545,13 @@ export default class extends Controller {
     }
 
     return json
+  }
+
+  _withBasePath(path) {
+    if (!path?.startsWith('/')) return path
+
+    const basePath = document.querySelector('meta[name="homechat-base-path"]')?.content || ''
+    return `${basePath}${path}`
   }
 
   _required() {

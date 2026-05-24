@@ -817,7 +817,7 @@ export default class extends Controller {
 
       for (const msg of queue) {
         try {
-          const response = await fetch(`/channels/${msg.channelId}/messages`, {
+          const response = await fetch(this._withBasePath(`/channels/${msg.channelId}/messages`), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -850,6 +850,13 @@ export default class extends Controller {
     } catch (e) {
       console.error('Failed to sync messages:', e)
     }
+  }
+
+  _withBasePath(path) {
+    if (!path?.startsWith('/')) return path
+
+    const basePath = document.querySelector('meta[name="homechat-base-path"]')?.content || ''
+    return `${basePath}${path}`
   }
 
   // Show a brief notification about sync status

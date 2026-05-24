@@ -17,7 +17,7 @@
 
       <%= form_with url: dms_path, method: :post, local: true, class: "p-6" do |f| %>
         <div class="space-y-6">
-          <div data-controller="user-autocomplete" data-user-autocomplete-url-value="/users/search" data-action="click@window->user-autocomplete#clickOutside">
+          <div data-controller="user-autocomplete" data-user-autocomplete-url-value="<%= users_search_path %>" data-action="click@window->user-autocomplete#clickOutside">
             <%= f.label :username, class: "block text-sm font-medium text-gray-900 mb-2" do %>
               <span class="flex items-center">
                 <svg class="w-4 h-4 mr-2 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
@@ -62,4 +62,3 @@
     </div>
   </div>
 </div>
-
