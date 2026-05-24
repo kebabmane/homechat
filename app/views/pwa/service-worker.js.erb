@@ -1,12 +1,14 @@
 // HomeChat Service Worker with offline support and background sync
 // Auto cache-busting: version changes with each deploy
 const CACHE_NAME = 'homechat-<%= Rails.application.config.assets.version || Time.now.to_i %>';
-const OFFLINE_PAGE = '/offline.html';
+const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');
+const withBasePath = path => `${BASE_PATH}${path}`;
+const OFFLINE_PAGE = withBasePath('/offline.html');
 const OFFLINE_URLS = [
-  '/',
-  '/offline.html',
-  '/icon.png',
-  '/icon.svg'
+  withBasePath('/'),
+  OFFLINE_PAGE,
+  withBasePath('/icon.png'),
+  withBasePath('/icon.svg')
 ];
 
 // Install: pre-cache essential assets
@@ -39,7 +41,7 @@ self.addEventListener('fetch', event => {
   if (url.origin !== location.origin || req.method !== 'GET') return;
 
   // Skip ActionCable WebSocket requests
-  if (url.pathname === '/cable') return;
+  if (url.pathname === withBasePath('/cable')) return;
 
   // Cache-first for static assets (styles, scripts, images, fonts)
   if (isStaticAsset(req, url)) {
@@ -74,7 +76,11 @@ self.addEventListener('message', event => {
 // Helper: check if request is for a static asset
 function isStaticAsset(req, url) {
   const staticDestinations = ['style', 'script', 'image', 'font'];
-  const staticPaths = ['/assets/', '/app/assets/builds/', '/packs/'];
+  const staticPaths = [
+    withBasePath('/assets/'),
+    withBasePath('/app/assets/builds/'),
+    withBasePath('/packs/')
+  ];
 
   return staticDestinations.includes(req.destination) ||
          staticPaths.some(path => url.pathname.startsWith(path));
