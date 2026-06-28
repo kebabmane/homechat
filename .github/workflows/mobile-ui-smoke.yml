@@ -1,4 +1,4 @@
-name: iOS UI Smoke (Non-blocking)
+name: iOS UI Smoke
 
 on:
   pull_request:
@@ -21,9 +21,11 @@ jobs:
       CROSS_REPO_PAT: ${{ secrets.CROSS_REPO_PAT }}
 
     steps:
-      - name: Skip when cross-repo token is unavailable
+      - name: Require cross-repo token for iOS UI smoke tests
         if: ${{ env.CROSS_REPO_PAT == '' }}
-        run: echo "::notice::Skipping iOS UI smoke because CROSS_REPO_PAT is not configured."
+        run: |
+          echo "::error::CROSS_REPO_PAT is required so iOS UI smoke tests cannot silently skip."
+          exit 1
 
       - name: Checkout iOS repo
         if: ${{ env.CROSS_REPO_PAT != '' }}
@@ -33,10 +35,9 @@ jobs:
           path: homechat-ios
           token: ${{ env.CROSS_REPO_PAT }}
 
-      - name: Run HomeChat iOS UI tests (non-blocking)
+      - name: Run HomeChat iOS UI tests
         if: ${{ env.CROSS_REPO_PAT != '' }}
         working-directory: homechat-ios
-        continue-on-error: true
         run: |
           mkdir -p TestResults
           xcodebuild \

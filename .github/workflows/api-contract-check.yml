@@ -69,9 +69,11 @@ jobs:
         with:
           path: homechat
 
-      - name: Skip when cross-repo token is unavailable
+      - name: Require cross-repo token for mobile DTO drift checks
         if: ${{ env.CROSS_REPO_PAT == '' }}
-        run: echo "::notice::Skipping mobile DTO drift check because CROSS_REPO_PAT is not configured."
+        run: |
+          echo "::error::CROSS_REPO_PAT is required so mobile DTO drift checks cannot silently skip."
+          exit 1
 
       - name: Checkout Android repo
         if: ${{ env.CROSS_REPO_PAT != '' }}
