@@ -34,10 +34,11 @@ module MessagesHelper
       %(<a href="#{url}" target="_blank" rel="noopener" class="hc-link">#{url}</a>)
     end
 
-    # Mentions @username (alphanumeric + underscore) → link to start DM
+    # Mentions @username (alphanumeric + underscore) → link to the DM form.
+    # Creating the DM remains a POST-only action so message rendering never mutates state.
     escaped = escaped.gsub(/(^|\s)@([A-Za-z0-9_]{2,50})/) do
       prefix, name = Regexp.last_match(1), Regexp.last_match(2)
-      href = start_dm_path(username: name) rescue "#"
+      href = new_dm_path(username: name) rescue "#"
       %(#{prefix}<a href="#{href}" class="hc-mention-link">@#{name}</a>)
     end
 
