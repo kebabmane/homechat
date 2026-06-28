@@ -100,6 +100,22 @@ jobs:
           sarif_file: hadolint-dev-results.sarif
           category: 'hadolint-development'
 
+  production_docker_smoke:
+    name: Production Docker Smoke
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run production Docker smoke test
+        run: scripts/ci-docker-smoke.sh
+
   secrets_scan:
     name: Secret Detection
     runs-on: ubuntu-latest

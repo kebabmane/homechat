@@ -49,9 +49,11 @@ jobs:
       CROSS_REPO_PAT: ${{ secrets.CROSS_REPO_PAT }}
 
     steps:
-      - name: Skip when cross-repo token is unavailable
+      - name: Require cross-repo token for Android contract tests
         if: ${{ env.CROSS_REPO_PAT == '' }}
-        run: echo "::notice::Skipping Android contract tests because CROSS_REPO_PAT is not configured."
+        run: |
+          echo "::error::CROSS_REPO_PAT is required so Android contract tests cannot silently skip."
+          exit 1
 
       - name: Checkout Android repo
         if: ${{ env.CROSS_REPO_PAT != '' }}
@@ -84,9 +86,11 @@ jobs:
       CROSS_REPO_PAT: ${{ secrets.CROSS_REPO_PAT }}
 
     steps:
-      - name: Skip when cross-repo token is unavailable
+      - name: Require cross-repo token for iOS contract tests
         if: ${{ env.CROSS_REPO_PAT == '' }}
-        run: echo "::notice::Skipping iOS contract tests because CROSS_REPO_PAT is not configured."
+        run: |
+          echo "::error::CROSS_REPO_PAT is required so iOS contract tests cannot silently skip."
+          exit 1
 
       - name: Checkout iOS repo
         if: ${{ env.CROSS_REPO_PAT != '' }}
