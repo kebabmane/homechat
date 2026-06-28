@@ -2,19 +2,7 @@ class DmsController < ApplicationController
   before_action :require_login
 
   def new
-  end
-
-  # GET /dm/:username
-  # Finds or creates a DM with the given user and redirects to it
-  def start
-    username = params[:username].to_s.strip
-    target = User.find_by(username: username)
-    if target.nil? || target == current_user
-      redirect_to new_dm_path, alert: "Invalid user" and return
-    end
-
-    channel = find_or_create_dm(current_user, target)
-    redirect_to channel
+    @username = params[:username].to_s.strip
   end
 
   def create

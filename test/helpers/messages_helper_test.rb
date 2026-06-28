@@ -47,6 +47,6 @@ class MessagesHelperTest < ActionView::TestCase
     text = "Hey @alice check this"
     result = render_message_body(text)
     assert result.include?("@alice")
-    assert result.include?("<a href=")
+    assert result.include?(%(href="#{new_dm_path(username: "alice")}"))
   end
 end

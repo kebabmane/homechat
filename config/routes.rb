@@ -22,7 +22,6 @@ Rails.application.routes.draw do
   # Channel routes
   resources :channels do
     member do
-      get :join
       post :join
       delete :leave
       post :invite
@@ -89,8 +88,6 @@ Rails.application.routes.draw do
   end
 
   resources :dms, only: [ :new, :create ]
-  # Quick-start a DM with a username
-  get "/dm/:username", to: "dms#start", as: :start_dm
 
   # API routes for Home Assistant integration
   namespace :api do

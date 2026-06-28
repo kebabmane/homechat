@@ -12,6 +12,15 @@ class DmsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to signin_path
   end
 
+  test "new pre-fills username from query" do
+    sign_in_as(@user)
+
+    get new_dm_path(username: @target.username)
+
+    assert_response :success
+    assert_select "input[name='username'][value=?]", @target.username
+  end
+
   test "creates dm channel with both users and stable name" do
     sign_in_as(@user)
 
@@ -54,8 +63,17 @@ class DmsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_dm_path
 
     assert_no_difference("Channel.count") do
-      get start_dm_path(username: "missing-user")
+      post dms_path, params: { username: "missing-user" }
     end
     assert_redirected_to new_dm_path
+  end
+
+  test "get dm username route does not exist and does not create dm" do
+    sign_in_as(@user)
+
+    assert_no_difference("Channel.count") do
+      get "/dm/#{@target.username}"
+    end
+    assert_response :not_found
   end
 end

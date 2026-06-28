@@ -111,6 +111,16 @@ class ChannelsControllerTest < ActionDispatch::IntegrationTest
     assert @channel.member?(other_user)
   end
 
+  test "get join route does not exist and does not add membership" do
+    other_user = create_user(username: "other_get_join")
+    sign_in_as(other_user)
+
+    assert_no_difference("ChannelMembership.count") do
+      get "/channels/#{@channel.id}/join"
+    end
+    assert_response :not_found
+  end
+
   test "should leave channel" do
     @channel.add_member(@user)
     sign_in_as(@user)
