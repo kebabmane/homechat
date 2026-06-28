@@ -98,9 +98,14 @@ if ENV["HOME_ASSISTANT_ADDON"] == "true"
       same_site: :lax
   end
 else
+  # Local/LAN HTTP deployments explicitly opt in with RAILS_ALLOW_INSECURE_HTTP=true.
+  # In that mode, do not mark the session cookie Secure, otherwise browsers will
+  # refuse to store/send it over http:// and CSRF verification fails on sign-in.
+  allow_insecure_http = ENV["RAILS_ALLOW_INSECURE_HTTP"] == "true"
+
   Rails.application.config.session_store :cookie_store,
     key: "_homechat_session",
-    secure: Rails.env.production?,
+    secure: Rails.env.production? && !allow_insecure_http,
     httponly: true,
     same_site: :lax
 end
