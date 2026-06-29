@@ -27,7 +27,7 @@ jobs:
 
       - name: Checkout iOS repo
         if: ${{ env.CROSS_REPO_PAT != '' }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           repository: kebabmane/homechat-ios
           path: homechat-ios

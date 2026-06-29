@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout server repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install native build dependencies
         run: sudo apt-get update && sudo apt-get install -y libavahi-compat-libdnssd-dev
@@ -55,7 +55,7 @@ jobs:
 
       - name: Checkout Android repo
         if: ${{ env.CROSS_REPO_PAT != '' }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           repository: kebabmane/homechat-android
           path: homechat-android
@@ -90,7 +90,7 @@ jobs:
 
       - name: Checkout iOS repo
         if: ${{ env.CROSS_REPO_PAT != '' }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           repository: kebabmane/homechat-ios
           path: homechat-ios
