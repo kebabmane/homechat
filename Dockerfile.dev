@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM ruby:4.0.1-slim
+FROM ruby:4.0.5-slim
 
 # Install base packages for development including mDNS support
 RUN apt-get update -qq && \
