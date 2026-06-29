@@ -51,7 +51,7 @@ jobs:
 
       - name: Upload iOS UI test results
         if: ${{ always() && env.CROSS_REPO_PAT != '' }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: ios-ui-smoke-xcresult
           path: homechat-ios/TestResults/HomeChatIOSUI.xcresult
